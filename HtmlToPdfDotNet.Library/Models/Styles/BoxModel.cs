@@ -1,6 +1,6 @@
 using HtmlAgilityPack;
 
-namespace HtmlToPdfDotNet.Library.Models;
+namespace HtmlToPdfDotNet.Library.Models.Styles;
 
 /// <summary>
 /// Represents the CSS box model of a DOM node with absolute coordinates

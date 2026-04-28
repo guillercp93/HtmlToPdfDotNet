@@ -1,5 +1,5 @@
 using HtmlAgilityPack;
-using HtmlToPdfDotNet.Library.Models;
+using HtmlToPdfDotNet.Library.Models.Styles;
 
 namespace HtmlToPdfDotNet.Library;
 

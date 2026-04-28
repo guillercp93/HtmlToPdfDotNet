@@ -1,9 +1,9 @@
 using HtmlAgilityPack;
 using HtmlToPdfDotNet.Library.Commons;
-using HtmlToPdfDotNet.Library.Models;
+using HtmlToPdfDotNet.Library.Models.Styles;
 using Xunit;
 
-namespace HtmlToPdf.Tests.Css;
+namespace HtmlToPdfDotNet.Tests.Css;
 
 public class StyleResolverTests
 {

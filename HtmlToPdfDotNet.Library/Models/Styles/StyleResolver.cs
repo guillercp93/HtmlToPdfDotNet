@@ -1,7 +1,7 @@
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlAgilityPack;
 
-namespace HtmlToPdfDotNet.Library.Models;
+namespace HtmlToPdfDotNet.Library.Models.Styles;
 
 /// <summary>
 /// Resolves the styles of the entire tree and calculate each node's computed style
@@ -15,7 +15,7 @@ public sealed class StyleResolver
 {
     #region Tag Defaults
     // Non-heritable properties that certain tags override by default.
-    private static readonly Dictionary<string, Action<ComputedStyle>> TagDefaults =
+    private static readonly Dictionary<string, Action<ComputedStyle>> _TagDefaults =
         new(StringComparer.OrdinalIgnoreCase)
         {
             // Typography
@@ -64,14 +64,13 @@ public sealed class StyleResolver
 
     // Properties inherited from the parent if the child does not define them.
     // Reference: https://www.w3.org/TR/CSS22/propidx.html
-    private static readonly HashSet<string> InheritedProperties = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> _InheritedProperties = new(StringComparer.OrdinalIgnoreCase)
     {
         "color", "font-family", "font-size", "font-weight", "font-style",
         "line-height", "text-align", "visibility",
     };
     #endregion
 
-    #region Public API
     /// <summary>
     /// Resolves the styles of the entire tree.
     /// </summary>
@@ -84,7 +83,6 @@ public sealed class StyleResolver
         ResolveNode(root, initial, result);
         return result;
     }
-    #endregion
 
     #region Recursion
     private static void ResolveNode(
@@ -148,7 +146,7 @@ public sealed class StyleResolver
     #region Tag defaults
     private static void ApplyTagDefaults(string tagName, ComputedStyle style)
     {
-        if (TagDefaults.TryGetValue(tagName, out var apply))
+        if (_TagDefaults.TryGetValue(tagName, out var apply))
             apply(style);
     }
     #endregion

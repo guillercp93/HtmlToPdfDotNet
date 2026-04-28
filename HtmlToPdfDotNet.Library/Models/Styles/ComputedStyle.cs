@@ -1,6 +1,6 @@
 using HtmlToPdfDotNet.Library.Commons;
 
-namespace HtmlToPdfDotNet.Library.Models;
+namespace HtmlToPdfDotNet.Library.Models.Styles;
 
 /// <summary>
 /// Represents the computed style of an HTML element.
