@@ -1,8 +1,10 @@
+using System.Globalization;
+using System.Text;
 using HtmlAgilityPack;
-using HtmlToPdfDotNet.Library.Commons;
+using HtmlToPdfDotNet.Library.Models.Layout;
 using HtmlToPdfDotNet.Library.Models.Styles;
 
-namespace HtmlToPdfDotNet.Library.Models.Layout;
+namespace HtmlToPdfDotNet.Library.Commons;
 
 public static class Helpers
 {
@@ -175,4 +177,23 @@ public static class Helpers
         if (ascent > line.Ascent) line.Ascent = ascent;
         if (descent < line.Descent) line.Descent = descent;
     }
+
+    /// <summary>
+    /// Writes raw text to a stream.
+    /// </summary>
+    /// <param name="s">The stream to write to.</param>
+    /// <param name="text">The text to write.</param>
+    public static void WriteRaw(Stream s, string text)
+    {
+        var bytes = Encoding.Latin1.GetBytes(text);
+        s.Write(bytes);
+    }
+
+    /// <summary>
+    /// Formats a float with 3 decimal places.
+    /// </summary>
+    /// <param name="v">The float to format.</param>
+    /// <returns>The formatted float.</returns>
+    public static string F(float v)
+        => v.ToString("F3", CultureInfo.InvariantCulture);
 }
