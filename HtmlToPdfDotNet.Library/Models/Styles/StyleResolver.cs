@@ -20,12 +20,12 @@ public sealed class StyleResolver
         {
             // Typography
             // Typography & Display
-            ["h1"] = s => { s.FontSize = 24f; s.FontWeight = FontWeight.Bold; s.Margin = new CssEdges(new CssLength(12f)); },
-            ["h2"] = s => { s.FontSize = 20f; s.FontWeight = FontWeight.Bold; s.Margin = new CssEdges(new CssLength(10f)); },
-            ["h3"] = s => { s.FontSize = 16f; s.FontWeight = FontWeight.Bold; s.Margin = new CssEdges(new CssLength(8f)); },
-            ["h4"] = s => { s.FontSize = 14f; s.FontWeight = FontWeight.Bold; },
-            ["h5"] = s => { s.FontSize = 12f; s.FontWeight = FontWeight.Bold; },
-            ["h6"] = s => { s.FontSize = 10f; s.FontWeight = FontWeight.Bold; },
+            ["h1"] = s => { s.FontSize = 24f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(12f); },
+            ["h2"] = s => { s.FontSize = 18.7f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(10f); },
+            ["h3"] = s => { s.FontSize = 16f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(8f); },
+            ["h4"] = s => { s.FontSize = 14f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(7f); },
+            ["h5"] = s => { s.FontSize = 12f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(6f); },
+            ["h6"] = s => { s.FontSize = 10f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(5f); },
             ["b"] = s => { s.FontWeight = FontWeight.Bold; s.Display = DisplayType.Inline; },
             ["strong"] = s => { s.FontWeight = FontWeight.Bold; s.Display = DisplayType.Inline; },
             ["i"] = s => { s.FontStyle = FontStyle.Italic; s.Display = DisplayType.Inline; },
@@ -42,9 +42,10 @@ public sealed class StyleResolver
             ["pre"] = s => s.FontFamily = "Courier",
 
             // Layout
-            ["p"] = s => { s.Margin = new CssEdges(new CssLength(8f)); },
-            ["ul"] = s => { s.Margin = new CssEdges(new CssLength(8f)); s.Padding = new CssEdges(CssLength.Zero, new CssLength(20f), CssLength.Zero, new CssLength(20f)); },
-            ["ol"] = s => { s.Margin = new CssEdges(new CssLength(8f)); s.Padding = new CssEdges(CssLength.Zero, new CssLength(20f), CssLength.Zero, new CssLength(20f)); },
+            ["p"] = s => { s.Margin = Helpers.DefaultMargin(8f); },
+            ["ul"] = s => { s.Margin = Helpers.DefaultMargin(8f); s.Padding = Helpers.DefaultPadding(30f); },
+            ["ol"] = s => { s.Margin = Helpers.DefaultMargin(8f); s.Padding = Helpers.DefaultPadding(30f); },
+            ["blockquote"] = s => { s.Margin = Helpers.DefaultMargin(8f); s.Padding = Helpers.DefaultPadding(30f); },
             ["li"] = s => s.Display = DisplayType.Block,
 
             // Display none
@@ -78,22 +79,27 @@ public sealed class StyleResolver
     /// <returns>Dictionary node → computed style.</returns>
     public Dictionary<HtmlNode, ComputedStyle> Resolve(HtmlNode root)
     {
-        var result = new Dictionary<HtmlNode, ComputedStyle>();
-        var initial = new ComputedStyle(); // initial values
+        Dictionary<HtmlNode, ComputedStyle> result = new();
+        ComputedStyle initial = new(); // initial values
         ResolveNode(root, initial, result);
         return result;
     }
 
     #region Recursion
-    private static void ResolveNode(
-        HtmlNode node,
-        ComputedStyle parentStyle,
-        Dictionary<HtmlNode, ComputedStyle> result)
+    /// <summary>
+    /// Resolves the styles of the entire tree.
+    /// </summary>
+    /// <param name="node">Root of the DOM (usually the &lt;html&gt; node).</param>
+    /// <param name="parentStyle">Computed style of the parent node.</param>
+    /// <param name="result">Dictionary to store the computed style of each node.</param>
+    private static void ResolveNode(HtmlNode node,
+                                    ComputedStyle parentStyle,
+                                    Dictionary<HtmlNode, ComputedStyle> result)
     {
         if (node.NodeType == HtmlNodeType.Document)
         {
             // The document node has no style of its own; we only traverse children
-            foreach (var child in node.ChildNodes)
+            foreach (HtmlNode child in node.ChildNodes)
                 ResolveNode(child, parentStyle, result);
             return;
         }
@@ -109,7 +115,7 @@ public sealed class StyleResolver
             return;
 
         // 1. Inheritance: start from the parent's style
-        var style = InheritFrom(parentStyle);
+        ComputedStyle style = InheritFrom(parentStyle);
 
         // 2. HTML tag defaults
         ApplyTagDefaults(node.Name, style);
@@ -120,16 +126,22 @@ public sealed class StyleResolver
         result[node] = style;
 
         // 4. Recursion in children
-        foreach (var child in node.ChildNodes)
+        foreach (HtmlNode child in node.ChildNodes)
             ResolveNode(child, style, result);
     }
     #endregion
 
     #region Inheritance
+    /// <summary>
+    /// Creates a new <see cref="ComputedStyle"/> by inheriting from the parent's style.
+    /// Only inheritable properties are copied.
+    /// </summary>
+    /// <param name="parent">The parent's computed style.</param>
+    /// <returns>A new <see cref="ComputedStyle"/> with inherited properties.</returns>
     private static ComputedStyle InheritFrom(ComputedStyle parent)
     {
         // Start with default values and copy only inheritable properties.
-        var s = new ComputedStyle
+        ComputedStyle s = new()
         {
             Color = parent.Color,
             FontFamily = parent.FontFamily,
@@ -144,28 +156,38 @@ public sealed class StyleResolver
     #endregion
 
     #region Tag defaults
+    /// <summary>
+    /// Applies the default styles for a specific HTML tag.
+    /// </summary>
+    /// <param name="tagName">The name of the HTML tag.</param>
+    /// <param name="style">The computed style to apply defaults to.</param>
     private static void ApplyTagDefaults(string tagName, ComputedStyle style)
     {
-        if (_TagDefaults.TryGetValue(tagName, out var apply))
+        if (_TagDefaults.TryGetValue(tagName, out Action<ComputedStyle>? apply))
             apply(style);
     }
     #endregion
 
     #region Inline style
+    /// <summary>
+    /// Applies inline styles from an HTML node to the computed style.
+    /// </summary>
+    /// <param name="node">The HTML node containing the inline style attribute.</param>
+    /// <param name="style">The computed style to apply the inline styles to.</param>
     private static void ApplyInlineStyle(HtmlNode node, ComputedStyle style)
     {
-        var attr = node.GetAttributeValue("style", string.Empty);
+        string attr = node.GetAttributeValue("style", string.Empty);
         if (string.IsNullOrWhiteSpace(attr)) return;
 
         // Parse "prop: value; prop: value"
-        var declarations = attr.Split(';', StringSplitOptions.RemoveEmptyEntries);
-        foreach (var decl in declarations)
+        string[] declarations = attr.Split(';', StringSplitOptions.RemoveEmptyEntries);
+        foreach (string decl in declarations)
         {
-            var idx = decl.IndexOf(':');
+            int idx = decl.IndexOf(':');
             if (idx < 0) continue;
 
-            var prop = decl[..idx].Trim().ToLowerInvariant();
-            var value = decl[(idx + 1)..].Trim();
+            string prop = decl[..idx].Trim().ToLowerInvariant();
+            string value = decl[(idx + 1)..].Trim();
 
             ApplyDeclaration(prop, value, style);
         }
@@ -173,6 +195,12 @@ public sealed class StyleResolver
     #endregion
 
     #region Apply declaration
+    /// <summary>
+    /// Applies a single declaration to the computed style.
+    /// </summary>
+    /// <param name="prop">The property name.</param>
+    /// <param name="value">The property value.</param>
+    /// <param name="style">The computed style.</param>
     internal static void ApplyDeclaration(string prop, string value, ComputedStyle style)
     {
         switch (prop)
@@ -233,11 +261,9 @@ public sealed class StyleResolver
 
             // Border shorthand
             case "border":
-                {
-                    var side = CssValueParser.ParseBorderSide(value, style.FontSize);
-                    style.BorderTop = style.BorderRight = style.BorderBottom = style.BorderLeft = side;
-                    break;
-                }
+                CssBorderSide side = CssValueParser.ParseBorderSide(value, style.FontSize);
+                style.BorderTop = style.BorderRight = style.BorderBottom = style.BorderLeft = side;
+                break;
             case "border-top":
                 style.BorderTop = CssValueParser.ParseBorderSide(value, style.FontSize); break;
             case "border-right":
@@ -285,15 +311,20 @@ public sealed class StyleResolver
     #endregion
 
     #region Font shorthand
+    /// <summary>
+    /// Parses the font shorthand property and applies it to the computed style.
+    /// </summary>
+    /// <param name="value">The font shorthand value.</param>
+    /// <param name="style">The computed style to apply the font shorthand to.</param>
     private static void ParseFontShorthand(string value, ComputedStyle style)
     {
         // Simplified: look for weight, style, size and family
         // Format: [style] [weight] size[/line-height] family
-        var parts = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        foreach (var part in parts)
+        foreach (string part in parts)
         {
-            var p = part.ToLowerInvariant().TrimEnd(',');
+            string p = part.ToLowerInvariant().TrimEnd(',');
 
             if (p is "italic" or "oblique") { style.FontStyle = CssValueParser.ParseFontStyle(p); continue; }
             if (p is "bold" or "bolder") { style.FontWeight = FontWeight.Bold; continue; }
@@ -302,17 +333,17 @@ public sealed class StyleResolver
             // size/line-height
             if (p.Contains('/'))
             {
-                var sl = p.Split('/');
+                string[] sl = p.Split('/');
                 style.FontSize = CssValueParser.ParseFontSize(sl[0], style.FontSize);
                 style.LineHeight = ParseLineHeight(sl[1], style.FontSize);
                 continue;
             }
 
             // Is it a size?
-            var len = CssValueParser.ParseLength(p, style.FontSize);
+            CssLength len = CssValueParser.ParseLength(p, style.FontSize);
             if (!len.IsZero && !len.IsAuto) { style.FontSize = len.Points; continue; }
 
-            var fs = CssValueParser.ParseFontSize(p, style.FontSize);
+            float fs = CssValueParser.ParseFontSize(p, style.FontSize);
             if (Math.Abs(fs - style.FontSize) > 0.01f) { style.FontSize = fs; continue; }
         }
 
@@ -320,26 +351,38 @@ public sealed class StyleResolver
         // To simplify: take the first part that was not recognized as a keyword
     }
 
+    /// <summary>
+    /// Parses the line-height property and applies it to the computed style.
+    /// </summary>
+    /// <param name="value">The line-height value.</param>
+    /// <param name="fontSize">The font size.</param>
+    /// <returns>The line height as a multiplier of the font size.</returns>
     private static float ParseLineHeight(string value, float fontSize)
     {
-        var v = value.Trim();
+        string v = value.Trim();
         if (v == "normal") return 1.2f;
 
         // No unit = multiplier
         if (float.TryParse(v, System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out var mult))
+            System.Globalization.CultureInfo.InvariantCulture, out float mult))
             return mult;
 
         // With unit → convert to multiplier
-        var len = CssValueParser.ParseLength(v, fontSize);
+        CssLength len = CssValueParser.ParseLength(v, fontSize);
         return fontSize > 0f ? len.Points / fontSize : 1.2f;
     }
 
+    /// <summary>
+    /// Normalizes the font-family property by removing quotes and mapping generic
+    /// font families to specific PDF font names.
+    /// </summary>
+    /// <param name="value">The font-family value.</param>
+    /// <returns>The normalized font-family value.</returns>
     private static string NormalizeFontFamily(string value)
     {
         // Take the first family from the list and remove quotes
-        var families = value.Split(',');
-        var first = families[0].Trim().Trim('"', '\'');
+        string[] families = value.Split(',');
+        string first = families[0].Trim().Trim('"', '\'');
 
         return first.ToLowerInvariant() switch
         {

@@ -1,7 +1,7 @@
-using System.IO.Compression;
 using System.Text;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Layout;
+using HtmlToPdfDotNet.Library.Models.Writer.Font;
 
 namespace HtmlToPdfDotNet.Library.Models.Writer;
 
@@ -17,7 +17,12 @@ namespace HtmlToPdfDotNet.Library.Models.Writer;
 ///   BT … ET        → text block
 ///   Tf             → select font and size
 ///   Td             → move text cursor
-///   Tj             → show text
+///   Tj             → show text (Latin-1 string for Type1 fonts)
+///   TJ via hex     → show GID hex string for Type0/CIDFont embedded fonts
+///
+/// Text encoding:
+///   Standard (Type1) fonts  → Latin-1 string literal  (text) Tj
+///   Embedded (Type0) fonts  → 2-byte-per-char GID hex  &lt;GGGGGGGG…&gt; Tj
 ///
 /// Coordinates: PDF has origin in the bottom-left corner of the page.
 /// The layout engine works with Y from top, so we apply:
@@ -29,7 +34,14 @@ public sealed class ContentStreamBuilder
     private readonly StringBuilder _sb = new();
     private readonly float _pageH;
 
-    // Active font in the stream (avoid redundant Tf)
+    /// <summary>
+    /// Alias map provided by <see cref="FontResourceBuilder.EmbeddedAliases"/>.
+    /// Maps each EmbeddedFontInfo reference to its /FEn alias in the page resources.
+    /// Null when no embedded fonts are used.
+    /// </summary>
+    private readonly IReadOnlyDictionary<EmbeddedFontInfo, string>? _embeddedAliases;
+
+    // Active graphic state (cached to suppress redundant operators)
     private string _currentFont = "";
     private float _currentFontSize = 0f;
 
@@ -42,15 +54,21 @@ public sealed class ContentStreamBuilder
     /// <summary>
     /// Initializes a new instance of the <see cref="ContentStreamBuilder"/> class.
     /// </summary>
-    /// <param name="pageHeight">The height of the page, used for coordinate inversion (Y-axis).</param>
-    public ContentStreamBuilder(float pageHeight) => _pageH = pageHeight;
+    /// <param name="pageHeight">The height of the page for Y-axis inversion.</param>
+    /// <param name="embeddedAliases">
+    ///   Optional map of embedded-font aliases (from <see cref="FontResourceBuilder"/>).
+    ///   Pass <c>null</c> when only standard fonts are used.
+    /// </param>
+    public ContentStreamBuilder(float pageHeight,
+                                IReadOnlyDictionary<EmbeddedFontInfo, string>? embeddedAliases = null)
+    {
+        _pageH = pageHeight;
+        _embeddedAliases = embeddedAliases;
+    }
 
     #region Drawing primitives
-
-    /// <summary>
-    /// Emits PDF operators to draw a filled rectangle.
-    /// </summary>
-    /// <param name="r">The rectangle primitive containing position, size, and fill color.</param>
+    /// <summary>Emits PDF operators to draw a filled rectangle.</summary>
+    /// <param name="r">The rectangle primitive to draw, containing position, size, and fill color information.</param>
     public void DrawRect(RectPrimitive r)
     {
         if (!r.HasFill) return;
@@ -60,9 +78,9 @@ public sealed class ContentStreamBuilder
         // PDF re: x y width height re  →  then f to fill
         // Y inverted: bottom-left corner of the rect in PDF
         float pdfY = _pageH - r.Y - r.Height;
-        _sb.AppendLine($"q");
+        _sb.AppendLine("q");
         _sb.AppendLine($"{Helpers.F(r.X)} {Helpers.F(pdfY)} {Helpers.F(r.Width)} {Helpers.F(r.Height)} re f");
-        _sb.AppendLine($"Q");
+        _sb.AppendLine("Q");
     }
 
     /// <summary>
@@ -91,6 +109,7 @@ public sealed class ContentStreamBuilder
 
     /// <summary>
     /// Emits PDF operators to draw a text fragment.
+    /// Automatically switches between Type1 (Latin-1) and Type0 (GID-hex) encoding.
     /// </summary>
     /// <param name="t">The text primitive containing position, text, font, and color.</param>
     public void DrawText(TextPrimitive t)
@@ -100,13 +119,26 @@ public sealed class ContentStreamBuilder
         float pdfY = _pageH - t.Y;
 
         _sb.AppendLine("BT");
-        SetFont(t.FontName, t.FontSize);
         SetFillColor(t.Color);
-        _sb.AppendLine($"{Helpers.F(t.X)} {Helpers.F(pdfY)} Td");
-        _sb.AppendLine($"({EscapePdfString(t.Text)}) Tj");
-        _sb.AppendLine("ET");
 
-        // Reset text cursor (each BT starts fresh)
+        if (t.EmbeddedFont != null
+            && _embeddedAliases != null
+            && _embeddedAliases.TryGetValue(t.EmbeddedFont, out var embAlias))
+        {
+            // ── Embedded Type0 path ────────────────────────────────────────
+            SetFont(embAlias, t.FontSize);
+            _sb.AppendLine($"{Helpers.F(t.X)} {Helpers.F(pdfY)} Td");
+            _sb.AppendLine($"<{BuildGidHexString(t.Text, t.EmbeddedFont)}> Tj");
+        }
+        else
+        {
+            // ── Standard Type1 path ────────────────────────────────────────
+            SetFont(FontAlias(t.FontName), t.FontSize);
+            _sb.AppendLine($"{Helpers.F(t.X)} {Helpers.F(pdfY)} Td");
+            _sb.AppendLine($"({EscapePdfString(t.Text)}) Tj");
+        }
+
+        _sb.AppendLine("ET");
     }
 
     #endregion
@@ -115,6 +147,7 @@ public sealed class ContentStreamBuilder
     /// <summary>
     /// Sets the fill color in the graphic state if it has changed.
     /// </summary>
+    /// <param name="c">The fill color to set.</param>
     private void SetFillColor(CssColor c)
     {
         if (ColorsEqual(c, _currentFillColor)) return;
@@ -125,20 +158,20 @@ public sealed class ContentStreamBuilder
     /// <summary>
     /// Sets the stroke color in the graphic state.
     /// </summary>
+    /// <param name="c">The stroke color to set.</param>
     private void SetStrokeColor(CssColor c)
         => _sb.AppendLine($"{Helpers.F(c.R)} {Helpers.F(c.G)} {Helpers.F(c.B)} RG");
 
     /// <summary>
     /// Sets the current font and size in the graphic state if they have changed.
     /// </summary>
-    private void SetFont(string name, float size)
+    /// <param name="name">The name of the font to set.</param>
+    /// <param name="size">The size of the font to set.</param>
+    private void SetFont(string alias, float size)
     {
-        if (name == _currentFont && Math.Abs(size - _currentFontSize) < 0.01f) return;
-        _currentFont = name;
+        if (alias == _currentFont && Math.Abs(size - _currentFontSize) < 0.01f) return;
+        _currentFont = alias;
         _currentFontSize = size;
-        // /F1 is the font alias in the page resources dictionary
-        // We use the alias based on the font name
-        var alias = FontAlias(name);
         _sb.AppendLine($"/{alias} {Helpers.F(size)} Tf");
     }
     #endregion
@@ -152,24 +185,39 @@ public sealed class ContentStreamBuilder
     /// <returns>A byte array representing the content stream.</returns>
     public byte[] Build(bool compress = true)
     {
-        var raw = Encoding.Latin1.GetBytes(_sb.ToString());
-        if (!compress) return raw;
-        return Deflate(raw);
+        byte[] raw = Encoding.Latin1.GetBytes(_sb.ToString());
+        return compress ? Helpers.Deflate(raw) : raw;
     }
 
     /// <summary>
     /// Gets the raw, uncompressed content stream as a string.
     /// </summary>
     public string RawContent => _sb.ToString();
-    #endregion
 
+    #endregion
     #region Utils
 
-    /// <summary>Escapes special characters in a PDF string.</summary>
+    /// <summary>
+    /// Builds the GID hex string for an embedded (Type0/Identity-H) font.
+    /// Each Unicode character is mapped to its 2-byte GID and encoded as 4 hex digits.
+    /// Result: "GGGGGGGG…" (no spaces, no angle brackets — caller adds those).
+    /// </summary>
+    private static string BuildGidHexString(string text, EmbeddedFontInfo font)
+    {
+        StringBuilder sb = new(text.Length * 4);
+        foreach (char ch in text)
+        {
+            int gid = font.GetGlyphId(ch);
+            sb.Append(gid.ToString("X4"));
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Escapes special characters in a PDF Latin-1 string literal.</summary>
     private static string EscapePdfString(string s)
     {
-        var sb = new StringBuilder(s.Length);
-        foreach (var ch in s)
+        StringBuilder sb = new(s.Length);
+        foreach (char ch in s)
         {
             switch (ch)
             {
@@ -177,11 +225,7 @@ public sealed class ContentStreamBuilder
                 case ')': sb.Append("\\)"); break;
                 case '\\': sb.Append("\\\\"); break;
                 default:
-                    // Characters outside basic Latin-1 → replace with '?'
-                    if (ch > 255)
-                        sb.Append('?');
-                    else
-                        sb.Append(ch);
+                    sb.Append(ch > 255 ? '?' : ch);
                     break;
             }
         }
@@ -196,7 +240,7 @@ public sealed class ContentStreamBuilder
         && Math.Abs(a.B - b.B) < 0.001f;
 
     /// <summary>
-    /// Maps a PDF standard font name to its internal resource alias (F1..F12).
+    /// Maps a PDF standard font name to its resource alias (F1..F12).
     /// </summary>
     /// <param name="pdfFontName">The standard PDF name of the font.</param>
     /// <returns>The font alias used in the page resources dictionary.</returns>
@@ -216,18 +260,5 @@ public sealed class ContentStreamBuilder
         "Courier-BoldOblique" => "F12",
         _ => "F1",
     };
-
-    /// <summary>
-    /// Compresses the input data using the Deflate algorithm with a ZLib header.
-    /// </summary>
-    private static byte[] Deflate(byte[] data)
-    {
-        using var ms = new MemoryStream();
-        // PDF FlateDecode uses zlib: 2 bytes header + deflate + 4 bytes Adler32
-        // .NET DeflateStream does not add zlib header → we use ZLibStream (.NET 6+)
-        using (var zlib = new ZLibStream(ms, CompressionLevel.Optimal, leaveOpen: true))
-            zlib.Write(data, 0, data.Length);
-        return ms.ToArray();
-    }
     #endregion
 }

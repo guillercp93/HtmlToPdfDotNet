@@ -1,8 +1,11 @@
+using System.Buffers.Binary;
 using System.Globalization;
+using System.IO.Compression;
 using System.Text;
 using HtmlAgilityPack;
 using HtmlToPdfDotNet.Library.Models.Layout;
 using HtmlToPdfDotNet.Library.Models.Styles;
+using HtmlToPdfDotNet.Library.Models.Writer.Font;
 
 namespace HtmlToPdfDotNet.Library.Commons;
 
@@ -78,24 +81,48 @@ public static class Helpers
     }
 
     /// <summary>
-    /// Creates an inline run from a text and a style.
+    /// Creates an inline run from a text and a style, optionally using an embedded
+    /// font from <paramref name="registry"/> for accurate per-glyph metrics.
     /// </summary>
     /// <param name="text">The text to create the inline run from.</param>
     /// <param name="style">The computed style to apply to the inline run.</param>
-    /// <returns>The inline run.</returns>
-    public static InlineRun MakeRun(string text, ComputedStyle style)
+    /// <param name="registry">
+    ///   Optional font registry.  When the requested family is found here, the run
+    ///   carries an <see cref="EmbeddedFontInfo"/> and the layout engine uses its
+    ///   hmtx widths instead of the AFM approximations.
+    /// </param>
+    /// <returns>
+    ///   An <see cref="InlineRun"/> representing the text with the given style.
+    /// </returns>
+    public static InlineRun MakeRun(string text, ComputedStyle style, FontRegistry? registry = null)
     {
         bool bold = style.FontWeight == FontWeight.Bold;
         bool italic = style.FontStyle == FontStyle.Italic || style.FontStyle == FontStyle.Oblique;
-        var font = StandardFontMetrics.Resolve(style.FontFamily, bold, italic);
+
+        EmbeddedFontInfo? embeddedFont = null;
+        string fontName;
+
+        if (registry != null && registry.TryResolve(style.FontFamily, bold, italic, out embeddedFont))
+        {
+            // Use the registered TTF/OTF font – keep family name in FontName for
+            // identification; EmbeddedFont carries all metric / encoding data.
+            fontName = embeddedFont!.FamilyName;
+        }
+        else
+        {
+            embeddedFont = null;
+            fontName = StandardFontMetrics.Resolve(style.FontFamily, bold, italic);
+        }
+
         return new InlineRun
         {
             Text = text,
-            FontName = font,
+            FontName = fontName,
             FontSize = style.FontSize,
             Bold = bold,
             Italic = italic,
             Color = style.Color,
+            EmbeddedFont = embeddedFont,
         };
     }
 
@@ -107,13 +134,12 @@ public static class Helpers
     public static string NormalizeText(string raw)
     {
         if (string.IsNullOrEmpty(raw)) return string.Empty;
-
         // Replace line breaks and tabs with space
-        var span = raw.AsSpan();
-        var buffer = new System.Text.StringBuilder(raw.Length);
+        ReadOnlySpan<char> span = raw.Trim().AsSpan();
+        StringBuilder buffer = new(raw.Length);
         bool lastWasSpace = false;
 
-        foreach (var ch in span)
+        foreach (char ch in span)
         {
             if (ch is '\r' or '\n' or '\t' or ' ')
             {
@@ -196,4 +222,214 @@ public static class Helpers
     /// <returns>The formatted float.</returns>
     public static string F(float v)
         => v.ToString("F3", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Builds padded glyf data and returns the offsets.
+    /// </summary>
+    /// <param name="parts">The parts of the glyf data.</param>
+    /// <param name="offsets">The offsets of the glyf data.</param>
+    /// <returns>The padded glyf data.</returns>
+    public static byte[] BuildPaddedGlyf(byte[][] parts, out int[] offsets)
+    {
+        offsets = new int[parts.Length + 1];
+        int total = 0;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            offsets[i] = total;
+            int len = parts[i].Length;
+            total += len;
+            // 4-byte padding
+            if (len % 4 != 0) total += 4 - (len % 4);
+        }
+        offsets[parts.Length] = total;
+
+        var result = new byte[total];
+        int pos = 0;
+        foreach (var part in parts)
+        {
+            part.CopyTo(result, pos);
+            int len = part.Length;
+            pos += len;
+            if (len % 4 != 0) pos += 4 - (len % 4); // skip padding (already zeroed)
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Rebuilds the hmtx table.
+    /// </summary>
+    /// <param name="src">The source font bytes.</param>
+    /// <param name="tableDir">The table directory.</param>
+    /// <param name="numGlyphs">The number of glyphs.</param>
+    /// <param name="numOfHMetrics">The number of hmetrics.</param>
+    /// <returns>The rebuilt hmtx table.</returns>
+    public static byte[] RebuildHmtx(
+        ReadOnlySpan<byte> src,
+        Dictionary<string, (int Offset, int Length)> tableDir,
+        int numGlyphs,
+        int numOfHMetrics)
+    {
+        if (!tableDir.TryGetValue("hmtx", out var hmtxE))
+            return [];
+
+        // Copy original hmtx verbatim – widths are per original GID and we keep all of them.
+        return CopyTable(src, hmtxE);
+    }
+
+    /// <summary>
+    /// Copies a table from the source font bytes.
+    /// </summary>
+    /// <param name="src">The source font bytes.</param>
+    /// <param name="t">The table to copy.</param>
+    /// <returns>The copied table.</returns>
+    public static byte[] CopyTable(ReadOnlySpan<byte> src, (int Offset, int Length) t)
+        => src[t.Offset..(t.Offset + t.Length)].ToArray();
+
+    /// <summary>
+    /// Assembles a new sfnt font file from a dictionary of table tag → bytes.
+    /// Computes the proper sfnt header and table directory.
+    /// </summary>
+    /// <param name="tables">The tables to assemble.</param>
+    /// <returns>The assembled font bytes.</returns>
+    public static byte[] AssembleSfnt(Dictionary<string, byte[]> tables)
+    {
+        int n = tables.Count;
+        // searchRange = (2 ** floor(log2(n))) * 16
+        int sr = 1;
+        while (sr * 2 <= n) sr *= 2;
+        ushort searchRange = (ushort)(sr * 16);
+        ushort entrySelector = (ushort)(Math.Log2(sr));
+        ushort rangeShift = (ushort)((n - sr) * 16);
+
+        // Sort table tags
+        var sorted = tables.Keys.OrderBy(t => t).ToList();
+
+        // Compute table data offsets (starting after sfnt header + table dir)
+        int headerSize = 12 + n * 16;
+        int dataOffset = headerSize;
+        // Each table is 4-byte aligned
+        var tableOffsets = new Dictionary<string, int>();
+        foreach (var tag in sorted)
+        {
+            tableOffsets[tag] = dataOffset;
+            int len = tables[tag].Length;
+            dataOffset += len;
+            if (len % 4 != 0) dataOffset += 4 - (len % 4);
+        }
+        int totalSize = dataOffset;
+
+        var buf = new byte[totalSize];
+        var span = buf.AsSpan();
+
+        // sfnt header (TrueType: sfVersion = 0x00010000)
+        BinaryPrimitives.WriteUInt32BigEndian(span[0..], 0x00010000u);
+        BinaryPrimitives.WriteUInt16BigEndian(span[4..], (ushort)n);
+        BinaryPrimitives.WriteUInt16BigEndian(span[6..], searchRange);
+        BinaryPrimitives.WriteUInt16BigEndian(span[8..], entrySelector);
+        BinaryPrimitives.WriteUInt16BigEndian(span[10..], rangeShift);
+
+        // Table directory
+        int dirPos = 12;
+        foreach (var tag in sorted)
+        {
+            var tagBytes = System.Text.Encoding.ASCII.GetBytes(tag.PadRight(4)[..4]);
+            tagBytes.CopyTo(span[dirPos..]);
+            int off = tableOffsets[tag];
+            var tdata = tables[tag];
+            uint checksum = CalcChecksum(tdata);
+            BinaryPrimitives.WriteUInt32BigEndian(span[(dirPos + 4)..], checksum);
+            BinaryPrimitives.WriteUInt32BigEndian(span[(dirPos + 8)..], (uint)off);
+            BinaryPrimitives.WriteUInt32BigEndian(span[(dirPos + 12)..], (uint)tdata.Length);
+            dirPos += 16;
+        }
+
+        // Table data
+        foreach (var tag in sorted)
+        {
+            int off = tableOffsets[tag];
+            tables[tag].CopyTo(span[off..]);
+        }
+
+        return buf;
+    }
+
+    /// <summary>
+    /// Calculates the checksum of the given data.
+    /// </summary>
+    /// <param name="data">The data to calculate the checksum of.</param>
+    /// <returns>The checksum.</returns>
+    public static uint CalcChecksum(byte[] data)
+    {
+        uint sum = 0;
+        int i = 0;
+        while (i + 3 < data.Length)
+        {
+            sum += BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(i));
+            i += 4;
+        }
+        // Remaining bytes (pad with zeros)
+        if (i < data.Length)
+        {
+            uint last = 0;
+            int shift = 24;
+            while (i < data.Length) { last |= (uint)data[i++] << shift; shift -= 8; }
+            sum += last;
+        }
+        return sum;
+    }
+
+    /// <summary>
+    /// Compresses the given byte array using Zlib (FlateDecode).
+    /// </summary>
+    public static byte[] Deflate(byte[] data)
+    {
+        using MemoryStream ms = new();
+        using (ZLibStream zlib = new(ms, CompressionLevel.Optimal, leaveOpen: true))
+            zlib.Write(data, 0, data.Length);
+        return ms.ToArray();
+    }
+
+    /// <summary>
+    /// Generates a deterministic 6-character uppercase subset prefix from a string.
+    /// </summary>
+    public static string MakeSubsetTag(string input)
+    {
+        uint hash = 2166136261u;
+        foreach (char c in input) { hash ^= (byte)c; hash *= 16777619u; }
+        StringBuilder sb = new(6);
+        for (int i = 0; i < 6; i++) { sb.Append((char)('A' + hash % 26)); hash /= 26; }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Sanitizes a string for use as a PDF/PostScript name token.
+    /// </summary>
+    public static string SanitizePsName(string name)
+        => new string(name.Replace(" ", "")
+            .Where(c => c is (>= 'A' and <= 'Z') or (>= 'a' and <= 'z')
+                          or (>= '0' and <= '9') or '-' or '_')
+            .ToArray());
+
+
+    /// <summary>
+    /// Measures <paramref name="text"/> using the embedded font's hmtx table when
+    /// available, otherwise falls back to the AFM-based <see cref="StandardFontMetrics"/>.
+    /// </summary>
+    /// <param name="text">The text to measure.</param>
+    /// <param name="run">The inline run containing the font information.</param>
+    /// <returns>The width of the text in points.</returns>
+    public static float MeasureText(string text, InlineRun run)
+        => run.EmbeddedFont != null
+            ? run.EmbeddedFont.MeasureWidth(text, run.FontSize)
+            : StandardFontMetrics.MeasureWidth(text, run.FontName, run.FontSize);
+
+    /// <summary>
+    /// Creates a CssEdges with the given points for top and bottom margins and zero for left and right margins.
+    /// </summary>
+    /// <param name="points">The top and bottom margin points.</param>
+    /// <returns>The CssEdges with the given points for top and bottom margins and zero for left and right margins.</returns>
+    public static CssEdges DefaultMargin(float points) => new(new CssLength(points), CssLength.Zero);
+
+    public static CssEdges DefaultPadding(float points) => new(CssLength.Zero, CssLength.Zero, CssLength.Zero, new CssLength(points));
+
 }

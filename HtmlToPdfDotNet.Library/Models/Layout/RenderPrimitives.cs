@@ -1,5 +1,5 @@
 using HtmlToPdfDotNet.Library.Commons;
-using HtmlToPdfDotNet.Library.Models.Styles;
+using HtmlToPdfDotNet.Library.Models.Writer.Font;
 
 namespace HtmlToPdfDotNet.Library.Models.Layout;
 
@@ -63,6 +63,13 @@ public sealed class TextPrimitive : RenderPrimitive
     public bool Bold { get; init; }
     public bool Italic { get; init; }
     public CssColor Color { get; init; }
+
+    /// <summary>
+    /// When non-null, this text primitive uses an embedded TTF/OTF font.
+    /// The content-stream builder will encode the text as GID hex strings
+    /// and the font writer will emit a Type0/CIDFontType2 object chain.
+    /// </summary>
+    public EmbeddedFontInfo? EmbeddedFont { get; init; }
 }
 
 /// <summary>

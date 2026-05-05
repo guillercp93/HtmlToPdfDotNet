@@ -1,6 +1,7 @@
 using HtmlAgilityPack;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Styles;
+using HtmlToPdfDotNet.Library.Models.Writer.Font;
 
 namespace HtmlToPdfDotNet.Library.Models.Layout;
 
@@ -14,6 +15,7 @@ public sealed class BlockLayoutEngine
     private readonly PageLayout _page;
     private readonly Dictionary<HtmlNode, ComputedStyle> _styles;
     private readonly LayoutResult _result = new();
+    private readonly FontRegistry? _registry;
 
     #region Pagination Status
     private int _currentPage = 0;
@@ -28,10 +30,14 @@ public sealed class BlockLayoutEngine
     /// </summary>
     /// <param name="page">The page layout configuration (size, margins, etc.).</param>
     /// <param name="styles">A dictionary containing the computed styles for each HTML node.</param>
-    public BlockLayoutEngine(PageLayout page, Dictionary<HtmlNode, ComputedStyle> styles)
+    /// <param name="registry">Optional font registry for embedded TTF/OTF fonts.</param>
+    public BlockLayoutEngine(PageLayout page,
+                             Dictionary<HtmlNode, ComputedStyle> styles,
+                             FontRegistry? registry = null)
     {
         _page = page;
         _styles = styles;
+        _registry = registry;
         _contentTop = page.Margins.Top;
         _contentLeft = page.Margins.Left;
         _pageContentH = page.ContentHeight;
@@ -65,17 +71,17 @@ public sealed class BlockLayoutEngine
     {
         float startY = _cursorY;
 
-        foreach (var child in parent.ChildNodes)
+        foreach (HtmlNode child in parent.ChildNodes)
         {
-            if (!_styles.TryGetValue(child, out var style)) continue;
+            if (!_styles.TryGetValue(child, out ComputedStyle? style)) continue;
             if (style.Display == DisplayType.None) continue;
 
             if (child.NodeType == HtmlNodeType.Text)
             {
-                var text = Helpers.NormalizeText(child.InnerText);
+                string text = Helpers.NormalizeText(child.InnerText);
                 if (!string.IsNullOrWhiteSpace(text))
                 {
-                    LayoutTextRuns(new[] { Helpers.MakeRun(text, style) }, x, availableWidth, style.TextAlign);
+                    LayoutTextRuns(new[] { Helpers.MakeRun(text, style, _registry) }, x, availableWidth, style.TextAlign);
                 }
                 continue;
             }
@@ -86,7 +92,7 @@ public sealed class BlockLayoutEngine
                 AdvancePage();
             }
 
-            var display = style.Display;
+            DisplayType display = style.Display;
             if (display == DisplayType.Block || display == DisplayType.InlineBlock || display == DisplayType.Table)
             {
                 LayoutBlock(child, style, x, availableWidth);
@@ -114,7 +120,7 @@ public sealed class BlockLayoutEngine
     /// <param name="availableWidth">The total width available in the parent container.</param>
     private void LayoutBlock(HtmlNode node, ComputedStyle style, float parentX, float availableWidth)
     {
-        var box = new BoxModel(node, style);
+        BoxModel box = new(node, style);
         box.ResolveWidth(availableWidth);
         box.X = parentX;
         box.Y = _cursorY;
@@ -189,7 +195,7 @@ public sealed class BlockLayoutEngine
     /// <returns>The height of the resulting line boxes.</returns>
     private float LayoutInlineContent(HtmlNode node, ComputedStyle containerStyle, float contentX, float contentWidth)
     {
-        var runs = CollectInlineRuns(node);
+        List<InlineRun> runs = CollectInlineRuns(node);
         if (runs.Count == 0)
         {
             return 0f;
@@ -203,7 +209,7 @@ public sealed class BlockLayoutEngine
     /// </summary>
     private float LayoutInlineContainer(HtmlNode node, ComputedStyle style, float x, float availableWidth)
     {
-        var runs = CollectInlineRuns(node);
+        List<InlineRun> runs = CollectInlineRuns(node);
         if (runs.Count == 0)
         {
             return 0f;
@@ -214,14 +220,19 @@ public sealed class BlockLayoutEngine
     /// <summary>
     /// Processes a sequence of inline runs, breaks them into lines, and generates text primitives.
     /// </summary>
+    /// <param name="runs">The inline runs to layout.</param>
+    /// <param name="contentX">The horizontal start position.</param>
+    /// <param name="contentWidth">The width available for text wrapping.</param>
+    /// <param name="align">The text alignment.</param>
+    /// <returns>The height of the resulting line boxes.</returns>
     private float LayoutTextRuns(IReadOnlyList<InlineRun> runs, float contentX, float contentWidth, TextAlign align)
     {
         if (runs.Count == 0) return 0f;
 
-        var lines = InlineLayoutEngine.Layout(runs, contentWidth, align);
+        List<LineBox> lines = InlineLayoutEngine.Layout(runs, contentWidth, align);
         float startY = _cursorY;
 
-        foreach (var line in lines)
+        foreach (LineBox line in lines)
         {
             // Check if the line fits on the current page
             if (_cursorY + line.LineHeight > _pageContentH)
@@ -232,7 +243,7 @@ public sealed class BlockLayoutEngine
             // Baseline Y (reference: inside the page, Y from top)
             float baselineY = _cursorY + line.Ascent;
 
-            foreach (var (runItem, runX) in line.Items)
+            foreach ((InlineRun runItem, float runX) in line.Items)
             {
                 if (string.IsNullOrEmpty(runItem.Text)) continue;
 
@@ -247,6 +258,7 @@ public sealed class BlockLayoutEngine
                     Bold = runItem.Bold,
                     Italic = runItem.Italic,
                     Color = runItem.Color,
+                    EmbeddedFont = runItem.EmbeddedFont, // null → standard Type1 font
                 });
             }
 
@@ -259,9 +271,11 @@ public sealed class BlockLayoutEngine
     /// <summary>
     /// Gathers all text and inline child nodes into a flat list of <see cref="InlineRun"/> objects.
     /// </summary>
+    /// <param name="node">The node whose content is being collected.</param>
+    /// <returns>The list of <see cref="InlineRun"/> objects.</returns>
     private List<InlineRun> CollectInlineRuns(HtmlNode node)
     {
-        var runs = new List<InlineRun>();
+        List<InlineRun> runs = [];
         CollectRunsRecursive(node, runs);
         return runs;
     }
@@ -269,19 +283,21 @@ public sealed class BlockLayoutEngine
     /// <summary>
     /// Recursively collects runs from the node tree, handling nested inline elements.
     /// </summary>
+    /// <param name="node">The node to collect runs from.</param>
+    /// <param name="runs">The list of <see cref="InlineRun"/> objects to add to.</param>
     private void CollectRunsRecursive(HtmlNode node, List<InlineRun> runs)
     {
-        foreach (var child in node.ChildNodes)
+        foreach (HtmlNode child in node.ChildNodes)
         {
-            if (!_styles.TryGetValue(child, out var style)) continue;
+            if (!_styles.TryGetValue(child, out ComputedStyle? style)) continue;
             if (style.Display == DisplayType.None) continue;
 
             if (child.NodeType == HtmlNodeType.Text)
             {
-                var text = Helpers.NormalizeText(child.InnerText);
+                string text = Helpers.NormalizeText(child.InnerText);
                 if (!string.IsNullOrEmpty(text))
                 {
-                    runs.Add(Helpers.MakeRun(text, style));
+                    runs.Add(Helpers.MakeRun(text, style, _registry));
                 }
             }
             else if (child.NodeType == HtmlNodeType.Element)
@@ -298,6 +314,9 @@ public sealed class BlockLayoutEngine
     /// <summary>
     /// Emits background and border primitives for the specified box model.
     /// </summary>
+    /// <param name="box">The box model to emit.</param>
+    /// <param name="borderBoxTop">The Y coordinate of the top of the border box.</param>
+    /// <param name="borderBoxX">The X coordinate of the left of the border box.</param>
     private void EmitBox(BoxModel box, float borderBoxTop, float borderBoxX)
     {
         float bbW = box.BorderBoxWidth;
@@ -327,6 +346,11 @@ public sealed class BlockLayoutEngine
     /// <summary>
     /// Emits a line primitive for a specific border side if it is visible.
     /// </summary>
+    /// <param name="side">The border side to emit.</param>
+    /// <param name="x1">The X coordinate of the start of the border line.</param>
+    /// <param name="y1">The Y coordinate of the start of the border line.</param>
+    /// <param name="x2">The X coordinate of the end of the border line.</param>
+    /// <param name="y2">The Y coordinate of the end of the border line.</param>
     private void EmitBorder(CssBorderSide side, float x1, float y1, float x2, float y2)
     {
         if (!side.IsVisible) return;

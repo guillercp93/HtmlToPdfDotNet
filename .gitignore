@@ -55,3 +55,6 @@ nunit-*.xml
 
 # VS Code
 .vscode/
+
+# Test Output
+*.pdf

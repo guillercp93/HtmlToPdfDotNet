@@ -92,7 +92,7 @@ public class PdfGenerator
         var styles = resolver.Resolve(doc.DocumentNode);
 
         // Phase 2 – Layout engine
-        var engine = new BlockLayoutEngine(_options.Page, styles);
+        var engine = new BlockLayoutEngine(_options.Page, styles, _options.Fonts);
         return engine.Layout(doc.DocumentNode);
     }
 }

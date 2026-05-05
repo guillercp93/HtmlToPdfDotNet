@@ -1,4 +1,5 @@
 using HtmlToPdfDotNet.Library.Commons;
+using HtmlToPdfDotNet.Library.Models.Writer.Font;
 
 namespace HtmlToPdfDotNet.Library.Models.Layout;
 
@@ -14,4 +15,10 @@ public sealed class InlineRun
     public bool Italic { get; init; }
     public CssColor Color { get; init; }
     public float Width { get; set; }   // measured
+
+    /// <summary>
+    /// When non-null, this run is rendered with an embedded TTF/OTF font instead
+    /// of a standard PDF Type1 font.  The value is taken from <see cref="FontRegistry"/>.
+    /// </summary>
+    public EmbeddedFontInfo? EmbeddedFont { get; init; }
 }

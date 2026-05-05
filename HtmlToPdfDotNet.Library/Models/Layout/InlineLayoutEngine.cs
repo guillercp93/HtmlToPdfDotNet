@@ -15,26 +15,25 @@ public static class InlineLayoutEngine
     /// <param name="availableWidth">Available width in points.</param>
     /// <param name="textAlign">Horizontal alignment of text.</param>
     /// <returns>Sequence of lines ready to render.</returns>
-    public static List<LineBox> Layout(
-        IEnumerable<InlineRun> runs,
-        float availableWidth,
-        TextAlign textAlign = TextAlign.Left)
+    public static List<LineBox> Layout(IEnumerable<InlineRun> runs,
+                                       float availableWidth,
+                                       TextAlign textAlign = TextAlign.Left)
     {
-        var lines = new List<LineBox>();
-        var line = new LineBox();
+        List<LineBox> lines = new();
+        LineBox line = new();
         float curX = 0f;
 
-        foreach (var run in runs)
+        foreach (InlineRun run in runs)
         {
-            // Measure the run
-            run.Width = StandardFontMetrics.MeasureWidth(run.Text, run.FontName, run.FontSize);
+            // Measure the run (use embedded font hmtx if available)
+            run.Width = Helpers.MeasureText(run.Text, run);
 
             // Split into words preserving spaces
-            var words = Helpers.SplitWords(run.Text);
+            IEnumerable<string> words = Helpers.SplitWords(run.Text);
 
-            foreach (var word in words)
+            foreach (string word in words)
             {
-                var wordWidth = StandardFontMetrics.MeasureWidth(word, run.FontName, run.FontSize);
+                float wordWidth = Helpers.MeasureText(word, run);
 
                 // If the word does not fit and the line already has content -> new line
                 if (curX + wordWidth > availableWidth && line.Items.Count > 0)
@@ -45,9 +44,9 @@ public static class InlineLayoutEngine
                     curX = 0f;
 
                     // Skip leading space
-                    var trimmedWord = word.TrimStart();
+                    string trimmedWord = word.TrimStart();
                     if (string.IsNullOrEmpty(trimmedWord)) continue;
-                    wordWidth = StandardFontMetrics.MeasureWidth(trimmedWord, run.FontName, run.FontSize);
+                    wordWidth = Helpers.MeasureText(trimmedWord, run);
 
                     line.Items.Add((new InlineRun
                     {
@@ -57,6 +56,7 @@ public static class InlineLayoutEngine
                         Bold = run.Bold,
                         Italic = run.Italic,
                         Color = run.Color,
+                        EmbeddedFont = run.EmbeddedFont,
                         Width = wordWidth,
                     }, curX));
                     Helpers.UpdateMetrics(line, run);
@@ -73,6 +73,7 @@ public static class InlineLayoutEngine
                         Bold = run.Bold,
                         Italic = run.Italic,
                         Color = run.Color,
+                        EmbeddedFont = run.EmbeddedFont,
                         Width = wordWidth,
                     }, curX));
                     Helpers.UpdateMetrics(line, run);
@@ -85,7 +86,7 @@ public static class InlineLayoutEngine
         if (line.Items.Count > 0)
         {
             // Last line is never justified (CSS behavior)
-            var lastAlign = textAlign == TextAlign.Justify ? TextAlign.Left : textAlign;
+            TextAlign lastAlign = textAlign == TextAlign.Justify ? TextAlign.Left : textAlign;
             Helpers.FinalizeAndAlign(line, availableWidth, lastAlign);
             lines.Add(line);
         }
