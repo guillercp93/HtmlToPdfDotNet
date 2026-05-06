@@ -16,7 +16,7 @@ public class ContentStreamBuilderTests
     [Fact]
     public void DrawText_ProducesBTandTj()
     {
-        var b = Builder();
+        ContentStreamBuilder b = Builder();
         b.DrawText(new TextPrimitive
         {
             X = 50f,
@@ -27,7 +27,7 @@ public class ContentStreamBuilderTests
             Color = new CssColor(0, 0, 0),
         });
 
-        var raw = b.RawContent;
+        string raw = b.RawContent;
         Assert.Contains("BT", raw);
         Assert.Contains("ET", raw);
         Assert.Contains("Tj", raw);
@@ -38,7 +38,7 @@ public class ContentStreamBuilderTests
     public void DrawText_InvertsYCoordinate()
     {
         // pageH=841.89, layoutY=100 → pdfY = 841.89 - 100 = 741.89
-        var b = Builder();
+        ContentStreamBuilder b = Builder();
         b.DrawText(new TextPrimitive
         {
             X = 0,
@@ -49,14 +49,14 @@ public class ContentStreamBuilderTests
             Color = new CssColor(0, 0, 0),
         });
 
-        var raw = b.RawContent;
+        string raw = b.RawContent;
         Assert.Contains("741.890", raw);
     }
 
     [Fact]
     public void DrawRect_ProducesReAndF()
     {
-        var b = Builder();
+        ContentStreamBuilder b = Builder();
         b.DrawRect(new RectPrimitive
         {
             X = 10,
@@ -66,7 +66,7 @@ public class ContentStreamBuilderTests
             Fill = CssColor.FromRgb(255, 0, 0),
         });
 
-        var raw = b.RawContent;
+        string raw = b.RawContent;
         Assert.Contains(" re f", raw);
         Assert.Contains("rg", raw);  // fill color
     }
@@ -74,7 +74,7 @@ public class ContentStreamBuilderTests
     [Fact]
     public void DrawBorderLine_ProducesStrokeOperators()
     {
-        var b = Builder();
+        ContentStreamBuilder b = Builder();
         b.DrawBorderLine(new BorderLinePrimitive
         {
             X1 = 0,
@@ -86,7 +86,7 @@ public class ContentStreamBuilderTests
             Style = BorderStyle.Solid,
         });
 
-        var raw = b.RawContent;
+        string raw = b.RawContent;
         Assert.Contains(" m ", raw);
         Assert.Contains(" l S", raw);
     }
@@ -94,7 +94,7 @@ public class ContentStreamBuilderTests
     [Fact]
     public void DrawBorderLine_DashedAddesDashPattern()
     {
-        var b = Builder();
+        ContentStreamBuilder b = Builder();
         b.DrawBorderLine(new BorderLinePrimitive
         {
             X1 = 0,
@@ -112,7 +112,7 @@ public class ContentStreamBuilderTests
     [Fact]
     public void Build_WithCompression_ReturnsSmallerBytes()
     {
-        var b = Builder();
+        ContentStreamBuilder b = Builder();
         for (int i = 0; i < 50; i++)
             b.DrawText(new TextPrimitive
             {
@@ -124,8 +124,8 @@ public class ContentStreamBuilderTests
                 Color = CssColor.Black,
             });
 
-        var compressed = b.Build(compress: true);
-        var uncompressed = b.Build(compress: false);
+        byte[] compressed = b.Build(compress: true);
+        byte[] uncompressed = b.Build(compress: false);
 
         Assert.True(compressed.Length < uncompressed.Length,
             $"Compressed {compressed.Length} should be < uncompressed {uncompressed.Length}");
@@ -134,7 +134,7 @@ public class ContentStreamBuilderTests
     [Fact]
     public void EscapeParentheses_InTextContent()
     {
-        var b = Builder();
+        ContentStreamBuilder b = Builder();
         b.DrawText(new TextPrimitive
         {
             X = 0,
@@ -158,7 +158,7 @@ public class PdfDocumentWriterTests
 {
     private static byte[] Generate(string html, bool compress = false)
     {
-        var options = new ConversionOptions { CompressStreams = compress };
+        ConversionOptions options = new() { CompressStreams = compress };
         return new PdfGenerator(options).Convert(html);
     }
 
@@ -167,32 +167,32 @@ public class PdfDocumentWriterTests
     [Fact]
     public void Output_StartsWithPdfHeader()
     {
-        var pdf = Generate("<p>Hello</p>");
-        var header = Encoding.Latin1.GetString(pdf, 0, 8);
+        byte[] pdf = Generate("<p>Hello</p>");
+        string header = Encoding.Latin1.GetString(pdf, 0, 8);
         Assert.StartsWith("%PDF-1.7", header);
     }
 
     [Fact]
     public void Output_EndsWithEof()
     {
-        var pdf = Generate("<p>Hello</p>");
-        var tail = Encoding.Latin1.GetString(pdf, pdf.Length - 5, 5);
+        byte[] pdf = Generate("<p>Hello</p>");
+        string tail = Encoding.Latin1.GetString(pdf, pdf.Length - 5, 5);
         Assert.Equal("%%EOF", tail);
     }
 
     [Fact]
     public void Output_ContainsStartxref()
     {
-        var pdf = Generate("<p>Hello</p>");
-        var text = Encoding.Latin1.GetString(pdf);
+        byte[] pdf = Generate("<p>Hello</p>");
+        string text = Encoding.Latin1.GetString(pdf);
         Assert.Contains("startxref", text);
     }
 
     [Fact]
     public void Output_ContainsCatalogAndPages()
     {
-        var pdf = Generate("<p>Hello</p>");
-        var text = Encoding.Latin1.GetString(pdf);
+        byte[] pdf = Generate("<p>Hello</p>");
+        string text = Encoding.Latin1.GetString(pdf);
         Assert.Contains("/Type /Catalog", text);
         Assert.Contains("/Type /Pages", text);
     }
@@ -200,8 +200,8 @@ public class PdfDocumentWriterTests
     [Fact]
     public void Output_ContainsFontDeclarations()
     {
-        var pdf = Generate("<p>Hello</p>");
-        var text = Encoding.Latin1.GetString(pdf);
+        byte[] pdf = Generate("<p>Hello</p>");
+        string text = Encoding.Latin1.GetString(pdf);
         Assert.Contains("/Type /Font", text);
         Assert.Contains("/Subtype /Type1", text);
         Assert.Contains("Helvetica", text);
@@ -210,8 +210,8 @@ public class PdfDocumentWriterTests
     [Fact]
     public void Output_ContainsMediaBox()
     {
-        var pdf = Generate("<p>Hello</p>");
-        var text = Encoding.Latin1.GetString(pdf);
+        byte[] pdf = Generate("<p>Hello</p>");
+        string text = Encoding.Latin1.GetString(pdf);
         Assert.Contains("/MediaBox", text);
     }
 
@@ -220,18 +220,18 @@ public class PdfDocumentWriterTests
     [Fact]
     public void UncompressedOutput_ContainsTextContent()
     {
-        var pdf = Generate("<p>HelloWorld</p>", compress: false);
-        var text = Encoding.Latin1.GetString(pdf);
+        byte[] pdf = Generate("<p>HelloWorld</p>", compress: false);
+        string text = Encoding.Latin1.GetString(pdf);
         Assert.Contains("HelloWorld", text);
     }
 
     [Fact]
     public void MultiPage_ContainsMultiplePageObjects()
     {
-        var html = "<div>Page1</div>" +
+        string html = "<div>Page1</div>" +
                    "<div style='page-break-before:always'>Page2</div>";
-        var pdf = Generate(html);
-        var text = Encoding.Latin1.GetString(pdf);
+        byte[] pdf = Generate(html);
+        string text = Encoding.Latin1.GetString(pdf);
 
         // Should be at least 2 objects of type Page
         int count = CountOccurrences(text, "/Type /Page\n");
@@ -241,7 +241,7 @@ public class PdfDocumentWriterTests
     [Fact]
     public void Output_IsNonEmpty()
     {
-        var pdf = Generate("<h1>Test</h1>");
+        byte[] pdf = Generate("<h1>Test</h1>");
         Assert.True(pdf.Length > 500, $"Expected >500 bytes, got {pdf.Length}");
     }
 
@@ -249,14 +249,14 @@ public class PdfDocumentWriterTests
     public void ConvertToStream_ProducesSameResultAsToBytes()
     {
         const string html = "<p>Test consistency</p>";
-        var options = new ConversionOptions { CompressStreams = false };
-        var converter = new PdfGenerator(options);
+        ConversionOptions options = new() { CompressStreams = false };
+        PdfGenerator converter = new(options);
 
-        var bytes = converter.Convert(html);
+        byte[] bytes = converter.Convert(html);
 
-        using var ms = new MemoryStream();
+        using MemoryStream ms = new();
         converter.Convert(html, ms);
-        var streamBytes = ms.ToArray();
+        byte[] streamBytes = ms.ToArray();
 
         // Ignore date in /Info (can differ in ms) — compare length
         Assert.Equal(bytes.Length, streamBytes.Length);
@@ -265,12 +265,12 @@ public class PdfDocumentWriterTests
     [Fact]
     public void XrefTable_HasValidEntries()
     {
-        var pdf = Generate("<p>Hello</p>", compress: false);
-        var text = Encoding.Latin1.GetString(pdf);
+        byte[] pdf = Generate("<p>Hello</p>", compress: false);
+        string text = Encoding.Latin1.GetString(pdf);
 
         // Each xref entry has the form: "0000000NNN 00000 n "
-        var lines = text.Split('\n');
-        var xrefEntries = lines
+        string[] lines = text.Split('\n');
+        List<string> xrefEntries = lines
             .Where(l => l.Length >= 18 && (l.EndsWith("n ") || l.EndsWith("f ")))
             .ToList();
 

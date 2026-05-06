@@ -21,33 +21,33 @@ public static class Helpers
     {
         if (line.Items.Count == 0) return;
 
-        var totalWidth = line.Items.Sum(i => i.Run.Width);
+        float totalWidth = line.Items.Sum(i => i.Run.Width);
         line.Width = totalWidth;
 
         switch (align)
         {
             case TextAlign.Right:
                 {
-                    var offset = availableWidth - totalWidth;
+                    float offset = availableWidth - totalWidth;
                     ShiftAll(line, offset);
                     break;
                 }
             case TextAlign.Center:
                 {
-                    var offset = (availableWidth - totalWidth) / 2f;
+                    float offset = (availableWidth - totalWidth) / 2f;
                     ShiftAll(line, offset);
                     break;
                 }
             case TextAlign.Justify when line.Items.Count > 1:
                 {
                     // Distribuir espacio extra entre los gaps entre palabras
-                    var spaceCount = line.Items.Count - 1;
-                    var extra = (availableWidth - totalWidth) / spaceCount;
-                    var accumulated = 0f;
-                    var updated = new List<(InlineRun Run, float X)>();
+                    int spaceCount = line.Items.Count - 1;
+                    float extra = (availableWidth - totalWidth) / spaceCount;
+                    float accumulated = 0f;
+                    List<(InlineRun Run, float X)> updated = new();
                     for (int i = 0; i < line.Items.Count; i++)
                     {
-                        var (run, x) = line.Items[i];
+                        (InlineRun run, float x) = line.Items[i];
                         updated.Add((run, x + accumulated));
                         if (i < spaceCount) accumulated += extra;
                     }
@@ -67,11 +67,11 @@ public static class Helpers
     /// <returns>True if the node has only inline content, false otherwise.</returns>
     public static bool HasOnlyInlineContent(HtmlNode node, Dictionary<HtmlNode, ComputedStyle> parentStyle)
     {
-        foreach (var child in node.ChildNodes)
+        foreach (HtmlNode child in node.ChildNodes)
         {
             if (child.NodeType == HtmlNodeType.Text) continue;
             if (child.NodeType != HtmlNodeType.Element) continue;
-            if (!parentStyle.TryGetValue(child, out var style)) continue;
+            if (!parentStyle.TryGetValue(child, out ComputedStyle? style)) continue;
             if (style.Display == DisplayType.Block || style.Display == DisplayType.Table)
             {
                 return false;
@@ -163,7 +163,7 @@ public static class Helpers
     public static void ShiftAll(LineBox line, float offset)
     {
         if (offset <= 0f) return;
-        var updated = line.Items.Select(i => (i.Run, i.X + offset)).ToList();
+        List<(InlineRun Run, float)> updated = line.Items.Select(i => (i.Run, i.X + offset)).ToList();
         line.Items.Clear();
         line.Items.AddRange(updated);
     }
@@ -198,8 +198,8 @@ public static class Helpers
     /// <param name="run">The run to update the metrics with.</param>
     public static void UpdateMetrics(LineBox line, InlineRun run)
     {
-        var ascent = run.FontSize * 0.8f;
-        var descent = -run.FontSize * 0.2f;
+        float ascent = run.FontSize * 0.8f;
+        float descent = -run.FontSize * 0.2f;
         if (ascent > line.Ascent) line.Ascent = ascent;
         if (descent < line.Descent) line.Descent = descent;
     }
@@ -211,7 +211,7 @@ public static class Helpers
     /// <param name="text">The text to write.</param>
     public static void WriteRaw(Stream s, string text)
     {
-        var bytes = Encoding.Latin1.GetBytes(text);
+        byte[] bytes = Encoding.Latin1.GetBytes(text);
         s.Write(bytes);
     }
 
@@ -243,9 +243,9 @@ public static class Helpers
         }
         offsets[parts.Length] = total;
 
-        var result = new byte[total];
+        byte[] result = new byte[total];
         int pos = 0;
-        foreach (var part in parts)
+        foreach (byte[] part in parts)
         {
             part.CopyTo(result, pos);
             int len = part.Length;
@@ -260,14 +260,9 @@ public static class Helpers
     /// </summary>
     /// <param name="src">The source font bytes.</param>
     /// <param name="tableDir">The table directory.</param>
-    /// <param name="numGlyphs">The number of glyphs.</param>
-    /// <param name="numOfHMetrics">The number of hmetrics.</param>
     /// <returns>The rebuilt hmtx table.</returns>
-    public static byte[] RebuildHmtx(
-        ReadOnlySpan<byte> src,
-        Dictionary<string, (int Offset, int Length)> tableDir,
-        int numGlyphs,
-        int numOfHMetrics)
+    public static byte[] RebuildHmtx(ReadOnlySpan<byte> src,
+                                     Dictionary<string, (int Offset, int Length)> tableDir)
     {
         if (!tableDir.TryGetValue("hmtx", out var hmtxE))
             return [];
@@ -302,14 +297,14 @@ public static class Helpers
         ushort rangeShift = (ushort)((n - sr) * 16);
 
         // Sort table tags
-        var sorted = tables.Keys.OrderBy(t => t).ToList();
+        List<string> sorted = tables.Keys.OrderBy(t => t).ToList();
 
         // Compute table data offsets (starting after sfnt header + table dir)
         int headerSize = 12 + n * 16;
         int dataOffset = headerSize;
         // Each table is 4-byte aligned
-        var tableOffsets = new Dictionary<string, int>();
-        foreach (var tag in sorted)
+        Dictionary<string, int> tableOffsets = new Dictionary<string, int>();
+        foreach (string tag in sorted)
         {
             tableOffsets[tag] = dataOffset;
             int len = tables[tag].Length;
@@ -318,8 +313,8 @@ public static class Helpers
         }
         int totalSize = dataOffset;
 
-        var buf = new byte[totalSize];
-        var span = buf.AsSpan();
+        byte[] buf = new byte[totalSize];
+        Span<byte> span = buf.AsSpan();
 
         // sfnt header (TrueType: sfVersion = 0x00010000)
         BinaryPrimitives.WriteUInt32BigEndian(span[0..], 0x00010000u);
@@ -330,12 +325,12 @@ public static class Helpers
 
         // Table directory
         int dirPos = 12;
-        foreach (var tag in sorted)
+        foreach (string tag in sorted)
         {
-            var tagBytes = System.Text.Encoding.ASCII.GetBytes(tag.PadRight(4)[..4]);
+            byte[] tagBytes = Encoding.ASCII.GetBytes(tag.PadRight(4)[..4]);
             tagBytes.CopyTo(span[dirPos..]);
             int off = tableOffsets[tag];
-            var tdata = tables[tag];
+            byte[] tdata = tables[tag];
             uint checksum = CalcChecksum(tdata);
             BinaryPrimitives.WriteUInt32BigEndian(span[(dirPos + 4)..], checksum);
             BinaryPrimitives.WriteUInt32BigEndian(span[(dirPos + 8)..], (uint)off);
@@ -344,7 +339,7 @@ public static class Helpers
         }
 
         // Table data
-        foreach (var tag in sorted)
+        foreach (string tag in sorted)
         {
             int off = tableOffsets[tag];
             tables[tag].CopyTo(span[off..]);

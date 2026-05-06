@@ -103,9 +103,9 @@ public sealed class BoxModel
         else
         {
             // Block by default: occupies all available width minus margins/borders/padding
-            var used = MarginLeft + MarginRight
-                     + BorderLeftWidth + BorderRightWidth
-                     + PaddingLeft + PaddingRight;
+            float used = MarginLeft + MarginRight
+                         + BorderLeftWidth + BorderRightWidth
+                         + PaddingLeft + PaddingRight;
             ContentWidth = Math.Max(0f, availableWidth - used);
         }
     }

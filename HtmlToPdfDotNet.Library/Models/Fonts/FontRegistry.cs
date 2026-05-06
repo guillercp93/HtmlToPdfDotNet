@@ -195,7 +195,7 @@ public sealed class FontRegistry
         string[] parts = lower.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         List<string> familyParts = new List<string>();
 
-        foreach (var part in parts)
+        foreach (string part in parts)
         {
             if (part == "bold" || part == "semibold") bold = true;
             if (part == "italic" || part == "oblique") italic = true;

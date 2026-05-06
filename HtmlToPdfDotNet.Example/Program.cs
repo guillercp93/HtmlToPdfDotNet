@@ -3,7 +3,7 @@ using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
-var services = new ServiceCollection();
+ServiceCollection services = new();
 
 // ── Phase 1: Configure options ──────────────────────────────────────
 ConversionOptions options = new() { CompressStreams = false };
@@ -18,11 +18,11 @@ if (File.Exists(fontPath2)) options.Fonts.RegisterFont(fontPath2, "DejaVu Sans",
 services.AddSingleton(options);
 services.AddHtmlToPdfDotNet();
 
-var serviceProvider = services.BuildServiceProvider();
+ServiceProvider sp = services.BuildServiceProvider();
 
 // ── Phase 3: Use the interface ──────────────────────────────────────
 // Resolve the interface instead of the concrete class
-IPdfGenerator generator = serviceProvider.GetRequiredService<IPdfGenerator>();
+IPdfGenerator generator = sp.GetRequiredService<IPdfGenerator>();
 
 string html = @"
 <h1 style='font-family: ""DejaVu Sans""'>Hello World (via Interface)</h1>

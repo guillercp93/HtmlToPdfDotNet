@@ -18,7 +18,7 @@ namespace HtmlToPdfDotNet.Tests.Css
         [InlineData("auto", 0f)]    // IsAuto=true
         public void ParseLength_ReturnsCorrectPoints(string input, float expectedPt)
         {
-            var len = CssValueParser.ParseLength(input, parentFontSize: 12f);
+            CssLength len = CssValueParser.ParseLength(input, parentFontSize: 12f);
 
             if (input == "auto")
                 Assert.True(len.IsAuto);
@@ -36,7 +36,7 @@ namespace HtmlToPdfDotNet.Tests.Css
         [InlineData("red", 1f, 0f, 0f)]
         public void ParseColor_ReturnsCorrectRgb(string input, float r, float g, float b)
         {
-            var color = CssValueParser.ParseColor(input);
+            CssColor color = CssValueParser.ParseColor(input);
             Assert.Equal(r, color.R, precision: 2);
             Assert.Equal(g, color.G, precision: 2);
             Assert.Equal(b, color.B, precision: 2);
@@ -45,7 +45,7 @@ namespace HtmlToPdfDotNet.Tests.Css
         [Fact]
         public void ParseColor_Hex6_ParsesCorrectly()
         {
-            var c = CssValueParser.ParseColor("#336699");
+            CssColor c = CssValueParser.ParseColor("#336699");
             Assert.Equal(0x33 / 255f, c.R, precision: 3);
             Assert.Equal(0x66 / 255f, c.G, precision: 3);
             Assert.Equal(0x99 / 255f, c.B, precision: 3);
@@ -54,7 +54,7 @@ namespace HtmlToPdfDotNet.Tests.Css
         [Fact]
         public void ParseColor_RgbFunction_ParsesCorrectly()
         {
-            var c = CssValueParser.ParseColor("rgb(51, 102, 153)");
+            CssColor c = CssValueParser.ParseColor("rgb(51, 102, 153)");
             Assert.Equal(51 / 255f, c.R, precision: 3);
             Assert.Equal(102 / 255f, c.G, precision: 3);
             Assert.Equal(153 / 255f, c.B, precision: 3);
@@ -65,7 +65,7 @@ namespace HtmlToPdfDotNet.Tests.Css
         [Fact]
         public void ParseEdges_OneValue_AllSidesEqual()
         {
-            var e = CssValueParser.ParseEdges("8pt");
+            CssEdges e = CssValueParser.ParseEdges("8pt");
             Assert.Equal(8f, e.Top.Points);
             Assert.Equal(8f, e.Right.Points);
             Assert.Equal(8f, e.Bottom.Points);
@@ -75,7 +75,7 @@ namespace HtmlToPdfDotNet.Tests.Css
         [Fact]
         public void ParseEdges_TwoValues_VerticalHorizontal()
         {
-            var e = CssValueParser.ParseEdges("10pt 20pt");
+            CssEdges e = CssValueParser.ParseEdges("10pt 20pt");
             Assert.Equal(10f, e.Top.Points);
             Assert.Equal(20f, e.Right.Points);
             Assert.Equal(10f, e.Bottom.Points);
@@ -85,7 +85,7 @@ namespace HtmlToPdfDotNet.Tests.Css
         [Fact]
         public void ParseEdges_FourValues_EachSide()
         {
-            var e = CssValueParser.ParseEdges("1pt 2pt 3pt 4pt");
+            CssEdges e = CssValueParser.ParseEdges("1pt 2pt 3pt 4pt");
             Assert.Equal(1f, e.Top.Points);
             Assert.Equal(2f, e.Right.Points);
             Assert.Equal(3f, e.Bottom.Points);
@@ -103,14 +103,14 @@ namespace HtmlToPdfDotNet.Tests.Css
         [InlineData("16px", 12f)]
         public void ParseFontSize_Keywords_ReturnCorrectPoints(string input, float expected)
         {
-            var result = CssValueParser.ParseFontSize(input, 12f);
+            float result = CssValueParser.ParseFontSize(input, 12f);
             Assert.Equal(expected, result, precision: 1);
         }
 
         [Fact]
         public void ParseFontSize_Percentage_RelatesToParent()
         {
-            var result = CssValueParser.ParseFontSize("150%", parentFontSize: 12f);
+            float result = CssValueParser.ParseFontSize("150%", parentFontSize: 12f);
             Assert.Equal(18f, result, precision: 1);
         }
 
@@ -119,7 +119,7 @@ namespace HtmlToPdfDotNet.Tests.Css
         [Fact]
         public void ParseBorderSide_Shorthand_ExtractsAllParts()
         {
-            var b = CssValueParser.ParseBorderSide("2pt solid #336699");
+            CssBorderSide b = CssValueParser.ParseBorderSide("2pt solid #336699");
             Assert.Equal(2f, b.Width.Points, precision: 1);
             Assert.Equal(BorderStyle.Solid, b.Style);
             Assert.Equal(0x33 / 255f, b.Color.R, precision: 3);
@@ -128,7 +128,7 @@ namespace HtmlToPdfDotNet.Tests.Css
         [Fact]
         public void ParseBorderSide_None_ReturnsNoBorder()
         {
-            var b = CssValueParser.ParseBorderSide("none");
+            CssBorderSide b = CssValueParser.ParseBorderSide("none");
             Assert.False(b.IsVisible);
         }
 

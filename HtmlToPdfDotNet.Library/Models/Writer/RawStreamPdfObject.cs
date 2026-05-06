@@ -32,14 +32,14 @@ public sealed class RawStreamPdfObject : PdfObject
         ByteOffset = stream.Position;
 
         // "N 0 obj\n<dict>\nstream\n"
-        var header = Encoding.Latin1.GetBytes($"{Number} 0 obj\n{_dictHeader}");
+        byte[] header = Encoding.Latin1.GetBytes($"{Number} 0 obj\n{_dictHeader}");
         stream.Write(header);
 
         // Binary data of the stream
         stream.Write(_streamBytes);
 
         // "\nendstream\nendobj\n"
-        var footer = Encoding.Latin1.GetBytes("\nendstream\nendobj\n");
+        byte[] footer = Encoding.Latin1.GetBytes("\nendstream\nendobj\n");
         stream.Write(footer);
     }
 }

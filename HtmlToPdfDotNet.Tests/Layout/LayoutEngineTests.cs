@@ -74,8 +74,8 @@ public class InlineLayoutEngineTests
     public void Layout_ShortText_FitsOnOneLine()
     {
         // "Hi" con Courier 12pt → 2 * 7.2pt = 14.4pt < 200pt
-        var runs = new[] { MakeRun("Hi") };
-        var lines = InlineLayoutEngine.Layout(runs, availableWidth: 200f);
+        InlineRun[] runs = [MakeRun("Hi")];
+        List<LineBox> lines = InlineLayoutEngine.Layout(runs, availableWidth: 200f);
 
         Assert.Single(lines);
     }
@@ -84,8 +84,8 @@ public class InlineLayoutEngineTests
     public void Layout_LongText_WrapsToMultipleLines()
     {
         // Courier 12pt → cada char = 7.2pt. 10 chars = 72pt > 50pt → wraps
-        var runs = new[] { MakeRun("AAAA BBBB CCCC DDDD") };
-        var lines = InlineLayoutEngine.Layout(runs, availableWidth: 50f);
+        InlineRun[] runs = [MakeRun("AAAA BBBB CCCC DDDD")];
+        List<LineBox> lines = InlineLayoutEngine.Layout(runs, availableWidth: 50f);
 
         Assert.True(lines.Count > 1);
     }
@@ -93,8 +93,8 @@ public class InlineLayoutEngineTests
     [Fact]
     public void Layout_EmptyText_ReturnsNoLines()
     {
-        var runs = new[] { MakeRun("") };
-        var lines = InlineLayoutEngine.Layout(runs, availableWidth: 200f);
+        InlineRun[] runs = [MakeRun("")];
+        List<LineBox> lines = InlineLayoutEngine.Layout(runs, availableWidth: 200f);
 
         Assert.Empty(lines);
     }
@@ -102,11 +102,11 @@ public class InlineLayoutEngineTests
     [Fact]
     public void Layout_AlignRight_ShiftsItemsRight()
     {
-        var runs = new[] { MakeRun("Hi") };
-        var lines = InlineLayoutEngine.Layout(runs, availableWidth: 200f, TextAlign.Right);
+        InlineRun[] runs = [MakeRun("Hi")];
+        List<LineBox> lines = InlineLayoutEngine.Layout(runs, availableWidth: 200f, TextAlign.Right);
 
         // The first item should be shifted to the right
-        var (_, x) = lines[0].Items[0];
+        (InlineRun _, float x) = lines[0].Items[0];
         Assert.True(x > 0f, $"Expected x > 0, got {x}");
     }
 
@@ -114,10 +114,10 @@ public class InlineLayoutEngineTests
     public void Layout_AlignCenter_ItemIsRoughlyInMiddle()
     {
         // "Hi" en Courier 12pt → 14.4pt. Centro en 200pt → offset ≈ 92.8pt
-        var runs = new[] { MakeRun("Hi") };
-        var lines = InlineLayoutEngine.Layout(runs, availableWidth: 200f, TextAlign.Center);
+        InlineRun[] runs = [MakeRun("Hi")];
+        List<LineBox> lines = InlineLayoutEngine.Layout(runs, availableWidth: 200f, TextAlign.Center);
 
-        var (run, x) = lines[0].Items[0];
+        (InlineRun run, float x) = lines[0].Items[0];
         float expectedOffset = (200f - run.Width) / 2f;
         Assert.Equal(expectedOffset, x, precision: 1);
     }
@@ -126,12 +126,11 @@ public class InlineLayoutEngineTests
     public void Layout_MultipleRuns_MergeOnSameLine()
     {
         // Two short runs should fit on the same line
-        var runs = new[]
-        {
+        InlineRun[] runs = [
             MakeRun("Hello "),
             MakeRun("World"),
-        };
-        var lines = InlineLayoutEngine.Layout(runs, availableWidth: 200f);
+        ];
+        List<LineBox> lines = InlineLayoutEngine.Layout(runs, availableWidth: 200f);
 
         Assert.Single(lines);
         Assert.Equal(2, lines[0].Items.Count);
@@ -140,8 +139,8 @@ public class InlineLayoutEngineTests
     [Fact]
     public void Layout_LineHeight_IsPositive()
     {
-        var runs = new[] { MakeRun("Test line") };
-        var lines = InlineLayoutEngine.Layout(runs, availableWidth: 500f);
+        InlineRun[] runs = [MakeRun("Test line")];
+        List<LineBox> lines = InlineLayoutEngine.Layout(runs, availableWidth: 500f);
 
         Assert.True(lines[0].LineHeight > 0f);
     }
@@ -154,17 +153,17 @@ public class BlockLayoutEngineTests
 {
     private static LayoutResult RunLayout(string html, PageLayout? page = null)
     {
-        var doc = new HtmlDocument();
+        HtmlDocument doc = new();
         doc.LoadHtml(html);
-        var styles = new StyleResolver().Resolve(doc.DocumentNode);
-        var engine = new BlockLayoutEngine(page ?? PageLayout.A4, styles);
+        Dictionary<HtmlNode, ComputedStyle> styles = new StyleResolver().Resolve(doc.DocumentNode);
+        BlockLayoutEngine engine = new(page ?? PageLayout.A4, styles);
         return engine.Layout(doc.DocumentNode);
     }
 
     [Fact]
     public void SimpleDiv_ProducesTextPrimitives()
     {
-        var result = RunLayout("<div>Hello World</div>");
+        LayoutResult result = RunLayout("<div>Hello World</div>");
 
         Assert.Contains(result.Primitives, p => p is TextPrimitive);
     }
@@ -172,7 +171,7 @@ public class BlockLayoutEngineTests
     [Fact]
     public void DisplayNone_ProducesNoPrimitives()
     {
-        var result = RunLayout("<div style=\"display:none\">hidden</div>");
+        LayoutResult result = RunLayout("<div style=\"display:none\">hidden</div>");
 
         Assert.DoesNotContain(result.Primitives, p => p is TextPrimitive);
     }
@@ -180,7 +179,7 @@ public class BlockLayoutEngineTests
     [Fact]
     public void BackgroundColor_ProducesRectPrimitive()
     {
-        var result = RunLayout("<div style=\"background-color:#ff0000\">text</div>");
+        LayoutResult result = RunLayout("<div style=\"background-color:#ff0000\">text</div>");
 
         Assert.Contains(result.Primitives, p => p is RectPrimitive r && r.Fill.R > 0.9f);
     }
@@ -188,18 +187,19 @@ public class BlockLayoutEngineTests
     [Fact]
     public void Border_ProducesBorderLinePrimitives()
     {
-        var result = RunLayout("<div style=\"border:1pt solid black\">box</div>");
+        LayoutResult result = RunLayout("<div style=\"border:1pt solid black\">box</div>");
 
-        var borders = result.Primitives.OfType<BorderLinePrimitive>().ToList();
+        List<BorderLinePrimitive> borders = result.Primitives.OfType<BorderLinePrimitive>().ToList();
         Assert.True(borders.Count >= 4, $"Expected ≥4 border lines, got {borders.Count}");
     }
 
     [Fact]
     public void PageBreakBefore_CreatesNewPage()
     {
-        var result = RunLayout(
+        LayoutResult result = RunLayout(
             "<div>Page 1</div>" +
-            "<div style=\"page-break-before:always\">Page 2</div>");
+            "<div style=\"page-break-before:always\">Page 2</div>"
+        );
 
         Assert.True(result.PageCount >= 2);
     }
@@ -208,8 +208,8 @@ public class BlockLayoutEngineTests
     public void LongContent_SpillsToMultiplePages()
     {
         // Generate enough content to force pagination
-        var paragraphs = string.Concat(Enumerable.Repeat("<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>", 60));
-        var result = RunLayout(paragraphs);
+        string paragraphs = string.Concat(Enumerable.Repeat("<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>", 60));
+        LayoutResult result = RunLayout(paragraphs);
 
         Assert.True(result.PageCount > 1, $"Expected >1 page, got {result.PageCount}");
     }
@@ -217,22 +217,22 @@ public class BlockLayoutEngineTests
     [Fact]
     public void TextPrimitive_IsOnCorrectPage()
     {
-        var result = RunLayout("<div>Only page</div>");
+        LayoutResult result = RunLayout("<div>Only page</div>");
 
-        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        List<TextPrimitive> texts = result.Primitives.OfType<TextPrimitive>().ToList();
         Assert.All(texts, t => Assert.Equal(0, t.PageIndex));
     }
 
     [Fact]
     public void NestedBlocks_LayoutCorrectly()
     {
-        var result = RunLayout(
+        LayoutResult result = RunLayout(
             "<div style=\"padding:10pt\">" +
             "  <p>First paragraph</p>" +
             "  <p>Second paragraph</p>" +
             "</div>");
 
-        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        List<TextPrimitive> texts = result.Primitives.OfType<TextPrimitive>().ToList();
         Assert.True(texts.Count >= 2, $"Expected ≥2 text primitives, got {texts.Count}");
 
         // El segundo párrafo debe estar más abajo que el primero
@@ -243,11 +243,11 @@ public class BlockLayoutEngineTests
     [Fact]
     public void H1_IsLargerThanBodyText()
     {
-        var result = RunLayout("<h1>Title</h1><p>Body</p>");
+        LayoutResult result = RunLayout("<h1>Title</h1><p>Body</p>");
 
-        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
-        var h1 = texts.FirstOrDefault(t => t.FontSize >= 20f);
-        var body = texts.FirstOrDefault(t => t.FontSize <= 12f);
+        List<TextPrimitive> texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        TextPrimitive? h1 = texts.FirstOrDefault(t => t.FontSize >= 20f);
+        TextPrimitive? body = texts.FirstOrDefault(t => t.FontSize <= 12f);
 
         Assert.NotNull(h1);
         Assert.NotNull(body);
@@ -257,12 +257,12 @@ public class BlockLayoutEngineTests
     [Fact]
     public void ForPage_FiltersByPageIndex()
     {
-        var result = RunLayout(
+        LayoutResult result = RunLayout(
             "<div>Page 1</div>" +
             "<div style=\"page-break-before:always\">Page 2</div>");
 
-        var page0 = result.ForPage(0).ToList();
-        var page1 = result.ForPage(1).ToList();
+        List<RenderPrimitive> page0 = result.ForPage(0).ToList();
+        List<RenderPrimitive> page1 = result.ForPage(1).ToList();
 
         // Each page must have its own primitives
         Assert.NotEmpty(page0);

@@ -50,7 +50,7 @@ public static class FontSubsetBuilder
 
         // ── Parse table directory ─────────────────────────────────────────────
         ushort numTables = BinaryPrimitives.ReadUInt16BigEndian(src[4..6]);
-        var tableDir = new Dictionary<string, (int Offset, int Length)>(numTables);
+        Dictionary<string, (int Offset, int Length)> tableDir = new(numTables);
         int dirBase = 12;
         for (int i = 0; i < numTables; i++)
         {
@@ -99,7 +99,7 @@ public static class FontSubsetBuilder
 
         // ── Build new glyf data ───────────────────────────────────────────────
         // Non-kept glyphs → empty (length 0), kept glyphs → copy original data.
-        var newGlyfParts = new byte[numGlyphs][];
+        byte[][] newGlyfParts = new byte[numGlyphs][];
         for (int g = 0; g < numGlyphs; g++)
         {
             if (validGids.Contains(g))
@@ -133,7 +133,7 @@ public static class FontSubsetBuilder
         if (tableDir.TryGetValue("hhea", out var hheaE))
             numOfHMetrics = BinaryPrimitives.ReadUInt16BigEndian(src[(hheaE.Offset + 34)..(hheaE.Offset + 36)]);
 
-        byte[] newHmtx = Helpers.RebuildHmtx(src, tableDir, numGlyphs, numOfHMetrics);
+        byte[] newHmtx = Helpers.RebuildHmtx(src, tableDir);
 
         // ── Clone and patch head ──────────────────────────────────────────────
         byte[] newHead = Helpers.CopyTable(src, headE);

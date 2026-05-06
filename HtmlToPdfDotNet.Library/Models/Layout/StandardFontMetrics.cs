@@ -14,9 +14,13 @@ public static class StandardFontMetrics
     /// <summary>
     /// Returns the PDF font name given the family and style.
     /// </summary>
+    /// <param name="family">The font family name.</param>
+    /// <param name="bold">Whether the font should be bold.</param>
+    /// <param name="italic">Whether the font should be italic.</param>
+    /// <returns>The corresponding PDF font name.</returns>
     public static string Resolve(string family, bool bold, bool italic)
     {
-        var f = family.ToLowerInvariant().Trim();
+        string f = family.ToLowerInvariant().Trim();
 
         return f switch
         {
@@ -49,32 +53,59 @@ public static class StandardFontMetrics
     /// Returns the width in points of the string <paramref name="text"/>
     /// with the specified font and size.
     /// </summary>
+    /// <param name="text">The text to measure.</param>
+    /// <param name="pdfFontName">The PDF font name.</param>
+    /// <param name="fontSize">The font size.</param>
+    /// <returns>The width of the text in points.</returns>
     public static float MeasureWidth(string text, string pdfFontName, float fontSize)
     {
         if (string.IsNullOrEmpty(text)) return 0f;
 
-        var widths = GetWidthTable(pdfFontName);
+        Dictionary<char, int> widths = GetWidthTable(pdfFontName);
         float total = 0f;
 
-        foreach (var ch in text)
+        foreach (char ch in text)
         {
-            total += widths.TryGetValue(ch, out var w) ? w : widths.GetValueOrDefault(' ', 278);
+            if (widths.TryGetValue(ch, out int w))
+            {
+                total += w;
+            }
+            else
+            {
+                total += widths.GetValueOrDefault(' ', 278);
+            }
         }
 
         return total / 1000f * fontSize;
     }
 
     /// <summary>Cap-height (capital letter line) in points.</summary>
+    /// <param name="pdfFontName">The PDF font name.</param>
+    /// <param name="fontSize">The font size.</param>
+    /// <returns>The cap-height in points.</returns>
     public static float CapHeight(string pdfFontName, float fontSize)
         => IsMonospace(pdfFontName) ? fontSize * 0.562f : fontSize * 0.718f;
 
     /// <summary>Descender in points (negative value).</summary>
+    /// <param name="pdfFontName">The PDF font name.</param>
+    /// <param name="fontSize">The font size.</param>
+    /// <returns>The descender in points.</returns>
     public static float Descender(string pdfFontName, float fontSize)
         => fontSize * -0.207f;
 
+    /// <summary>
+    /// Determines whether the specified font is monospace.
+    /// </summary>
+    /// <param name="name">The font name.</param>
+    /// <returns>True if the font is monospace, false otherwise.</returns>
     private static bool IsMonospace(string name)
         => name.StartsWith("Courier", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Returns the width table for the specified font.
+    /// </summary>
+    /// <param name="fontName">The font name.</param>
+    /// <returns>The width table for the font.</returns>
     private static Dictionary<char, int> GetWidthTable(string fontName)
     {
         // Normalize to family group

@@ -98,7 +98,7 @@ public sealed class EmbeddedFontInfo
     /// or 0 (the .notdef glyph) if the character is not present in the cmap.
     /// </summary>
     public int GetGlyphId(int unicodeCodepoint)
-        => CmapUnicodeToGid.TryGetValue(unicodeCodepoint, out var gid) ? gid : 0;
+        => CmapUnicodeToGid.TryGetValue(unicodeCodepoint, out int gid) ? gid : 0;
 
     /// <summary>
     /// Returns the advance width of glyph <paramref name="gid"/> in design units.
@@ -128,9 +128,9 @@ public sealed class EmbeddedFontInfo
     {
         if (string.IsNullOrEmpty(text) || UnitsPerEm == 0) return 0f;
         double total = 0;
-        foreach (var ch in text)
+        foreach (char ch in text)
         {
-            var gid = GetGlyphId(ch);
+            int gid = GetGlyphId(ch);
             total += GetAdvanceWidth(gid);
         }
         return (float)(total / UnitsPerEm * fontSize);

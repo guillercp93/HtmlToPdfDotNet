@@ -22,12 +22,13 @@ public static class ToUnicodeCMapBuilder
     /// Typically the inverse of <see cref="EmbeddedFontInfo.CmapUnicodeToGid"/>.
     /// </param>
     /// <param name="fontName">The PostScript font name, used in the CMap stream header.</param>
+    /// <returns>A byte array containing the ToUnicode CMap stream.</returns>
     public static byte[] Build(IReadOnlyDictionary<int, int> gidToUnicode, string fontName)
     {
         // Sort by GID for deterministic output
-        var pairs = gidToUnicode.OrderBy(kv => kv.Key).ToList();
+        List<KeyValuePair<int, int>> pairs = gidToUnicode.OrderBy(kv => kv.Key).ToList();
 
-        var sb = new StringBuilder(pairs.Count * 20 + 512);
+        StringBuilder sb = new(pairs.Count * 20 + 512);
 
         // ── CMap stream header ────────────────────────────────────────────────
         sb.AppendLine("/CIDInit /ProcSet findresource begin");
@@ -52,7 +53,7 @@ public static class ToUnicodeCMapBuilder
             sb.AppendLine($"{count} beginbfchar");
             for (int j = 0; j < count; j++)
             {
-                var (gid, unicode) = pairs[i + j];
+                (int gid, int unicode) = pairs[i + j];
                 // <GGGG> <UUUU>
                 sb.AppendLine($"<{gid:X4}> <{unicode:X4}>");
             }
@@ -72,10 +73,12 @@ public static class ToUnicodeCMapBuilder
     /// Inverts the Unicode→GID map to produce a GID→Unicode map.
     /// When multiple Unicode code points map to the same GID, the lowest is kept.
     /// </summary>
+    /// <param name="unicodeToGid">The Unicode→GID map to invert.</param>
+    /// <returns>A new dictionary mapping GID→Unicode.</returns>
     public static Dictionary<int, int> InvertCmap(IReadOnlyDictionary<int, int> unicodeToGid)
     {
-        var result = new Dictionary<int, int>(unicodeToGid.Count);
-        foreach (var (unicode, gid) in unicodeToGid)
+        Dictionary<int, int> result = new(unicodeToGid.Count);
+        foreach ((int unicode, int gid) in unicodeToGid)
         {
             if (!result.ContainsKey(gid) || unicode < result[gid])
                 result[gid] = unicode;

@@ -123,7 +123,7 @@ public sealed class ContentStreamBuilder
 
         if (t.EmbeddedFont != null
             && _embeddedAliases != null
-            && _embeddedAliases.TryGetValue(t.EmbeddedFont, out var embAlias))
+            && _embeddedAliases.TryGetValue(t.EmbeddedFont, out string? embAlias))
         {
             // ── Embedded Type0 path ────────────────────────────────────────
             SetFont(embAlias, t.FontSize);

@@ -289,7 +289,7 @@ public sealed class FontResourceBuilder
                                           int defaultWidth)
     {
         StringBuilder sb = new("[");
-        foreach (var gid in usedGids)
+        foreach (int gid in usedGids)
         {
             int w = font.GetPdfWidth(gid);
             if (w == defaultWidth) continue;

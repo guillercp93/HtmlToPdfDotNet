@@ -39,7 +39,7 @@ public class PdfGenerator : IPdfGenerator
     /// <returns>A byte array representing the generated PDF.</returns>
     public byte[] Convert(string html)
     {
-        using var ms = new MemoryStream();
+        using MemoryStream ms = new();
         Convert(html, ms);
         return ms.ToArray();
     }
@@ -51,8 +51,8 @@ public class PdfGenerator : IPdfGenerator
     /// <param name="output">The destination stream for the PDF data.</param>
     public void Convert(string html, Stream output)
     {
-        var layout = RunLayout(html);
-        var writer = new PdfDocumentWriter(_options.Page, _options.CompressStreams);
+        LayoutResult layout = RunLayout(html);
+        PdfDocumentWriter writer = new(_options.Page, _options.CompressStreams);
         writer.Write(layout, output);
     }
 
@@ -67,8 +67,8 @@ public class PdfGenerator : IPdfGenerator
         try
         {
             byte[] rawPdf = Convert(html);
-            using var ms = File.OpenWrite(pdfPath);
-            ms.Write(rawPdf);
+            using FileStream fs = File.OpenWrite(pdfPath);
+            fs.Write(rawPdf);
             return true;
         }
         catch
@@ -85,14 +85,14 @@ public class PdfGenerator : IPdfGenerator
     internal LayoutResult RunLayout(string html)
     {
         // Phase 1 – Parse HTML and resolve CSS styles
-        var doc = new HtmlDocument();
+        HtmlDocument doc = new();
         doc.LoadHtml(html);
 
-        var resolver = new StyleResolver();
-        var styles = resolver.Resolve(doc.DocumentNode);
+        StyleResolver resolver = new();
+        Dictionary<HtmlNode, ComputedStyle> styles = resolver.Resolve(doc.DocumentNode);
 
         // Phase 2 – Layout engine
-        var engine = new BlockLayoutEngine(_options.Page, styles, _options.Fonts);
+        BlockLayoutEngine engine = new(_options.Page, styles, _options.Fonts);
         return engine.Layout(doc.DocumentNode);
     }
 }

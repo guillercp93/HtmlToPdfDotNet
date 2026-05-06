@@ -35,19 +35,19 @@ public static class CssValueParser
             ("in",   72f),
         ];
 
-        foreach (var (suffix, toPt) in units)
+        foreach ((string suffix, float toPt) in units)
         {
             if (value.EndsWith(suffix))
             {
-                var raw = value[..^suffix.Length];
-                if (TryParseFloat(raw, out var num))
+                string raw = value[..^suffix.Length];
+                if (TryParseFloat(raw, out float num))
                     return new CssLength(num * toPt);
                 return CssLength.Zero;
             }
         }
 
         // Without unit → treat as px
-        if (TryParseFloat(value, out var plain))
+        if (TryParseFloat(value, out float plain))
             return new CssLength(plain * 0.75f);
 
         return CssLength.Zero;
@@ -62,8 +62,8 @@ public static class CssValueParser
     {
         if (string.IsNullOrWhiteSpace(value)) return CssEdges.Zero;
 
-        var parts = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var lengths = Array.ConvertAll(parts, p => ParseLength(p, parentFontSize));
+        string[] parts = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        CssLength[] lengths = Array.ConvertAll(parts, p => ParseLength(p, parentFontSize));
 
         return lengths.Length switch
         {
@@ -115,12 +115,12 @@ public static class CssValueParser
 
         value = value.Trim();
 
-        if (NamedColors.TryGetValue(value, out var named)) return named;
+        if (NamedColors.TryGetValue(value, out CssColor named)) return named;
 
         // Hex
         if (value.StartsWith('#'))
         {
-            var hex = value[1..];
+            string hex = value[1..];
             return hex.Length switch
             {
                 3 => CssColor.FromRgb(
@@ -141,18 +141,18 @@ public static class CssValueParser
         }
 
         // rgb(...) / rgba(...)
-        var lower = value.ToLowerInvariant();
+        string lower = value.ToLowerInvariant();
         if (lower.StartsWith("rgb"))
         {
-            var start = lower.IndexOf('(');
-            var end = lower.IndexOf(')');
+            int start = lower.IndexOf('(');
+            int end = lower.IndexOf(')');
             if (start >= 0 && end > start)
             {
-                var parts = lower[(start + 1)..end].Split(',');
+                string[] parts = lower[(start + 1)..end].Split(',');
                 if (parts.Length >= 3 &&
-                    TryParseFloat(parts[0].Trim(), out var r) &&
-                    TryParseFloat(parts[1].Trim(), out var g) &&
-                    TryParseFloat(parts[2].Trim(), out var b))
+                    TryParseFloat(parts[0].Trim(), out float r) &&
+                    TryParseFloat(parts[1].Trim(), out float g) &&
+                    TryParseFloat(parts[2].Trim(), out float b))
                 {
                     float a = 1f;
                     if (parts.Length == 4) TryParseFloat(parts[3].Trim(), out a);
@@ -190,7 +190,7 @@ public static class CssValueParser
 
         value = value.Trim();
 
-        if (FontSizeKeywords.TryGetValue(value, out var keyword))
+        if (FontSizeKeywords.TryGetValue(value, out float keyword))
         {
             if (keyword > 0f) return keyword;
             // "smaller" / "larger"
@@ -200,10 +200,10 @@ public static class CssValueParser
         }
 
         // Percentage: "120%" → parentFontSize * 1.2
-        if (value.EndsWith('%') && TryParseFloat(value[..^1], out var pct))
+        if (value.EndsWith('%') && TryParseFloat(value[..^1], out float pct))
             return parentFontSize * pct / 100f;
 
-        var len = ParseLength(value, parentFontSize);
+        CssLength len = ParseLength(value, parentFontSize);
         return len.Points > 0f ? len.Points : parentFontSize;
     }
     #endregion
@@ -217,15 +217,15 @@ public static class CssValueParser
         if (string.IsNullOrWhiteSpace(value) || value.Trim() == "none")
             return CssBorderSide.None;
 
-        var parts = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         CssLength width = new(1f);           // default 1pt
         BorderStyle style = BorderStyle.Solid;
         CssColor color = CssColor.Black;
 
-        foreach (var part in parts)
+        foreach (string part in parts)
         {
-            var p = part.ToLowerInvariant();
+            string p = part.ToLowerInvariant();
 
             if (p == "none") { style = BorderStyle.None; continue; }
             if (p == "solid") { style = BorderStyle.Solid; continue; }
@@ -239,7 +239,7 @@ public static class CssValueParser
                 continue;
             }
 
-            var len = ParseLength(p, parentFontSize);
+            CssLength len = ParseLength(p, parentFontSize);
             if (!len.IsZero) width = len;
         }
 
@@ -271,9 +271,9 @@ public static class CssValueParser
     public static FontWeight ParseFontWeight(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return FontWeight.Normal;
-        var v = value.Trim().ToLowerInvariant();
+        string v = value.Trim().ToLowerInvariant();
         if (v == "bold" || v == "bolder") return FontWeight.Bold;
-        if (int.TryParse(v, out var n) && n >= 600) return FontWeight.Bold;
+        if (int.TryParse(v, out int n) && n >= 600) return FontWeight.Bold;
         return FontWeight.Normal;
     }
 

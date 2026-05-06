@@ -56,7 +56,7 @@ public sealed class TrueTypeFontParser
         ushort numTables = BinaryPrimitives.ReadUInt16BigEndian(data[4..6]);
 
         // Build table directory: tag → (offset, length)
-        var tables = new Dictionary<string, (uint Offset, uint Length)>(numTables);
+        Dictionary<string, (uint Offset, uint Length)> tables = new(numTables);
         int dirBase = 12; // sizeof(sfnt header)
         for (int i = 0; i < numTables; i++)
         {
@@ -211,7 +211,7 @@ public sealed class TrueTypeFontParser
         ushort numSubtables = BinaryPrimitives.ReadUInt16BigEndian(table[2..4]);
 
         // Collect candidate subtables
-        var candidates = new List<(int Platform, int Encoding, int Format, int SubtableOffset)>();
+        List<(int Platform, int Encoding, int Format, int SubtableOffset)> candidates = new();
         for (int i = 0; i < numSubtables; i++)
         {
             int rec = 4 + i * 8;

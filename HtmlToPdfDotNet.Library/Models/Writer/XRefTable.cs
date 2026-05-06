@@ -28,13 +28,13 @@ public sealed class XRefTable
         long xrefOffset = stream.Position;
 
         // Entry 0 is always the free object
-        var sb = new StringBuilder();
+        StringBuilder sb = new();
         sb.AppendLine("xref");
         sb.AppendLine($"0 {_objects.Count + 1}");
         sb.AppendLine("0000000000 65535 f ");   // object 0 free (note: trailing space required)
 
         // Entries in numerical order
-        foreach (var obj in _objects.OrderBy(o => o.Number))
+        foreach (PdfObject? obj in _objects.OrderBy(o => o.Number))
             sb.AppendLine($"{obj.ByteOffset:D10} 00000 n ");
 
         // Trailer
@@ -48,7 +48,7 @@ public sealed class XRefTable
         sb.AppendLine(xrefOffset.ToString());
         sb.Append("%%EOF");
 
-        var bytes = Encoding.Latin1.GetBytes(sb.ToString());
+        byte[] bytes = Encoding.Latin1.GetBytes(sb.ToString());
         stream.Write(bytes);
 
         return xrefOffset;

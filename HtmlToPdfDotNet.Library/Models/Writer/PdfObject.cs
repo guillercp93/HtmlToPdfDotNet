@@ -26,10 +26,11 @@ public class PdfObject
     }
 
     /// <summary>Serializes "N 0 obj\nBODY\nendobj\n".</summary>
+    /// <param name="stream">The stream to write the object to.</param>
     public virtual void WriteTo(Stream stream)
     {
         ByteOffset = stream.Position;
-        var bytes = Encoding.Latin1.GetBytes($"{Number} 0 obj\n{_body}\nendobj\n");
+        byte[] bytes = Encoding.Latin1.GetBytes($"{Number} 0 obj\n{_body}\nendobj\n");
         stream.Write(bytes);
     }
 }
