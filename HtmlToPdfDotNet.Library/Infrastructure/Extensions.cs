@@ -6,6 +6,7 @@ public static class Extensions
 {
     public static IServiceCollection AddHtmlToPdfDotNet(this IServiceCollection services)
     {
+        services.AddSingleton<IPdfGenerator, PdfGenerator>();
         return services;
     }
 }

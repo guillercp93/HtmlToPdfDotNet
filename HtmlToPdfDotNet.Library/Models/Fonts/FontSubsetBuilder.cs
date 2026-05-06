@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.Text;
 using HtmlToPdfDotNet.Library.Commons;
 
-namespace HtmlToPdfDotNet.Library.Models.Writer.Font;
+namespace HtmlToPdfDotNet.Library.Models.Fonts;
 
 /// <summary>
 /// Builds a minimal TrueType font subset from a full font and a set of used glyph IDs.

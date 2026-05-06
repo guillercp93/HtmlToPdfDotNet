@@ -21,7 +21,7 @@ namespace HtmlToPdfDotNet.Library;
 /// File.WriteAllBytes("output.pdf", pdf);
 /// </code>
 /// </summary>
-public class PdfGenerator
+public class PdfGenerator : IPdfGenerator
 {
     private readonly ConversionOptions _options;
 

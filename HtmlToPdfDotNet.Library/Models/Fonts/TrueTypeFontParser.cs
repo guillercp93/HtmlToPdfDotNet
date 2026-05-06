@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace HtmlToPdfDotNet.Library.Models.Writer.Font;
+namespace HtmlToPdfDotNet.Library.Models.Fonts;
 
 /// <summary>
 /// Binary parser for OpenType/TrueType font files (.ttf / .otf).

@@ -1,4 +1,4 @@
-namespace HtmlToPdfDotNet.Library.Models.Writer.Font;
+namespace HtmlToPdfDotNet.Library.Models.Fonts;
 
 /// <summary>
 /// Resolves and caches <see cref="EmbeddedFontInfo"/> instances for font files

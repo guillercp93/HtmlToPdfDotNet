@@ -1,7 +1,7 @@
 using HtmlAgilityPack;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Styles;
-using HtmlToPdfDotNet.Library.Models.Writer.Font;
+using HtmlToPdfDotNet.Library.Models.Fonts;
 
 namespace HtmlToPdfDotNet.Library.Models.Layout;
 

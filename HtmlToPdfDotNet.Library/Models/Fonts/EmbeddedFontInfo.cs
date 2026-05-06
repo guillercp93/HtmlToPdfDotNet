@@ -1,4 +1,4 @@
-namespace HtmlToPdfDotNet.Library.Models.Writer.Font;
+namespace HtmlToPdfDotNet.Library.Models.Fonts;
 
 /// <summary>
 /// Holds all data extracted from a parsed TTF/OTF font file:

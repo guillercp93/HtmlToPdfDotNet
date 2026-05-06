@@ -2,7 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Layout;
-using HtmlToPdfDotNet.Library.Models.Writer.Font;
+using HtmlToPdfDotNet.Library.Models.Fonts;
 
 namespace HtmlToPdfDotNet.Library.Models.Writer;
 

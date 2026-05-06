@@ -1,4 +1,5 @@
 using HtmlToPdfDotNet.Library.Commons;
+using HtmlToPdfDotNet.Library.Models.Fonts;
 using HtmlToPdfDotNet.Library.Models.Layout;
 
 namespace HtmlToPdfDotNet.Library.Models.Writer;
@@ -83,7 +84,7 @@ public sealed class PdfDocumentWriter
 
         // Alias map: passed to each ContentStreamBuilder so it knows
         // which TextPrimitives need GID-hex encoding.
-        IReadOnlyDictionary<Font.EmbeddedFontInfo, string> embeddedAliases = fontBuilder.EmbeddedAliases;
+        IReadOnlyDictionary<EmbeddedFontInfo, string> embeddedAliases = fontBuilder.EmbeddedAliases;
 
         // ── Build page object pairs ────────────────────────────────────────
         List<int> pageObjectNums = new();

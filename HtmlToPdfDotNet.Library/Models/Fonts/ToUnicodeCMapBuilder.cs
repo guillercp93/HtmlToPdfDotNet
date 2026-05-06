@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace HtmlToPdfDotNet.Library.Models.Writer.Font;
+namespace HtmlToPdfDotNet.Library.Models.Fonts;
 
 /// <summary>
 /// Builds the <c>ToUnicode</c> CMap stream required for embedded fonts in PDF.

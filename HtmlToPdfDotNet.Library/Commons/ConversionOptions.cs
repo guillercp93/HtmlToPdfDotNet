@@ -1,5 +1,5 @@
 using HtmlToPdfDotNet.Library.Models.Layout;
-using HtmlToPdfDotNet.Library.Models.Writer.Font;
+using HtmlToPdfDotNet.Library.Models.Fonts;
 
 namespace HtmlToPdfDotNet.Library.Commons;
 
