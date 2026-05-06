@@ -1,0 +1,7 @@
+version: v1.25.0
+exclude:
+  global:
+    - "HtmlToPdfDotNet.Tests"
+    - "HtmlToPdfDotNet.Example"
+    - "**/bin"
+    - "**/obj"
