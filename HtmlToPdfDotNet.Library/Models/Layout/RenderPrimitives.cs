@@ -1,5 +1,6 @@
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Fonts;
+using HtmlToPdfDotNet.Library.Models.Imaging;
 
 namespace HtmlToPdfDotNet.Library.Models.Layout;
 
@@ -59,7 +60,7 @@ public sealed class TextPrimitive : RenderPrimitive
     public float Y { get; init; }
     public string Text { get; init; } = "";
     public string FontName { get; init; } = "Helvetica";
-    public float FontSize { get; init; } = 12f;
+    public float FontSize { get; init; } = Constants.DefaultFontSize;
     public bool Bold { get; init; }
     public bool Italic { get; init; }
     public CssColor Color { get; init; }
@@ -81,7 +82,15 @@ public sealed class ImagePrimitive : RenderPrimitive
     public float Y { get; init; }
     public float Width { get; init; }
     public float Height { get; init; }
-    public string Src { get; init; } = "";
+    /// <summary>
+    /// Data of image resolved (dimensions, bytes, format etc.)
+    /// </summary>
+    public ImageData? ImageData { get; init; }
+
+    /// <summary>
+    /// Alias of XObject in the resources PDF dictionary (/Im1, /Im2, etc.)
+    /// </summary>
+    public string XObjectAlias { get; init; } = string.Empty;
 }
 
 /// <summary>

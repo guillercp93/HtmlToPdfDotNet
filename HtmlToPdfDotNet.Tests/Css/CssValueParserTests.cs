@@ -1,3 +1,4 @@
+using System.Reflection.Metadata;
 using HtmlToPdfDotNet.Library.Commons;
 using Xunit;
 
@@ -11,14 +12,14 @@ namespace HtmlToPdfDotNet.Tests.Css
         [InlineData("0", 0f)]
         [InlineData("12pt", 12f)]
         [InlineData("16px", 12f)]    // 16 * 0.75 = 12pt
-        [InlineData("1in", 72f)]
-        [InlineData("1cm", 28.3465f)]
-        [InlineData("10mm", 28.3465f)]
+        [InlineData("1in", Constants.PointsPerInch)]
+        [InlineData("1cm", Constants.PointsPerCm)]
+        [InlineData("10mm", Constants.PointsPerMm * 10f)]
         [InlineData("1em", 12f)]    // parentFontSize = 12
         [InlineData("auto", 0f)]    // IsAuto=true
         public void ParseLength_ReturnsCorrectPoints(string input, float expectedPt)
         {
-            CssLength len = CssValueParser.ParseLength(input, parentFontSize: 12f);
+            CssLength len = CssValueParser.ParseLength(input, parentFontSize: Constants.DefaultFontSize);
 
             if (input == "auto")
                 Assert.True(len.IsAuto);
@@ -103,14 +104,14 @@ namespace HtmlToPdfDotNet.Tests.Css
         [InlineData("16px", 12f)]
         public void ParseFontSize_Keywords_ReturnCorrectPoints(string input, float expected)
         {
-            float result = CssValueParser.ParseFontSize(input, 12f);
+            float result = CssValueParser.ParseFontSize(input, Constants.DefaultFontSize);
             Assert.Equal(expected, result, precision: 1);
         }
 
         [Fact]
         public void ParseFontSize_Percentage_RelatesToParent()
         {
-            float result = CssValueParser.ParseFontSize("150%", parentFontSize: 12f);
+            float result = CssValueParser.ParseFontSize("150%", parentFontSize: Constants.DefaultFontSize);
             Assert.Equal(18f, result, precision: 1);
         }
 

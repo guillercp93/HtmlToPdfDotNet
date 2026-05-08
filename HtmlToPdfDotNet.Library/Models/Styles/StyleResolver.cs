@@ -24,7 +24,7 @@ public sealed class StyleResolver
             ["h2"] = s => { s.FontSize = 18.7f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(10f); },
             ["h3"] = s => { s.FontSize = 16f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(8f); },
             ["h4"] = s => { s.FontSize = 14f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(7f); },
-            ["h5"] = s => { s.FontSize = 12f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(6f); },
+            ["h5"] = s => { s.FontSize = Constants.DefaultFontSize; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(6f); },
             ["h6"] = s => { s.FontSize = 10f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(5f); },
             ["b"] = s => { s.FontWeight = FontWeight.Bold; s.Display = DisplayType.Inline; },
             ["strong"] = s => { s.FontWeight = FontWeight.Bold; s.Display = DisplayType.Inline; },

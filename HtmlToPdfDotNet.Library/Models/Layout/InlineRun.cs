@@ -10,7 +10,7 @@ public sealed class InlineRun
 {
     public string Text { get; init; } = "";
     public string FontName { get; init; } = "Helvetica";
-    public float FontSize { get; init; } = 12f;
+    public float FontSize { get; init; } = Constants.DefaultFontSize;
     public bool Bold { get; init; }
     public bool Italic { get; init; }
     public CssColor Color { get; init; }

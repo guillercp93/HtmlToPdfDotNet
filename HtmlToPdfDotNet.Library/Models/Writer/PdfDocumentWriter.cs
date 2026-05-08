@@ -1,5 +1,6 @@
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Fonts;
+using HtmlToPdfDotNet.Library.Models.Imaging;
 using HtmlToPdfDotNet.Library.Models.Layout;
 
 namespace HtmlToPdfDotNet.Library.Models.Writer;
@@ -72,15 +73,17 @@ public sealed class PdfDocumentWriter
         int infoNum = counter.Next(); // 2
         int pagesNum = counter.Next(); // 3
 
-        // ── Phase 4: pre-scan all TextPrimitives to discover embedded fonts ─
-        // FontResourceBuilder.Analyze() must run BEFORE CreateFontObjects()
-        // so it can collect the used glyph IDs for subsetting.
+        // ── Font resource builder ────────────────────────────────────────
         FontResourceBuilder fontBuilder = new(counter, xref);
         List<TextPrimitive> allText = layout.Primitives.OfType<TextPrimitive>().ToList();
         fontBuilder.Analyze(allText);
 
         // ── Create all font PDF objects ────────────────────────────────────
         List<PdfObject> fontObjects = fontBuilder.CreateFontObjects();
+
+        // ── Image resource builder ────────────────────────────────────────
+        ImageResourceBuilder imageBuilder = new(counter, xref, _compress);
+        List<PdfObject> imagesObjects = imageBuilder.GetObjects();
 
         // Alias map: passed to each ContentStreamBuilder so it knows
         // which TextPrimitives need GID-hex encoding.
@@ -113,6 +116,10 @@ public sealed class PdfDocumentWriter
                     case TextPrimitive t:
                         csBuilder.DrawText(t);
                         break;
+                    case ImagePrimitive img:
+                        csBuilder.DrawImage(img);
+                        if (img.ImageData != null) imageBuilder.RegisterImage(img.XObjectAlias, img.ImageData);
+                        break;
                 }
             }
 
@@ -125,11 +132,14 @@ public sealed class PdfDocumentWriter
 
             // Page dictionary
             string fontDict = fontBuilder.BuildFontDict();
+            string imgDict = imageBuilder.BuildImageDict();
+            string xobjRes = string.IsNullOrEmpty(imgDict) ? "" : $"/XObject {imgDict}";
+
             string pageBody =
                 $"<< /Type /Page\n" +
                 $"   /Parent {pagesNum} 0 R\n" +
                 $"   /MediaBox [0 0 {Helpers.F(_page.Width)} {Helpers.F(_page.Height)}]\n" +
-                $"   /Resources << /Font {fontDict} >>\n" +
+                $"   /Resources << /Font {fontDict} {xobjRes} >>\n" +
                 $"   /Contents {contentNum} 0 R\n" +
                 $">>";
             PdfObject pageObj = new(pageNum, pageBody);
@@ -167,6 +177,8 @@ public sealed class PdfDocumentWriter
         Helpers.WriteRaw(output, "%PDF-1.7\n%\xE2\xE3\xCF\xD3\n\n");
 
         foreach (PdfObject fo in fontObjects) fo.WriteTo(output);
+        foreach (PdfObject io in imagesObjects) io.WriteTo(output);
+
         foreach ((PdfObject pageObj, PdfObject contentObj) in pageContentPairs)
         {
             contentObj.WriteTo(output);

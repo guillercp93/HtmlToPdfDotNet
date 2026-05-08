@@ -31,7 +31,7 @@ public sealed class ComputedStyle
 
     #region Typography
     public string FontFamily { get; set; } = "Helvetica";
-    public float FontSize { get; set; } = 12f;          // points
+    public float FontSize { get; set; } = Constants.DefaultFontSize;  // points
     public FontWeight FontWeight { get; set; } = FontWeight.Normal;
     public FontStyle FontStyle { get; set; } = FontStyle.Normal;
     public float LineHeight { get; set; } = 1.2f;         // multiplier

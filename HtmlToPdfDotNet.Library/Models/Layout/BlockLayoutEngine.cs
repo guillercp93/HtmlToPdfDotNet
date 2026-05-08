@@ -2,6 +2,7 @@ using HtmlAgilityPack;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Styles;
 using HtmlToPdfDotNet.Library.Models.Fonts;
+using HtmlToPdfDotNet.Library.Models.Imaging;
 
 namespace HtmlToPdfDotNet.Library.Models.Layout;
 
@@ -12,6 +13,7 @@ namespace HtmlToPdfDotNet.Library.Models.Layout;
 /// </summary>
 public sealed class BlockLayoutEngine
 {
+    private static int _imageCounter = 0;
     private readonly PageLayout _page;
     private readonly Dictionary<HtmlNode, ComputedStyle> _styles;
     private readonly LayoutResult _result = new();
@@ -87,9 +89,18 @@ public sealed class BlockLayoutEngine
             }
 
             if (child.NodeType != HtmlNodeType.Element) continue;
+            // Explicit page breaks (before the element)
             if (style.PageBreakBefore)
             {
                 AdvancePage();
+            }
+
+            // Images
+            if (child.Name.Equals("img", StringComparison.OrdinalIgnoreCase))
+            {
+                LayoutImage(child, style, x, availableWidth);
+                if (style.PageBreakAfter) AdvancePage();
+                continue;
             }
 
             DisplayType display = style.Display;
@@ -102,6 +113,7 @@ public sealed class BlockLayoutEngine
                 LayoutInlineContainer(child, style, x, availableWidth);
             }
 
+            // Explicit page breaks (after the element)
             if (style.PageBreakAfter)
             {
                 AdvancePage();
@@ -384,5 +396,84 @@ public sealed class BlockLayoutEngine
     private void CheckPageOverflow()
     {
         if (_cursorY > _pageContentH) AdvancePage();
+    }
+
+    private void LayoutImage(HtmlNode imgNode, ComputedStyle style, float parentX, float availableWidth)
+    {
+        string src = imgNode.GetAttributeValue("src", string.Empty);
+        if (string.IsNullOrEmpty(src)) return;
+
+        // Load image
+        ImageData? imageData = null;
+        try
+        {
+            imageData = ImageLoader.Load(src);
+        }
+        catch
+        {
+            // if image isn't loaded, emit a gray rectangle placeholder.
+            _cursorY += 100f; // placeholder height
+            return;
+        }
+
+        if (imageData is null) return;
+
+        // calculate dimensions of display
+        float displayWidth = availableWidth;
+        float displayHeight = imageData.PixelHeight;
+
+        // HTML attributes width / height
+        string widthAttr = imgNode.GetAttributeValue("width", string.Empty);
+        string heightAttr = imgNode.GetAttributeValue("height", string.Empty);
+
+        if (!string.IsNullOrEmpty(widthAttr) && float.TryParse(widthAttr, out float w))
+        {
+            displayWidth = w * Constants.PointsPerPx; // px -> pt
+        }
+        else if (!style.Width.IsAuto && style.Width.Points > 0)
+        {
+            displayWidth = style.Width.Points;
+        }
+        else
+        {
+            displayWidth = Math.Min(imageData.PixelWidth * Constants.PointsPerPx, availableWidth); // px -> pt
+        }
+
+        // calculate height but keep aspect ratio
+        float aspectRatio = (float)imageData.PixelWidth / imageData.PixelHeight;
+
+        if (!string.IsNullOrEmpty(heightAttr) && float.TryParse(heightAttr, out float h))
+        {
+            displayHeight = h * Constants.PointsPerPx; // px -> pt
+        }
+        else if (!style.Height.IsAuto && style.Height.Points > 0)
+        {
+            displayHeight = style.Height.Points;
+        }
+        else
+        {
+            displayHeight = displayWidth / aspectRatio;
+        }
+
+        // Check if image fits on current page
+        if (_cursorY + displayHeight > _pageContentH)
+        {
+            AdvancePage();
+        }
+
+        // Emit primitive
+        _result.Primitives.Add(new ImagePrimitive
+        {
+            PageIndex = _currentPage,
+            X = parentX,
+            Y = _cursorY,
+            Width = displayWidth,
+            Height = displayHeight,
+            ImageData = imageData,
+            XObjectAlias = $"Im{Interlocked.Increment(ref _imageCounter)}"
+        });
+
+        _cursorY += displayHeight + style.Margin.Bottom.Points;
+
     }
 }

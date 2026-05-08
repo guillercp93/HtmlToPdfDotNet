@@ -224,6 +224,38 @@ public static class Helpers
         => v.ToString("F3", CultureInfo.InvariantCulture);
 
     /// <summary>
+    /// Concatenates an array of byte arrays into a single byte array.
+    /// </summary>
+    /// <param name="arrays">The array of byte arrays to concatenate.</param>
+    /// <returns>The concatenated byte array.</returns>
+    public static byte[] ConcatArrays(IEnumerable<byte[]> arrays)
+    {
+        int total = arrays.Sum(a => a.Length);
+        byte[] result = new byte[total];
+        int offset = 0;
+        foreach (byte[] arr in arrays)
+        {
+            arr.CopyTo(result, offset);
+            offset += arr.Length;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Decompresses zlib/Deflate data using System.IO.Compression.ZLibStream.
+    /// </summary>
+    /// <param name="data">The compressed data.</param>
+    /// <returns>The decompressed data.</returns>
+    public static byte[] ZlibDecompress(byte[] data)
+    {
+        using MemoryStream input = new(data);
+        using MemoryStream output = new();
+        using ZLibStream zlib = new(input, CompressionMode.Decompress);
+        zlib.CopyTo(output);
+        return output.ToArray();
+    }
+
+    /// <summary>
     /// Builds padded glyf data and returns the offsets.
     /// </summary>
     /// <param name="parts">The parts of the glyf data.</param>
@@ -425,6 +457,11 @@ public static class Helpers
     /// <returns>The CssEdges with the given points for top and bottom margins and zero for left and right margins.</returns>
     public static CssEdges DefaultMargin(float points) => new(new CssLength(points), CssLength.Zero);
 
+    /// <summary>
+    /// Creates a CssEdges with the given points for left and right padding and zero for top and bottom padding.
+    /// </summary>
+    /// <param name="points">The left and right padding points.</param>
+    /// <returns>The CssEdges with the given points for left and right padding and zero for top and bottom padding.</returns>
     public static CssEdges DefaultPadding(float points) => new(CssLength.Zero, CssLength.Zero, CssLength.Zero, new CssLength(points));
 
 }

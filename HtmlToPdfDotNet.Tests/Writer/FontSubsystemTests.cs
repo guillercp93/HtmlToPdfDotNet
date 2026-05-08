@@ -84,7 +84,7 @@ public class TrueTypeFontParserTests
     {
         if (!Fonts.Available) return;
         EmbeddedFontInfo info = TrueTypeFontParser.Parse(Fonts.Regular, "DejaVu Sans", false, false);
-        float w = info.MeasureWidth("Hello", 12f);
+        float w = info.MeasureWidth("Hello", Constants.DefaultFontSize);
         Assert.True(w > 0f, $"Width={w}");
     }
 
@@ -93,8 +93,8 @@ public class TrueTypeFontParserTests
     {
         if (!Fonts.Available) return;
         EmbeddedFontInfo info = TrueTypeFontParser.Parse(Fonts.Regular, "DejaVu Sans", false, false);
-        float short_ = info.MeasureWidth("Hi", 12f);
-        float long_ = info.MeasureWidth("Hello World", 12f);
+        float short_ = info.MeasureWidth("Hi", Constants.DefaultFontSize);
+        float long_ = info.MeasureWidth("Hello World", Constants.DefaultFontSize);
         Assert.True(long_ > short_, $"short={short_}, long={long_}");
     }
 
@@ -162,7 +162,7 @@ public class EmbeddedFontInfoTests
     [Fact]
     public void MeasureWidth_EmptyString_ReturnsZero()
     {
-        Assert.Equal(0f, MakeFont().MeasureWidth("", 12f));
+        Assert.Equal(0f, MakeFont().MeasureWidth("", Constants.DefaultFontSize));
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class EmbeddedFontInfoTests
     {
         EmbeddedFontInfo f = MakeFont();
         // GID 36 (A) = 722, GID 37 (B) = 667  → total=1389 units → 1389/1000*12 = 16.668
-        float w = f.MeasureWidth("AB", 12f);
+        float w = f.MeasureWidth("AB", Constants.DefaultFontSize);
         Assert.InRange(w, 16f, 17f);
     }
 }
@@ -333,7 +333,7 @@ public class ContentStreamBuilderEmbeddedFontTests
             Y = 100f,
             Text = "Hi",
             FontName = "synthetic",
-            FontSize = 12f,
+            FontSize = Constants.DefaultFontSize,
             Color = new CssColor(0, 0, 0),
             EmbeddedFont = font,
         });
@@ -378,7 +378,7 @@ public class ContentStreamBuilderEmbeddedFontTests
             Y = 0f,
             Text = "Hello",
             FontName = "Helvetica",
-            FontSize = 12f,
+            FontSize = Constants.DefaultFontSize,
             Color = new CssColor(0, 0, 0),
             EmbeddedFont = null,
         });

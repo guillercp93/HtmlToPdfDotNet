@@ -29,7 +29,8 @@ string html = @"
 <p style='font-family: ""DejaVu Sans""'>This PDF was generated using IPdfGenerator resolved from DI.</p>
 <div style='border: 1pt solid green; color: darkgreen; font-family: ""DejaVu Sans""'>
     The library is now decoupled via interfaces!
-</div>";
+</div>
+<img src='./public/images/test2.png' alt='Google Logo' />";
 
 bool result = generator.WritePdfFile(html, "./test_interface.pdf");
 

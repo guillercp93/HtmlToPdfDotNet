@@ -141,6 +141,26 @@ public sealed class ContentStreamBuilder
         _sb.AppendLine("ET");
     }
 
+    /// <summary>
+    /// Emits PDF operators to draw an image.
+    /// </summary>
+    /// <param name="img">The image primitive containing position, size, and image data.</param>
+    public void DrawImage(ImagePrimitive img)
+    {
+        if (img.ImageData is null || string.IsNullOrEmpty(img.XObjectAlias)) return;
+
+        // PDF: images are drawn with matrix transformations + Do operator.
+        // The transformation scales the image (1x1 unit in PDF) to the desired size
+        // and translate it to the desired position.
+        float pdfY = _pageH - img.Y - img.Height; // corner at bottom-left
+
+        _sb.AppendLine("q"); // save state
+        // cm: a b c d e f (matrix transformation)
+        // [width 0 0 height x y]
+        _sb.AppendLine($"{Helpers.F(img.Width)} 0 0 {Helpers.F(img.Height)} {Helpers.F(img.X)} {Helpers.F(pdfY)} cm");
+        _sb.AppendLine($"/{img.XObjectAlias} Do");
+        _sb.AppendLine("Q"); // restore state
+    }
     #endregion
     #region Graphic state helpers
 
@@ -195,6 +215,7 @@ public sealed class ContentStreamBuilder
     public string RawContent => _sb.ToString();
 
     #endregion
+
     #region Utils
 
     /// <summary>

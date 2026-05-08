@@ -13,26 +13,25 @@ public static class CssValueParser
     /// Supports: px, pt, em, rem, cm, mm, in and numeric values without unit (treated as px).
     /// Returns <see cref="CssLength.Zero"/> if the value is not recognized.
     /// </summary>
-    public static CssLength ParseLength(string? value, float parentFontSize = 12f)
+    public static CssLength ParseLength(string? value, float parentFontSize = Constants.DefaultFontSize)
     {
         if (string.IsNullOrWhiteSpace(value)) return CssLength.Zero;
 
         value = value.Trim().ToLowerInvariant();
 
         if (value == "auto") return CssLength.Auto;
-        if (value == "0") return CssLength.Zero;
-        if (value == "none") return CssLength.Zero;
+        if (value == "0" || value == "none") return CssLength.Zero;
 
         // Units with suffix
         (string suffix, float toPt)[] units =
         [
-            ("px",   0.75f),          // 1px = 0.75pt  (96dpi → 72dpi)
+            ("px",   Constants.PointsPerPx),       // 1px = 0.75pt  (96dpi → 72dpi)
             ("pt",   1f),
             ("em",   parentFontSize),
-            ("rem",  12f),            // rem = root font size (12pt por defecto)
-            ("cm",   28.3465f),       // 1cm ≈ 28.35pt
-            ("mm",   2.83465f),
-            ("in",   72f),
+            ("rem",  Constants.DefaultFontSize),   // rem = root font size (12pt por defecto)
+            ("cm",   Constants.PointsPerCm),       // 1cm ≈ 28.35pt
+            ("mm",   Constants.PointsPerMm),
+            ("in",   Constants.PointsPerInch),
         ];
 
         foreach ((string suffix, float toPt) in units)
@@ -48,7 +47,7 @@ public static class CssValueParser
 
         // Without unit → treat as px
         if (TryParseFloat(value, out float plain))
-            return new CssLength(plain * 0.75f);
+            return new CssLength(plain * Constants.PointsPerPx);
 
         return CssLength.Zero;
     }
@@ -58,7 +57,7 @@ public static class CssValueParser
     /// <summary>
     /// Parser a shorthand of 1-4 values (top right bottom left).
     /// </summary>
-    public static CssEdges ParseEdges(string? value, float parentFontSize = 12f)
+    public static CssEdges ParseEdges(string? value, float parentFontSize = Constants.DefaultFontSize)
     {
         if (string.IsNullOrWhiteSpace(value)) return CssEdges.Zero;
 
@@ -172,7 +171,7 @@ public static class CssValueParser
         ["xx-small"] = 6f,
         ["x-small"] = 7.5f,
         ["small"] = 9f,
-        ["medium"] = 12f,
+        ["medium"] = Constants.DefaultFontSize,
         ["large"] = 13.5f,
         ["x-large"] = 18f,
         ["xx-large"] = 24f,
@@ -184,7 +183,7 @@ public static class CssValueParser
     /// Parser font-size. If it's a keyword, return its equivalent in points.
     /// If it's a value with unit, delegate to ParseLength.
     /// </summary>
-    public static float ParseFontSize(string? value, float parentFontSize = 12f)
+    public static float ParseFontSize(string? value, float parentFontSize = Constants.DefaultFontSize)
     {
         if (string.IsNullOrWhiteSpace(value)) return parentFontSize;
 
@@ -212,7 +211,7 @@ public static class CssValueParser
     /// <summary>
     /// Parser a shorthand of border: "1px solid #333" o "2pt dashed red".
     /// </summary>
-    public static CssBorderSide ParseBorderSide(string? value, float parentFontSize = 12f)
+    public static CssBorderSide ParseBorderSide(string? value, float parentFontSize = Constants.DefaultFontSize)
     {
         if (string.IsNullOrWhiteSpace(value) || value.Trim() == "none")
             return CssBorderSide.None;

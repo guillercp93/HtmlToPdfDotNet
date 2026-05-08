@@ -23,7 +23,6 @@ public class ContentStreamBuilderTests
             Y = 100f,
             Text = "Hello",
             FontName = "Helvetica",
-            FontSize = 12f,
             Color = new CssColor(0, 0, 0),
         });
 
@@ -45,7 +44,6 @@ public class ContentStreamBuilderTests
             Y = 100f,
             Text = "X",
             FontName = "Helvetica",
-            FontSize = 12f,
             Color = new CssColor(0, 0, 0),
         });
 
@@ -120,7 +118,6 @@ public class ContentStreamBuilderTests
                 Y = i * 10,
                 Text = "Lorem ipsum dolor sit amet",
                 FontName = "Helvetica",
-                FontSize = 12f,
                 Color = CssColor.Black,
             });
 
@@ -141,7 +138,6 @@ public class ContentStreamBuilderTests
             Y = 100,
             Text = "Hello (World)",
             FontName = "Helvetica",
-            FontSize = 12f,
             Color = CssColor.Black,
         });
 

@@ -27,15 +27,15 @@ public class StandardFontMetricsTests
     [Fact]
     public void MeasureWidth_EmptyString_ReturnsZero()
     {
-        Assert.Equal(0f, StandardFontMetrics.MeasureWidth("", "Helvetica", 12f));
+        Assert.Equal(0f, StandardFontMetrics.MeasureWidth("", "Helvetica", Constants.DefaultFontSize));
     }
 
     [Fact]
     public void MeasureWidth_CourierIsMonospace()
     {
         // Todos los caracteres Courier tienen 600 unidades AFM → ancho = 600/1000 * fontSize
-        float w1 = StandardFontMetrics.MeasureWidth("A", "Courier", 12f);
-        float w2 = StandardFontMetrics.MeasureWidth("i", "Courier", 12f);
+        float w1 = StandardFontMetrics.MeasureWidth("A", "Courier", Constants.DefaultFontSize);
+        float w2 = StandardFontMetrics.MeasureWidth("i", "Courier", Constants.DefaultFontSize);
         Assert.Equal(w1, w2, precision: 2);
         Assert.Equal(7.2f, w1, precision: 2); // 600/1000 * 12
     }
@@ -43,16 +43,16 @@ public class StandardFontMetricsTests
     [Fact]
     public void MeasureWidth_ScalesWithFontSize()
     {
-        float w12 = StandardFontMetrics.MeasureWidth("Hello", "Helvetica", 12f);
-        float w24 = StandardFontMetrics.MeasureWidth("Hello", "Helvetica", 24f);
+        float w12 = StandardFontMetrics.MeasureWidth("Hello", "Helvetica", Constants.DefaultFontSize);
+        float w24 = StandardFontMetrics.MeasureWidth("Hello", "Helvetica", Constants.DefaultFontSize * 2f);
         Assert.Equal(w12 * 2f, w24, precision: 2);
     }
 
     [Fact]
     public void MeasureWidth_LongerTextIsWider()
     {
-        float wShort = StandardFontMetrics.MeasureWidth("Hi", "Helvetica", 12f);
-        float wLong = StandardFontMetrics.MeasureWidth("Hello", "Helvetica", 12f);
+        float wShort = StandardFontMetrics.MeasureWidth("Hi", "Helvetica", Constants.DefaultFontSize);
+        float wLong = StandardFontMetrics.MeasureWidth("Hello", "Helvetica", Constants.DefaultFontSize);
         Assert.True(wLong > wShort);
     }
 }
@@ -62,7 +62,7 @@ public class StandardFontMetricsTests
 /// </summary>
 public class InlineLayoutEngineTests
 {
-    private static InlineRun MakeRun(string text, float fontSize = 12f) => new()
+    private static InlineRun MakeRun(string text, float fontSize = Constants.DefaultFontSize) => new()
     {
         Text = text,
         FontName = "Courier",   // monospace → predictable width
@@ -247,7 +247,7 @@ public class BlockLayoutEngineTests
 
         List<TextPrimitive> texts = result.Primitives.OfType<TextPrimitive>().ToList();
         TextPrimitive? h1 = texts.FirstOrDefault(t => t.FontSize >= 20f);
-        TextPrimitive? body = texts.FirstOrDefault(t => t.FontSize <= 12f);
+        TextPrimitive? body = texts.FirstOrDefault(t => t.FontSize <= Constants.DefaultFontSize);
 
         Assert.NotNull(h1);
         Assert.NotNull(body);
