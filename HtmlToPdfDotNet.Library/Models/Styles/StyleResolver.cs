@@ -13,16 +13,28 @@ namespace HtmlToPdfDotNet.Library.Models.Styles;
 /// </summary>
 public sealed class StyleResolver
 {
+    private readonly List<CssRule> _stylesheetRules;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StyleResolver"/> class.
+    /// </summary>
+    /// <param name="stylesheetRules">The stylesheet rules to apply.</param>
+    public StyleResolver(IEnumerable<CssRule>? stylesheetRules = null)
+    {
+        _stylesheetRules = stylesheetRules is null ?
+            [] :
+            [.. stylesheetRules];
+    }
+
     #region Tag Defaults
     // Non-heritable properties that certain tags override by default.
     private static readonly Dictionary<string, Action<ComputedStyle>> _TagDefaults =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            // Typography
             // Typography & Display
             ["h1"] = s => { s.FontSize = 24f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(12f); },
             ["h2"] = s => { s.FontSize = 18.7f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(10f); },
-            ["h3"] = s => { s.FontSize = 16f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(8f); },
+            ["h3"] = s => { s.FontSize = 16f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(Constants.DefaultMargin); },
             ["h4"] = s => { s.FontSize = 14f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(7f); },
             ["h5"] = s => { s.FontSize = Constants.DefaultFontSize; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(6f); },
             ["h6"] = s => { s.FontSize = 10f; s.FontWeight = FontWeight.Bold; s.Margin = Helpers.DefaultMargin(5f); },
@@ -32,7 +44,7 @@ public sealed class StyleResolver
             ["em"] = s => { s.FontStyle = FontStyle.Italic; s.Display = DisplayType.Inline; },
             ["small"] = s => { s.FontSize = 9f; s.Display = DisplayType.Inline; },
             ["span"] = s => s.Display = DisplayType.Inline,
-            ["a"] = s => s.Display = DisplayType.Inline,
+            ["a"] = s => { s.Display = DisplayType.Inline; s.Color = CssValueParser.ParseColor("#0066CC"); },
             ["label"] = s => s.Display = DisplayType.Inline,
             ["abbr"] = s => s.Display = DisplayType.Inline,
             ["cite"] = s => s.Display = DisplayType.Inline,
@@ -40,13 +52,14 @@ public sealed class StyleResolver
             ["kbd"] = s => { s.Display = DisplayType.Inline; s.FontFamily = "Courier"; },
             ["tt"] = s => { s.Display = DisplayType.Inline; s.FontFamily = "Courier"; },
             ["pre"] = s => s.FontFamily = "Courier",
+            ["hr"] = s => { s.Display = DisplayType.Block; s.Margin = new CssEdges(new CssLength(Constants.DefaultMargin)); s.BorderBottom = new CssBorderSide(new CssLength(1f), BorderStyle.Solid, new CssColor(0.5f, 0.5f, 0.5f)); },
 
             // Layout
-            ["p"] = s => { s.Margin = Helpers.DefaultMargin(8f); },
-            ["ul"] = s => { s.Margin = Helpers.DefaultMargin(8f); s.Padding = Helpers.DefaultPadding(30f); },
-            ["ol"] = s => { s.Margin = Helpers.DefaultMargin(8f); s.Padding = Helpers.DefaultPadding(30f); },
-            ["blockquote"] = s => { s.Margin = Helpers.DefaultMargin(8f); s.Padding = Helpers.DefaultPadding(30f); },
+            ["p"] = s => { s.Margin = Helpers.DefaultMargin(Constants.DefaultMargin); },
+            ["ul"] = s => { s.Margin = new CssEdges(new CssLength(Constants.DefaultMargin)); s.Padding = Helpers.DefaultPadding(20f); },
+            ["ol"] = s => { s.Margin = new CssEdges(new CssLength(Constants.DefaultMargin)); s.Padding = Helpers.DefaultPadding(20f); },
             ["li"] = s => s.Display = DisplayType.Block,
+            ["blockquote"] = s => { s.Margin = new CssEdges(new CssLength(8f), new CssLength(32f)); s.Padding = new CssEdges(new CssLength(Constants.DefaultPadding)); },
 
             // Display none
             ["head"] = s => s.Display = DisplayType.None,
@@ -57,19 +70,11 @@ public sealed class StyleResolver
             ["title"] = s => s.Display = DisplayType.None,
 
             // Table
-            ["table"] = s => s.Display = DisplayType.Table,
+            ["table"] = s => { s.Display = DisplayType.Table; s.Margin = new CssEdges(new CssLength(Constants.DefaultMargin)); },
             ["tr"] = s => s.Display = DisplayType.Block,
-            ["td"] = s => s.Display = DisplayType.Block,
-            ["th"] = s => { s.Display = DisplayType.Block; s.FontWeight = FontWeight.Bold; },
+            ["td"] = s => { s.Display = DisplayType.Block; s.Padding = new CssEdges(new CssLength(Constants.DefaultPadding * 0.5f)); },
+            ["th"] = s => { s.Display = DisplayType.Block; s.FontWeight = FontWeight.Bold; s.Padding = new CssEdges(new CssLength(Constants.DefaultPadding * 0.5f)); },
         };
-
-    // Properties inherited from the parent if the child does not define them.
-    // Reference: https://www.w3.org/TR/CSS22/propidx.html
-    private static readonly HashSet<string> _InheritedProperties = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "color", "font-family", "font-size", "font-weight", "font-style",
-        "line-height", "text-align", "visibility",
-    };
     #endregion
 
     /// <summary>
@@ -92,9 +97,9 @@ public sealed class StyleResolver
     /// <param name="node">Root of the DOM (usually the &lt;html&gt; node).</param>
     /// <param name="parentStyle">Computed style of the parent node.</param>
     /// <param name="result">Dictionary to store the computed style of each node.</param>
-    private static void ResolveNode(HtmlNode node,
-                                    ComputedStyle parentStyle,
-                                    Dictionary<HtmlNode, ComputedStyle> result)
+    private void ResolveNode(HtmlNode node,
+                             ComputedStyle parentStyle,
+                             Dictionary<HtmlNode, ComputedStyle> result)
     {
         if (node.NodeType == HtmlNodeType.Document)
         {
@@ -120,7 +125,10 @@ public sealed class StyleResolver
         // 2. HTML tag defaults
         ApplyTagDefaults(node.Name, style);
 
-        // 3. Inline style attribute
+        // 3 Apply Stylesheet rules
+        ApplyStylesheetRules(node, style);
+
+        // 3.1 Inline style attribute
         ApplyInlineStyle(node, style);
 
         result[node] = style;
@@ -168,6 +176,19 @@ public sealed class StyleResolver
     }
     #endregion
 
+    #region  StyleSheet rules
+    private void ApplyStylesheetRules(HtmlNode node, ComputedStyle style)
+    {
+        if (_stylesheetRules.Count != 0)
+        {
+            List<CssRule> matchingRules = CssSelectorMatcher.GetMatchingRules(node, _stylesheetRules).ToList();
+            foreach (CssRule rule in matchingRules)
+                foreach ((string prop, string value) in rule.Declarations)
+                    ApplyDeclaration(prop, value, style);
+        }
+    }
+    #endregion
+
     #region Inline style
     /// <summary>
     /// Applies inline styles from an HTML node to the computed style.
@@ -205,152 +226,127 @@ public sealed class StyleResolver
     {
         switch (prop)
         {
-            // Display
             case "display":
-                style.Display = CssValueParser.ParseDisplay(value); break;
-
-            // Dimensions
-            case "width":
-                style.Width = CssValueParser.ParseLength(value, style.FontSize); break;
-            case "height":
-                style.Height = CssValueParser.ParseLength(value, style.FontSize); break;
-
-            // Margin shorthand and individual sides
-            case "margin":
-                style.Margin = CssValueParser.ParseEdges(value, style.FontSize); break;
-            case "margin-top":
-                style.Margin = new CssEdges(
-                    CssValueParser.ParseLength(value, style.FontSize),
-                    style.Margin.Right, style.Margin.Bottom, style.Margin.Left); break;
-            case "margin-right":
-                style.Margin = new CssEdges(
-                    style.Margin.Top,
-                    CssValueParser.ParseLength(value, style.FontSize),
-                    style.Margin.Bottom, style.Margin.Left); break;
-            case "margin-bottom":
-                style.Margin = new CssEdges(
-                    style.Margin.Top, style.Margin.Right,
-                    CssValueParser.ParseLength(value, style.FontSize),
-                    style.Margin.Left); break;
-            case "margin-left":
-                style.Margin = new CssEdges(
-                    style.Margin.Top, style.Margin.Right, style.Margin.Bottom,
-                    CssValueParser.ParseLength(value, style.FontSize)); break;
-
-            // Padding shorthand and individual sides
-            case "padding":
-                style.Padding = CssValueParser.ParseEdges(value, style.FontSize); break;
-            case "padding-top":
-                style.Padding = new CssEdges(
-                    CssValueParser.ParseLength(value, style.FontSize),
-                    style.Padding.Right, style.Padding.Bottom, style.Padding.Left); break;
-            case "padding-right":
-                style.Padding = new CssEdges(
-                    style.Padding.Top,
-                    CssValueParser.ParseLength(value, style.FontSize),
-                    style.Padding.Bottom, style.Padding.Left); break;
-            case "padding-bottom":
-                style.Padding = new CssEdges(
-                    style.Padding.Top, style.Padding.Right,
-                    CssValueParser.ParseLength(value, style.FontSize),
-                    style.Padding.Left); break;
-            case "padding-left":
-                style.Padding = new CssEdges(
-                    style.Padding.Top, style.Padding.Right, style.Padding.Bottom,
-                    CssValueParser.ParseLength(value, style.FontSize)); break;
-
-            // Border shorthand
-            case "border":
-                CssBorderSide side = CssValueParser.ParseBorderSide(value, style.FontSize);
-                style.BorderTop = style.BorderRight = style.BorderBottom = style.BorderLeft = side;
+                style.Display = CssValueParser.ParseDisplay(value);
                 break;
+            case "width":
+                style.Width = CssValueParser.ParseLength(value, style.FontSize);
+                break;
+            case "height":
+                style.Height = CssValueParser.ParseLength(value, style.FontSize);
+                break;
+            case "margin":
+                style.Margin = CssValueParser.ParseEdges(value, style.FontSize);
+                break;
+            case "margin-top":
+                style.Margin = new CssEdges(CssValueParser.ParseLength(value, style.FontSize),
+                                            style.Margin.Right,
+                                            style.Margin.Bottom,
+                                            style.Margin.Left);
+                break;
+            case "margin-right":
+                style.Margin = new CssEdges(style.Margin.Top,
+                                            CssValueParser.ParseLength(value, style.FontSize),
+                                            style.Margin.Bottom,
+                                            style.Margin.Left);
+                break;
+            case "margin-bottom":
+                style.Margin = new CssEdges(style.Margin.Top,
+                                            style.Margin.Right,
+                                            CssValueParser.ParseLength(value, style.FontSize),
+                                            style.Margin.Left);
+                break;
+            case "margin-left":
+                style.Margin = new CssEdges(style.Margin.Top,
+                                            style.Margin.Right,
+                                            style.Margin.Bottom,
+                                            CssValueParser.ParseLength(value, style.FontSize));
+                break;
+            case "padding":
+                style.Padding = CssValueParser.ParseEdges(value, style.FontSize);
+                break;
+            case "padding-top":
+                style.Padding = new CssEdges(CssValueParser.ParseLength(value, style.FontSize),
+                                            style.Padding.Right,
+                                            style.Padding.Bottom,
+                                            style.Padding.Left);
+                break;
+            case "padding-right":
+                style.Padding = new CssEdges(style.Padding.Top,
+                                            CssValueParser.ParseLength(value, style.FontSize),
+                                            style.Padding.Bottom,
+                                            style.Padding.Left);
+                break;
+            case "padding-bottom":
+                style.Padding = new CssEdges(style.Padding.Top,
+                                            style.Padding.Right,
+                                            CssValueParser.ParseLength(value, style.FontSize),
+                                            style.Padding.Left);
+                break;
+            case "padding-left":
+                style.Padding = new CssEdges(style.Padding.Top,
+                                            style.Padding.Right,
+                                            style.Padding.Bottom,
+                                            CssValueParser.ParseLength(value, style.FontSize));
+                break;
+            case "border":
+                {
+                    CssBorderSide s = CssValueParser.ParseBorderSide(value, style.FontSize);
+                    style.BorderTop = s;
+                    style.BorderRight = s;
+                    style.BorderBottom = s;
+                    style.BorderLeft = s;
+                    break;
+                }
             case "border-top":
-                style.BorderTop = CssValueParser.ParseBorderSide(value, style.FontSize); break;
+                style.BorderTop = CssValueParser.ParseBorderSide(value, style.FontSize);
+                break;
             case "border-right":
-                style.BorderRight = CssValueParser.ParseBorderSide(value, style.FontSize); break;
+                style.BorderRight = CssValueParser.ParseBorderSide(value, style.FontSize);
+                break;
             case "border-bottom":
-                style.BorderBottom = CssValueParser.ParseBorderSide(value, style.FontSize); break;
+                style.BorderBottom = CssValueParser.ParseBorderSide(value, style.FontSize);
+                break;
             case "border-left":
-                style.BorderLeft = CssValueParser.ParseBorderSide(value, style.FontSize); break;
-
-            // Colors
+                style.BorderLeft = CssValueParser.ParseBorderSide(value, style.FontSize);
+                break;
             case "color":
-                style.Color = CssValueParser.ParseColor(value); break;
+                style.Color = CssValueParser.ParseColor(value);
+                break;
             case "background-color":
             case "background":
-                // For "background" only extract color if no image is declared
                 if (!value.Contains("url(", StringComparison.OrdinalIgnoreCase))
                     style.BackgroundColor = CssValueParser.ParseColor(value);
                 break;
-
-            // Typography
             case "font-size":
-                style.FontSize = CssValueParser.ParseFontSize(value, style.FontSize); break;
+                style.FontSize = CssValueParser.ParseFontSize(value, style.FontSize);
+                break;
             case "font-weight":
-                style.FontWeight = CssValueParser.ParseFontWeight(value); break;
+                style.FontWeight = CssValueParser.ParseFontWeight(value);
+                break;
             case "font-style":
-                style.FontStyle = CssValueParser.ParseFontStyle(value); break;
+                style.FontStyle = CssValueParser.ParseFontStyle(value);
+                break;
             case "font-family":
-                style.FontFamily = NormalizeFontFamily(value); break;
-            case "font":
-                ParseFontShorthand(value, style); break;
+                style.FontFamily = NormalizeFontFamily(value);
+                break;
             case "line-height":
-                style.LineHeight = ParseLineHeight(value, style.FontSize); break;
-
-            // Text
+                style.LineHeight = ParseLineHeight(value, style.FontSize);
+                break;
             case "text-align":
-                style.TextAlign = CssValueParser.ParseTextAlign(value); break;
-
-            // Page breaks
+                style.TextAlign = CssValueParser.ParseTextAlign(value);
+                break;
             case "page-break-before":
-                style.PageBreakBefore = value.Trim().ToLowerInvariant() == "always"; break;
+                style.PageBreakBefore = value.Trim().Equals("always", StringComparison.OrdinalIgnoreCase);
+                break;
             case "page-break-after":
-                style.PageBreakAfter = value.Trim().ToLowerInvariant() == "always"; break;
+                style.PageBreakAfter = value.Trim().Equals("always", StringComparison.OrdinalIgnoreCase);
+                break;
         }
     }
     #endregion
 
     #region Font shorthand
-    /// <summary>
-    /// Parses the font shorthand property and applies it to the computed style.
-    /// </summary>
-    /// <param name="value">The font shorthand value.</param>
-    /// <param name="style">The computed style to apply the font shorthand to.</param>
-    private static void ParseFontShorthand(string value, ComputedStyle style)
-    {
-        // Simplified: look for weight, style, size and family
-        // Format: [style] [weight] size[/line-height] family
-        string[] parts = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (string part in parts)
-        {
-            string p = part.ToLowerInvariant().TrimEnd(',');
-
-            if (p is "italic" or "oblique") { style.FontStyle = CssValueParser.ParseFontStyle(p); continue; }
-            if (p is "bold" or "bolder") { style.FontWeight = FontWeight.Bold; continue; }
-            if (p is "normal") { continue; }
-
-            // size/line-height
-            if (p.Contains('/'))
-            {
-                string[] sl = p.Split('/');
-                style.FontSize = CssValueParser.ParseFontSize(sl[0], style.FontSize);
-                style.LineHeight = ParseLineHeight(sl[1], style.FontSize);
-                continue;
-            }
-
-            // Is it a size?
-            CssLength len = CssValueParser.ParseLength(p, style.FontSize);
-            if (!len.IsZero && !len.IsAuto) { style.FontSize = len.Points; continue; }
-
-            float fs = CssValueParser.ParseFontSize(p, style.FontSize);
-            if (Math.Abs(fs - style.FontSize) > 0.01f) { style.FontSize = fs; continue; }
-        }
-
-        // The family is the rest after size
-        // To simplify: take the first part that was not recognized as a keyword
-    }
-
     /// <summary>
     /// Parses the line-height property and applies it to the computed style.
     /// </summary>

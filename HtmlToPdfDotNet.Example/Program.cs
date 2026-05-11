@@ -32,10 +32,4 @@ string html = @"
 </div>
 <img src='./public/images/test2.png' alt='Google Logo' />";
 
-bool result = generator.WritePdfFile(html, "./test_interface.pdf");
-
-if (result)
-    Console.WriteLine("PDF generated successfully via IPdfGenerator.");
-else
-    Console.WriteLine("PDF generation failed.");
-
+generator.WritePdfFile(html, "./test.pdf");

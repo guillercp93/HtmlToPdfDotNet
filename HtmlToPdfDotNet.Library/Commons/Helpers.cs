@@ -462,6 +462,6 @@ public static class Helpers
     /// </summary>
     /// <param name="points">The left and right padding points.</param>
     /// <returns>The CssEdges with the given points for left and right padding and zero for top and bottom padding.</returns>
-    public static CssEdges DefaultPadding(float points) => new(CssLength.Zero, CssLength.Zero, CssLength.Zero, new CssLength(points));
+    public static CssEdges DefaultPadding(float points) => new(CssLength.Zero, new CssLength(points), CssLength.Zero, new CssLength(points));
 
 }

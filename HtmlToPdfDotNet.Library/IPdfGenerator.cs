@@ -1,4 +1,4 @@
-using System.IO;
+using HtmlToPdfDotNet.Library.Models.Layout;
 
 namespace HtmlToPdfDotNet.Library;
 
@@ -22,10 +22,16 @@ public interface IPdfGenerator
     void Convert(string html, Stream output);
 
     /// <summary>
-    /// Tries to write the converted PDF to the specified path, returning true if successful, false otherwise.
+    /// Writes the converted PDF to the specified file.
     /// </summary>
     /// <param name="html">The raw HTML content to convert.</param>
     /// <param name="pdfPath">The destination path for the generated PDF file.</param>
-    /// <returns>True if the PDF was successfully written, false otherwise.</returns>
-    bool WritePdfFile(string html, string pdfPath);
+    public void WritePdfFile(string html, string pdfPath);
+
+    /// <summary>
+    /// Runs the layout engine on the specified HTML content.
+    /// </summary>
+    /// <param name="html">The HTML content to process.</param>
+    /// <returns>The calculated layout result containing primitives for all pages.</returns>
+    public LayoutResult RunLayout(string html);
 }

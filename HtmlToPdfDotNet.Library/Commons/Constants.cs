@@ -11,6 +11,16 @@ public static class Constants
     public const float DefaultFontSize = 12f;
 
     /// <summary>
+    /// Default margin in points.
+    /// </summary>
+    public const float DefaultMargin = 8f;
+
+    /// <summary>
+    /// Default padding in points.
+    /// </summary>
+    public const float DefaultPadding = 8f;
+
+    /// <summary>
     /// Conversion factor from 96 DPI pixels to 72 DPI points (72/96 = 0.75).
     /// </summary>
     public const float PointsPerPx = 0.75f;

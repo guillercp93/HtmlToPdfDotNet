@@ -57,24 +57,15 @@ public class PdfGenerator : IPdfGenerator
     }
 
     /// <summary>
-    /// Tries to write the converted PDF to the specified path, returning true if successful, false otherwise.
+    /// Writes the converted PDF to the specified file.
     /// </summary>
     /// <param name="html">The raw HTML content to convert.</param>
     /// <param name="pdfPath">The destination path for the generated PDF file.</param>
-    /// <returns>True if the PDF was successfully written, false otherwise.</returns>
-    public bool WritePdfFile(string html, string pdfPath)
+    public void WritePdfFile(string html, string pdfPath)
     {
-        try
-        {
-            byte[] rawPdf = Convert(html);
-            using FileStream fs = File.OpenWrite(pdfPath);
-            fs.Write(rawPdf);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+        byte[] rawPdf = Convert(html);
+        using FileStream fs = File.OpenWrite(pdfPath);
+        fs.Write(rawPdf);
     }
 
     /// <summary>
@@ -82,17 +73,20 @@ public class PdfGenerator : IPdfGenerator
     /// </summary>
     /// <param name="html">The HTML content to process.</param>
     /// <returns>The calculated layout result containing primitives for all pages.</returns>
-    internal LayoutResult RunLayout(string html)
+    public LayoutResult RunLayout(string html)
     {
-        // Phase 1 – Parse HTML and resolve CSS styles
         HtmlDocument doc = new();
         doc.LoadHtml(html);
 
-        StyleResolver resolver = new();
+        List<CssRule> cssRules = _options.StyleSheets
+                                         .SelectMany(CssStyleSheetParser.Parse)
+                                         .Concat(CssStyleSheetParser.ParseFromHtml(html))
+                                         .ToList();
+
+        StyleResolver resolver = new(cssRules);
         Dictionary<HtmlNode, ComputedStyle> styles = resolver.Resolve(doc.DocumentNode);
 
-        // Phase 2 – Layout engine
-        BlockLayoutEngine engine = new(_options.Page, styles, _options.Fonts);
+        BlockLayoutEngine engine = new(_options.Page, styles, _options.Fonts, _options.BasePath);
         return engine.Layout(doc.DocumentNode);
     }
 }

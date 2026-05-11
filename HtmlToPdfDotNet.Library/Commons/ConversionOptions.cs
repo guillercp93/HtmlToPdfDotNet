@@ -16,6 +16,16 @@ public class ConversionOptions
     public bool CompressStreams { get; set; } = true;
 
     /// <summary>
+    /// Optional base path for resolving relative paths (images, stylesheets).
+    /// </summary>
+    public string? BasePath { get; set; }
+
+    /// <summary>
+    /// Optional list of CSS file paths to include in the PDF.
+    /// </summary>
+    public IEnumerable<string> StyleSheets { get; set; } = [];
+
+    /// <summary>
     /// Optional registry of embedded TTF/OTF fonts.
     /// When a font family referenced in the HTML/CSS is found here,
     /// it is parsed for exact glyph metrics and embedded as a subset

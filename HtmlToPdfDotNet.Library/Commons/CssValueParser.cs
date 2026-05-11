@@ -108,6 +108,8 @@ public static class CssValueParser
     /// <summary>
     /// Parser a CSS color. Supports: names, #rrggbb, #rgb, #rrggbbaa, rgb(...), rgba(...).
     /// </summary>
+    /// <param name="value">The CSS color value.</param>
+    /// <returns>The parsed color.</returns>
     public static CssColor ParseColor(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return CssColor.Black;

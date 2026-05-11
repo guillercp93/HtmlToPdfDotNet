@@ -18,6 +18,7 @@ public sealed class BlockLayoutEngine
     private readonly Dictionary<HtmlNode, ComputedStyle> _styles;
     private readonly LayoutResult _result = new();
     private readonly FontRegistry? _registry;
+    private readonly string? _basePath;
 
     #region Pagination Status
     private int _currentPage = 0;
@@ -25,6 +26,7 @@ public sealed class BlockLayoutEngine
     private float _contentTop = 0f;
     private float _contentLeft = 0f;
     private float _pageContentH = 0f;
+
     #endregion
 
     /// <summary>
@@ -35,7 +37,8 @@ public sealed class BlockLayoutEngine
     /// <param name="registry">Optional font registry for embedded TTF/OTF fonts.</param>
     public BlockLayoutEngine(PageLayout page,
                              Dictionary<HtmlNode, ComputedStyle> styles,
-                             FontRegistry? registry = null)
+                             FontRegistry? registry = null,
+                             string? basePath = null)
     {
         _page = page;
         _styles = styles;
@@ -43,6 +46,7 @@ public sealed class BlockLayoutEngine
         _contentTop = page.Margins.Top;
         _contentLeft = page.Margins.Left;
         _pageContentH = page.ContentHeight;
+        _basePath = basePath;
     }
 
     /// <summary>
@@ -407,7 +411,7 @@ public sealed class BlockLayoutEngine
         ImageData? imageData = null;
         try
         {
-            imageData = ImageLoader.Load(src);
+            imageData = ImageLoader.Load(src, _basePath);
         }
         catch
         {
