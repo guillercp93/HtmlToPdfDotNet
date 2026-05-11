@@ -11,7 +11,7 @@
     <PackageId>HtmlToPdfDotNet.Library</PackageId>
     <Authors>Guillermo Castillo</Authors>
     <Description>A library for converting HTML to PDF using .NET.</Description>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>MIT + Commercial License</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/guillercp93/HtmlToPdfDotNet</PackageProjectUrl>
     <RepositoryUrl>https://github.com/guillercp93/HtmlToPdfDotNet.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
