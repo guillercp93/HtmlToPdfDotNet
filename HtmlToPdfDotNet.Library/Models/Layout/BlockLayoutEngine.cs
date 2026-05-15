@@ -424,16 +424,17 @@ public sealed class BlockLayoutEngine
         {
             imageData = ImageLoader.Load(src, _basePath);
         }
-        catch
+        catch (Exception ex)
         {
             // if image isn't loaded, skip or placeholder.
+            Console.WriteLine($"Error loading image: {src} - {ex.Message}");
             return;
         }
 
         if (imageData is null) return;
 
         BoxModel box = new(imgNode, style);
-        
+
         // 1. Determine Display Width
         float targetWidth;
         string widthAttr = imgNode.GetAttributeValue("width", string.Empty);
