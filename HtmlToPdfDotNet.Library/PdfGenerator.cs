@@ -76,7 +76,8 @@ public class PdfGenerator : IPdfGenerator
     public LayoutResult RunLayout(string html)
     {
         HtmlDocument doc = new();
-        doc.LoadHtml(html);
+
+        doc.LoadHtml(Helpers.CleanHtml(html));
 
         List<CssRule> cssRules = _options.StyleSheets
                                          .SelectMany(CssStyleSheetParser.Parse)

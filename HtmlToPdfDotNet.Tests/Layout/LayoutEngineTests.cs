@@ -185,12 +185,42 @@ public class BlockLayoutEngineTests
     }
 
     [Fact]
+    public void BackgroundIsDrawnBefore_Text_ForZOrder()
+    {
+        // For correct Z-order in PDF, backgrounds must be emitted BEFORE text.
+        LayoutResult result = RunLayout("<div style=\"background-color:#0000ff\">Hello World</div>");
+
+        int rectIdx = result.Primitives.FindIndex(p => p is RectPrimitive);
+        int textIdx = result.Primitives.FindIndex(p => p is TextPrimitive);
+
+        Assert.True(rectIdx >= 0, "RectPrimitive not found");
+        Assert.True(textIdx >= 0, "TextPrimitive not found");
+        Assert.True(rectIdx < textIdx, $"Background (idx {rectIdx}) must be before Text (idx {textIdx})");
+    }
+
+    [Fact]
     public void Border_ProducesBorderLinePrimitives()
     {
         LayoutResult result = RunLayout("<div style=\"border:1pt solid black\">box</div>");
 
         List<BorderLinePrimitive> borders = result.Primitives.OfType<BorderLinePrimitive>().ToList();
         Assert.True(borders.Count >= 4, $"Expected ≥4 border lines, got {borders.Count}");
+    }
+
+    [Fact]
+    public void BackgroundIsDrawnBefore_Image_ForZOrder()
+    {
+        // For correct Z-order in PDF, backgrounds must be emitted BEFORE image.
+        // We use a base64 dummy image to avoid file system issues in tests.
+        string html = "<img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==\" style=\"background-color:#00ff00\" />";
+        LayoutResult result = RunLayout(html);
+
+        int rectIdx = result.Primitives.FindIndex(p => p is RectPrimitive);
+        int imgIdx = result.Primitives.FindIndex(p => p is ImagePrimitive);
+
+        Assert.True(rectIdx >= 0, "RectPrimitive not found");
+        Assert.True(imgIdx >= 0, "ImagePrimitive not found");
+        Assert.True(rectIdx < imgIdx, $"Background (idx {rectIdx}) must be before Image (idx {imgIdx})");
     }
 
     [Fact]

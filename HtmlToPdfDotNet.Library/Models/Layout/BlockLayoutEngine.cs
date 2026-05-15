@@ -35,6 +35,7 @@ public sealed class BlockLayoutEngine
     /// <param name="page">The page layout configuration (size, margins, etc.).</param>
     /// <param name="styles">A dictionary containing the computed styles for each HTML node.</param>
     /// <param name="registry">Optional font registry for embedded TTF/OTF fonts.</param>
+    /// <param name="basePath">Optional base path for resolving relative file paths.</param>
     public BlockLayoutEngine(PageLayout page,
                              Dictionary<HtmlNode, ComputedStyle> styles,
                              FontRegistry? registry = null,
@@ -159,6 +160,10 @@ public sealed class BlockLayoutEngine
         float contentX = parentX + style.Margin.Left.Points + style.BorderLeft.Width.Points + style.Padding.Left.Points;
         float contentWidth = box.ContentWidth;
 
+        // Capture the index before layouting children so we can insert the background/borders
+        // behind them in the primitives list (Z-order).
+        int boxPrimitiveIndex = _result.Primitives.Count;
+
         // Layout children nodes
         float childrenHeight = LayoutBlockContent(node, style, contentX, contentWidth);
 
@@ -170,8 +175,9 @@ public sealed class BlockLayoutEngine
         _cursorY = boxTop + style.BorderTop.Width.Points + style.Padding.Top.Points + contentHeight
                           + style.Padding.Bottom.Points + style.BorderBottom.Width.Points;
 
-        // Emit box primitives
-        EmitBox(box, boxTop, parentX + style.Margin.Left.Points);
+        // Emit box primitives (background and borders)
+        // We insert them at boxPrimitiveIndex so they are drawn BEFORE the children.
+        EmitBox(box, boxTop, parentX + style.Margin.Left.Points, boxPrimitiveIndex);
 
         _cursorY += style.Margin.Bottom.Points;
 
@@ -333,15 +339,18 @@ public sealed class BlockLayoutEngine
     /// <param name="box">The box model to emit.</param>
     /// <param name="borderBoxTop">The Y coordinate of the top of the border box.</param>
     /// <param name="borderBoxX">The X coordinate of the left of the border box.</param>
-    private void EmitBox(BoxModel box, float borderBoxTop, float borderBoxX)
+    /// <param name="insertAt">The optional index at which to insert the primitives (for Z-order control).</param>
+    private void EmitBox(BoxModel box, float borderBoxTop, float borderBoxX, int? insertAt = null)
     {
         float bbW = box.BorderBoxWidth;
         float bbH = box.BorderBoxHeight;
 
+        int currentIdx = insertAt ?? _result.Primitives.Count;
+
         // Background
         if (box.Style.BackgroundColor.A > 0f)
         {
-            _result.Primitives.Add(new RectPrimitive
+            _result.Primitives.Insert(currentIdx++, new RectPrimitive
             {
                 PageIndex = _currentPage,
                 X = borderBoxX,
@@ -353,10 +362,10 @@ public sealed class BlockLayoutEngine
         }
 
         // Bordes
-        EmitBorder(box.Style.BorderTop, borderBoxX, borderBoxTop, borderBoxX + bbW, borderBoxTop);
-        EmitBorder(box.Style.BorderBottom, borderBoxX, borderBoxTop + bbH, borderBoxX + bbW, borderBoxTop + bbH);
-        EmitBorder(box.Style.BorderLeft, borderBoxX, borderBoxTop, borderBoxX, borderBoxTop + bbH);
-        EmitBorder(box.Style.BorderRight, borderBoxX + bbW, borderBoxTop, borderBoxX + bbW, borderBoxTop + bbH);
+        currentIdx = EmitBorder(box.Style.BorderTop, borderBoxX, borderBoxTop, borderBoxX + bbW, borderBoxTop, currentIdx);
+        currentIdx = EmitBorder(box.Style.BorderBottom, borderBoxX, borderBoxTop + bbH, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
+        currentIdx = EmitBorder(box.Style.BorderLeft, borderBoxX, borderBoxTop, borderBoxX, borderBoxTop + bbH, currentIdx);
+        currentIdx = EmitBorder(box.Style.BorderRight, borderBoxX + bbW, borderBoxTop, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
     }
 
     /// <summary>
@@ -367,10 +376,11 @@ public sealed class BlockLayoutEngine
     /// <param name="y1">The Y coordinate of the start of the border line.</param>
     /// <param name="x2">The X coordinate of the end of the border line.</param>
     /// <param name="y2">The Y coordinate of the end of the border line.</param>
-    private void EmitBorder(CssBorderSide side, float x1, float y1, float x2, float y2)
+    /// <param name="insertAt">The index at which to insert the primitive.</param>
+    private int EmitBorder(CssBorderSide side, float x1, float y1, float x2, float y2, int insertAt)
     {
-        if (!side.IsVisible) return;
-        _result.Primitives.Add(new BorderLinePrimitive
+        if (!side.IsVisible) return insertAt;
+        _result.Primitives.Insert(insertAt, new BorderLinePrimitive
         {
             PageIndex = _currentPage,
             X1 = x1,
@@ -381,6 +391,7 @@ public sealed class BlockLayoutEngine
             Color = side.Color,
             Style = side.Style,
         });
+        return insertAt + 1;
     }
 
     /// <summary>
@@ -415,69 +426,72 @@ public sealed class BlockLayoutEngine
         }
         catch
         {
-            // if image isn't loaded, emit a gray rectangle placeholder.
-            _cursorY += 100f; // placeholder height
+            // if image isn't loaded, skip or placeholder.
             return;
         }
 
         if (imageData is null) return;
 
-        // calculate dimensions of display
-        float displayWidth = availableWidth;
-        float displayHeight = imageData.PixelHeight;
-
-        // HTML attributes width / height
+        BoxModel box = new(imgNode, style);
+        
+        // 1. Determine Display Width
+        float targetWidth;
         string widthAttr = imgNode.GetAttributeValue("width", string.Empty);
-        string heightAttr = imgNode.GetAttributeValue("height", string.Empty);
-
         if (!string.IsNullOrEmpty(widthAttr) && float.TryParse(widthAttr, out float w))
-        {
-            displayWidth = w * Constants.PointsPerPx; // px -> pt
-        }
-        else if (!style.Width.IsAuto && style.Width.Points > 0)
-        {
-            displayWidth = style.Width.Points;
-        }
+            targetWidth = w * Constants.PointsPerPx;
+        else if (!style.Width.IsAuto)
+            targetWidth = style.Width.Points;
         else
-        {
-            displayWidth = Math.Min(imageData.PixelWidth * Constants.PointsPerPx, availableWidth); // px -> pt
-        }
+            targetWidth = Math.Min(imageData.PixelWidth * Constants.PointsPerPx, availableWidth - style.Margin.Horizontal.Points - style.BorderLeft.Width.Points - style.BorderRight.Width.Points - style.Padding.Horizontal.Points);
 
-        // calculate height but keep aspect ratio
+        box.ContentWidth = targetWidth;
+
+        // 2. Determine Display Height (maintaining aspect ratio if auto)
         float aspectRatio = (float)imageData.PixelWidth / imageData.PixelHeight;
-
+        float targetHeight;
+        string heightAttr = imgNode.GetAttributeValue("height", string.Empty);
         if (!string.IsNullOrEmpty(heightAttr) && float.TryParse(heightAttr, out float h))
-        {
-            displayHeight = h * Constants.PointsPerPx; // px -> pt
-        }
-        else if (!style.Height.IsAuto && style.Height.Points > 0)
-        {
-            displayHeight = style.Height.Points;
-        }
+            targetHeight = h * Constants.PointsPerPx;
+        else if (!style.Height.IsAuto)
+            targetHeight = style.Height.Points;
         else
-        {
-            displayHeight = displayWidth / aspectRatio;
-        }
+            targetHeight = targetWidth / aspectRatio;
 
-        // Check if image fits on current page
-        if (_cursorY + displayHeight > _pageContentH)
+        box.ContentHeight = targetHeight;
+
+        // 3. Position and Pagination
+        _cursorY += style.Margin.Top.Points;
+        float boxTop = _cursorY;
+        float totalBoxHeight = box.BorderBoxHeight;
+
+        if (_cursorY + totalBoxHeight > _pageContentH)
         {
             AdvancePage();
+            boxTop = _cursorY;
         }
 
-        // Emit primitive
+        float borderBoxX = parentX + style.Margin.Left.Points;
+        float contentX = borderBoxX + style.BorderLeft.Width.Points + style.Padding.Left.Points;
+        float contentY = boxTop + style.BorderTop.Width.Points + style.Padding.Top.Points;
+
+        // 4. Emit Primitives
+        int boxIndex = _result.Primitives.Count;
+
         _result.Primitives.Add(new ImagePrimitive
         {
             PageIndex = _currentPage,
-            X = parentX,
-            Y = _cursorY,
-            Width = displayWidth,
-            Height = displayHeight,
+            X = contentX,
+            Y = contentY,
+            Width = targetWidth,
+            Height = targetHeight,
             ImageData = imageData,
             XObjectAlias = $"Im{Interlocked.Increment(ref _imageCounter)}"
         });
 
-        _cursorY += displayHeight + style.Margin.Bottom.Points;
+        EmitBox(box, boxTop, borderBoxX, boxIndex);
 
+        // 5. Advance Cursor
+        _cursorY = boxTop + totalBoxHeight + style.Margin.Bottom.Points;
+        CheckPageOverflow();
     }
 }
