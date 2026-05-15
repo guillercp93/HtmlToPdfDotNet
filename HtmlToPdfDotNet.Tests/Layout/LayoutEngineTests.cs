@@ -222,7 +222,6 @@ public class BlockLayoutEngineTests
         Assert.True(imgIdx >= 0, "ImagePrimitive not found");
         Assert.True(rectIdx < imgIdx, $"Background (idx {rectIdx}) must be before Image (idx {imgIdx})");
     }
-
     [Fact]
     public void PageBreakBefore_CreatesNewPage()
     {
@@ -232,6 +231,32 @@ public class BlockLayoutEngineTests
         );
 
         Assert.True(result.PageCount >= 2);
+    }
+
+    [Fact]
+    public void BlockBackground_SynchronizesWithPageBreak()
+    {
+        // This test verifies that if a block starts near the end of a page and 
+        // jumps to the next page, its background (RectPrimitive) follows it.
+        string html = @"<div style='height:1200px'>Space</div>
+                        <div style='background-color:#ff0000; padding:10px'>
+                            <p>This should be on page 2 with red background</p>
+                        </div>";
+        LayoutResult result = RunLayout(html);
+
+        // Find the red background
+        RectPrimitive? bg = result.Primitives.OfType<RectPrimitive>().FirstOrDefault(r => r.Fill.R > 0.9f);
+        TextPrimitive? text = result.Primitives.OfType<TextPrimitive>().FirstOrDefault(t => t.PageIndex == 1);
+
+        Assert.NotNull(bg);
+        Assert.NotNull(text);
+
+        // They should both be on the same page (Page 2, index 1)
+        Assert.Equal(1, bg.PageIndex);
+        Assert.Equal(1, text.PageIndex);
+
+        // The background Y should be less than or equal to text Y
+        Assert.True(bg.Y <= text.Y, $"Background Y ({bg.Y}) should be <= Text Y ({text.Y})");
     }
 
     [Fact]
