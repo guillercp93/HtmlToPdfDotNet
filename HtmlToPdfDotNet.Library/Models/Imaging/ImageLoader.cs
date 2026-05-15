@@ -161,16 +161,11 @@ public static class ImageLoader
         }
 
         // Extract and clean the base64 payload — Razor and HTML sources
-        // often HTML-encode the payload (e.g., + becomes &#x2B;) and
-        // inject line breaks or spaces that Convert.FromBase64String rejects.
         string base64 = dataUri[(commaIdx + 1)..];
-        
-        // 1. Decode HTML entities (like &#x2B;)
-        base64 = System.Net.WebUtility.HtmlDecode(base64);
-        
-        // 2. Strip everything except valid Base64 characters (A-Z, a-z, 0-9, +, /, =)
+
+        // Strip everything except valid Base64 characters (A-Z, a-z, 0-9, +, /, =)
         base64 = Regex.Replace(base64, @"[^A-Za-z0-9+/=]", "");
-        
+
         byte[] bytes = Convert.FromBase64String(base64);
         return LoadFromBytes(bytes);
     }

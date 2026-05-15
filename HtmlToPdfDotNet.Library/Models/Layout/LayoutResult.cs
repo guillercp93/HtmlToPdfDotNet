@@ -15,6 +15,11 @@ public sealed class LayoutResult
     /// </summary>
     public List<RenderPrimitive> Primitives { get; } = new();
 
+    /// <summary>
+    /// Gets or sets the total height of the content.
+    /// </summary>
+    public float TotalHeight { get; set; }
+
     public IEnumerable<RenderPrimitive> ForPage(int pageIndex)
         => Primitives.Where(p => p.PageIndex == pageIndex);
 }

@@ -62,7 +62,7 @@ public sealed class BlockLayoutEngine
         _cursorY = 0f;
 
         LayoutChildren(root, _contentLeft, _page.ContentWidth);
-
+        _result.TotalHeight = _cursorY;
         _result.PageCount = _currentPage + 1;
         return _result;
     }
@@ -88,7 +88,7 @@ public sealed class BlockLayoutEngine
                 string text = Helpers.NormalizeText(child.InnerText);
                 if (!string.IsNullOrWhiteSpace(text))
                 {
-                    LayoutTextRuns(new[] { Helpers.MakeRun(text, style, _registry) }, x, availableWidth, style.TextAlign);
+                    LayoutTextRuns([Helpers.MakeRun(text, style, _registry)], x, availableWidth, style.TextAlign);
                 }
                 continue;
             }
@@ -109,7 +109,23 @@ public sealed class BlockLayoutEngine
             }
 
             DisplayType display = style.Display;
-            if (display == DisplayType.Block || display == DisplayType.InlineBlock || display == DisplayType.Table)
+            if (display == DisplayType.Table)
+            {
+                TableLayoutEngine.Layout(child,
+                                         style,
+                                         _styles,
+                                         x,
+                                         availableWidth,
+                                         _result,
+                                         _currentPage,
+                                         _cursorY,
+                                         _pageContentH,
+                                         out _cursorY,
+                                         out _currentPage,
+                                         _registry,
+                                         _basePath);
+            }
+            else if (display == DisplayType.Block || display == DisplayType.InlineBlock)
             {
                 LayoutBlock(child, style, x, availableWidth);
             }
@@ -152,6 +168,7 @@ public sealed class BlockLayoutEngine
         if (estimatedHeight < _pageContentH && _cursorY + estimatedHeight > _pageContentH)
         {
             AdvancePage();
+            boxTop = _cursorY;
         }
 
         // Move cursor to start of content area

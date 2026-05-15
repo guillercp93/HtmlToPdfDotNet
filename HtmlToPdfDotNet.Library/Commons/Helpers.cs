@@ -165,10 +165,11 @@ public static class Helpers
         if (string.IsNullOrEmpty(html)) return string.Empty;
 
         // Remove NULL characters, BOM, and other non-printable ASCII control characters
-        return new string(html
-            .Where(c => c >= ' ' && c != '\0')
-            .ToArray())
-            .Trim('\uFEFF', '\u200B'); // Trim Byte Order Mark and Zero Width Space
+        string satinizeString = new(html.Where(c => c >= ' ' && c != '\0').ToArray());
+
+        // Decode HTML entities (like &#x2B;)
+        satinizeString = System.Net.WebUtility.HtmlDecode(satinizeString);
+        return satinizeString.Trim('\uFEFF', '\u200B'); // Trim Byte Order Mark and Zero Width Space
     }
 
     /// <summary>

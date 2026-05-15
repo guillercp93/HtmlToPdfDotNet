@@ -17,8 +17,8 @@
             font-size: 13px;
             color: #1e293b;
             background-color: #f8fafc;
-            padding: 32px 24px;
-            width: 480px;
+            padding: 10px;
+            width: 500px;
             margin: 0 auto;
         }
 
@@ -26,8 +26,8 @@
         .report-header {
             background-color: #1e40af;
             color: #ffffff;
-            padding: 28px 24px;
-            margin-bottom: 24px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
         }
 
 
@@ -66,7 +66,7 @@
 
         .report-header .meta {
             font-size: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.25);
+            border-top: 1px solid #ffffff40;
             padding-top: 10px;
             margin-top: 10px;
         }
@@ -75,8 +75,8 @@
         .kpi-card {
             background-color: #ffffff;
             border: 1px solid #e2e8f0;
-            padding: 16px 20px;
-            margin-bottom: 12px;
+            padding: 14px 18px;
+            margin-bottom: 10px;
         }
 
         .kpi-card .label {
@@ -111,29 +111,34 @@
         }
 
         /* ── Detail table ─────────────────────────────────────────────── */
-        table.report-table {
+        .report-table {
             width: 100%;
             background-color: #ffffff;
         }
 
-        table.report-table thead tr {
+        .report-table-header {
             background-color: #1e40af;
             color: #ffffff;
         }
 
-        table.report-table thead th {
+        .report-table-header th {
             padding: 11px;
             text-align: center;
             font-size: 10px;
             text-transform: uppercase;
             font-weight: 600;
+            color: #ffffff;
         }
 
-        table.report-table thead th.num {
+        .idx {
+            width: 24px;
+        }
+
+        .num {
             text-align: right;
         }
 
-        table.report-table tbody tr {
+        .report-table-row {
             border-bottom: 1px solid #f1f5f9;
         }
 
@@ -266,7 +271,7 @@
     <div class="section-title">Sales Breakdown</div>
     <table class="report-table">
         <thead>
-            <tr>
+            <tr class="report-table-header">
                 <th class="idx">#</th>
                 <th>Product</th>
                 <th>Cat.</th>
@@ -282,7 +287,7 @@
             @foreach (var item in Model.Items)
             {
                 row++;
-                <tr>
+                <tr class="report-table-row">
                     <td class="idx">@row</td>
                     <td>@item.Product</td>
                     <td>
@@ -299,8 +304,9 @@
     <!-- ── Grand total block ──────────────────────────────────────── -->
     <div class="grand-total-box">
         <div class="gt-label">Grand Total</div>
-        <div class="gt-value">@Model.GrandTotal.ToString("C")</div>
-        <div class="gt-units">@Model.TotalUnits.ToString("N0") units across @Model.Items.Count product lines</div>
+        <div class="gt-value" style="color:#ffffff;">@Model.GrandTotal.ToString("C")</div>
+        <div class="gt-units" style="color:#ffffff;">@Model.TotalUnits.ToString("N0") units across @Model.Items.Count
+            product lines</div>
     </div>
 
     <p class="disclaimer">

@@ -32,7 +32,7 @@ public class SalesReportModel
     public string LogoDataUri => _logoDataUri.Value;
 
     public string Title { get; init; } = "Quarterly Sales Report";
-    public string Subtitle { get; init; } = "Q1 2026 — Executive Summary";
+    public string Subtitle { get; init; } = "Q1 2026 - Executive Summary";
     public string GeneratedAt { get; init; } = DateTime.Now.ToString("MMMM dd, yyyy HH:mm");
     public string CompanyName { get; init; } = "Acme Corporation";
 
