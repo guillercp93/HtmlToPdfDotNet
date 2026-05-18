@@ -198,46 +198,132 @@ We enforce strict engineering standards to ensure high performance and maintaina
 
 ## Advanced Examples
 
-### Generating PDF as a Byte Array (Web API Scenario)
-If you are returning a PDF directly from an ASP.NET Core controller, you don't need to write it to disk.
+### ASP.NET Core Integration with Razor Views
+A highly effective pattern for generating professional PDFs in ASP.NET Core is rendering a Razor view (.cshtml) to an HTML string in memory, and then passing it to `HtmlToPdfDotNet`. This allows you to use the exact same template and CSS styles for both in-browser HTML previewing and offline PDF generation.
 
+This architectural pattern is fully implemented in the **`HtmlToPdfDotNet.Example`** project.
+
+#### 1. Register Services in `Program.cs`
+Register the MVC controller views, view-renderer helper, and the generator as a Singleton:
 ```csharp
-[ApiController]
-[Route("api/[controller]")]
-public class ReportController : ControllerBase
+using HtmlToPdfDotNet.Library;
+using HtmlToPdfDotNet.Library.Models.Layout;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// MVC + Razor Views
+builder.Services.AddControllersWithViews();
+
+// Register a service to render Razor views to strings (see below)
+builder.Services.AddScoped<IRazorViewRenderer, RazorViewRenderer>();
+
+// Register the PDF Generator as a Singleton
+builder.Services.AddSingleton<IPdfGenerator>(_ =>
+    new PdfGenerator(new ConversionOptions
+    {
+        Page            = PageLayout.A4,
+        CompressStreams = true
+    }));
+```
+
+#### 2. The Razor View Renderer
+Use the standard ASP.NET Core view engine to render templates into raw HTML strings asynchronously:
+```csharp
+public interface IRazorViewRenderer
 {
-    private readonly IPdfGenerator _pdfGenerator;
+    Task<string> RenderToStringAsync<TModel>(string viewName, TModel model);
+}
 
-    public ReportController(IPdfGenerator pdfGenerator)
+public class RazorViewRenderer(
+    IRazorViewEngine viewEngine,
+    ITempDataProvider tempDataProvider,
+    IServiceProvider serviceProvider) : IRazorViewRenderer
+{
+    public async Task<string> RenderToStringAsync<TModel>(string viewName, TModel model)
     {
-        _pdfGenerator = pdfGenerator;
-    }
+        var httpContext = new DefaultHttpContext { RequestServices = serviceProvider };
+        var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
 
-    [HttpPost("generate")]
-    public IActionResult GenerateReport([FromBody] ReportRequest request)
-    {
-        string html = $"<h1>Report for {request.UserName}</h1><p>Data...</p>";
-        
-        using MemoryStream memoryStream = new();
-        _pdfGenerator.Convert(html, memoryStream);
-        
-        return File(memoryStream.ToArray(), "application/pdf", "report.pdf");
+        using var sw = new StringWriter();
+        var viewResult = viewEngine.FindView(actionContext, viewName, isMainPage: true);
+
+        if (!viewResult.Success)
+            throw new InvalidOperationException($"View '{viewName}' not found.");
+
+        var viewData = new ViewDataDictionary<TModel>(new EmptyModelMetadataProvider(), new ModelStateDictionary()) { Model = model };
+        var tempData = new TempDataDictionary(httpContext, tempDataProvider);
+        var viewContext = new ViewContext(actionContext, viewResult.View, viewData, tempData, sw, new HtmlHelperOptions());
+
+        await viewResult.View.RenderAsync(viewContext);
+        return sw.ToString();
     }
 }
 ```
 
-### Loading Images from a Base Path
-If your HTML contains relative image paths (e.g., `<img src="images/logo.png" />`), you must configure the `BasePath`.
-
+#### 3. The Web API Controller
+Expose endpoints that either render the HTML in-browser (excellent for design and debugging CSS) or generate a downloadable PDF:
 ```csharp
-ConversionOptions options = new 
+[ApiController]
+public class ReportController(IRazorViewRenderer renderer, IPdfGenerator pdfGenerator) : ControllerBase
 {
-    BasePath = "/var/www/html/assets/", // Linux path example
+    // GET /report — Preview HTML in browser
+    [HttpGet("report")]
+    [Produces("text/html")]
+    public async Task<ContentResult> GetReportHtml()
+    {
+        var model = new SalesReportModel();
+        string html = await renderer.RenderToStringAsync("Report/SalesReport", model);
+        return Content(html, "text/html");
+    }
+
+    // GET /report/pdf — Download the same report as PDF
+    [HttpGet("report/pdf")]
+    [Produces("application/pdf")]
+    public async Task<FileContentResult> GetReportPdf()
+    {
+        var model = new SalesReportModel();
+        string html = await renderer.RenderToStringAsync("Report/SalesReport", model);
+        
+        // Convert to PDF byte array directly
+        byte[] pdfBytes = pdfGenerator.Convert(html);
+        
+        return File(pdfBytes, "application/pdf", "SalesReport.pdf");
+    }
+}
+```
+
+### Loading and Embedding Images
+HtmlToPdfDotNet supports loading images either by relative physical paths or by embedding them as Base64 Data URIs.
+
+#### Option A: Embedding as Base64 Data URIs (Recommended)
+This approach is extremely robust for web environments because it eliminates path-resolution issues and runtime base-path complications across environments (development, production containers, etc.).
+```csharp
+// Inside your View Model
+public string LogoDataUri => GetLogoAsBase64();
+
+private string GetLogoAsBase64()
+{
+    string filePath = Path.Combine(AppContext.BaseDirectory, "wwwroot", "images", "logo.png");
+    byte[] bytes = File.ReadAllBytes(filePath);
+    return $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+}
+```
+Then, reference the property directly in your `.cshtml` view:
+```html
+<img src="@Model.LogoDataUri" alt="Company Logo" />
+```
+
+#### Option B: Loading via BasePath
+If your HTML contains relative physical image paths (e.g. `<img src="images/logo.png" />`), you must configure the `BasePath` property inside the conversion options:
+```csharp
+var options = new ConversionOptions
+{
+    BasePath = "/var/www/html/assets/", // Resolves images relative to this base directory
     Page = PageLayout.A4
 };
 
-PdfGenerator generator = new(options);
-string html = @"<img src='logo.png' width='200' />"; // Resolves to /var/www/html/assets/logo.png
+var generator = new PdfGenerator(options);
+string html = @"<img src='images/logo.png' width='200' />"; 
 generator.WritePdfFile(html, "report.pdf");
 ```
 
