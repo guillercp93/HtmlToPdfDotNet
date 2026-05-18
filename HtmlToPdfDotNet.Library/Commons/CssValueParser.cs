@@ -218,7 +218,24 @@ public static class CssValueParser
         if (string.IsNullOrWhiteSpace(value) || value.Trim() == "none")
             return CssBorderSide.None;
 
-        string[] parts = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        // Smart split: ignore spaces inside parentheses (for rgb/rgba)
+        List<string> parts = new();
+        int bracketLevel = 0;
+        int lastPos = 0;
+        string vTrim = value.Trim();
+        for (int i = 0; i < vTrim.Length; i++)
+        {
+            if (vTrim[i] == '(') bracketLevel++;
+            else if (vTrim[i] == ')') bracketLevel--;
+            else if (vTrim[i] == ' ' && bracketLevel == 0)
+            {
+                string p = vTrim[lastPos..i].Trim();
+                if (!string.IsNullOrEmpty(p)) parts.Add(p);
+                lastPos = i + 1;
+            }
+        }
+        string lastPart = vTrim[lastPos..].Trim();
+        if (!string.IsNullOrEmpty(lastPart)) parts.Add(lastPart);
 
         CssLength width = new(1f);           // default 1pt
         BorderStyle style = BorderStyle.Solid;

@@ -70,10 +70,13 @@ public sealed class StyleResolver
             ["title"] = s => s.Display = DisplayType.None,
 
             // Table
-            ["table"] = s => { s.Display = DisplayType.Table; s.Margin = new CssEdges(new CssLength(Constants.DefaultMargin)); },
+            ["table"] = s => { s.Display = DisplayType.Table; },
+            ["thead"] = s => s.Display = DisplayType.Block,
+            ["tbody"] = s => s.Display = DisplayType.Block,
+            ["tfoot"] = s => s.Display = DisplayType.Block,
             ["tr"] = s => s.Display = DisplayType.Block,
             ["td"] = s => { s.Display = DisplayType.Block; s.Padding = new CssEdges(new CssLength(Constants.DefaultPadding * 0.5f)); },
-            ["th"] = s => { s.Display = DisplayType.Block; s.FontWeight = FontWeight.Bold; s.Padding = new CssEdges(new CssLength(Constants.DefaultPadding * 0.5f)); },
+            ["th"] = s => { s.Display = DisplayType.Block; s.FontWeight = FontWeight.Bold; s.TextAlign = TextAlign.Center; s.Padding = new CssEdges(new CssLength(Constants.DefaultPadding * 0.5f)); },
         };
     #endregion
 

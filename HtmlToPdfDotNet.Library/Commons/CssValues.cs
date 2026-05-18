@@ -38,6 +38,7 @@ public enum FontWeight
 /// <summary>
 /// Value of font-style CSS property
 /// </summary>
+/// <see cref="https://developer.mozilla.org/en-US/docs/Web/CSS/font-style"/>
 public enum FontStyle
 {
     Normal,

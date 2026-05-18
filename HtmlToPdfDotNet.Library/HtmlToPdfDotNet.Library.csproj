@@ -16,7 +16,6 @@
     <RepositoryUrl>https://github.com/guillercp93/HtmlToPdfDotNet.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>pdf;html;converter;css;dotnet</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>1.0.0</Version>
   </PropertyGroup>
 

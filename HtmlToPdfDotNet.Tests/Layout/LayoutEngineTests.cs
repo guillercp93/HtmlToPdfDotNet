@@ -2,7 +2,6 @@ using HtmlAgilityPack;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Layout;
 using HtmlToPdfDotNet.Library.Models.Styles;
-using Xunit;
 
 namespace HtmlToPdfDotNet.Tests.Layout;
 
@@ -185,6 +184,20 @@ public class BlockLayoutEngineTests
     }
 
     [Fact]
+    public void BackgroundIsDrawnBefore_Text_ForZOrder()
+    {
+        // For correct Z-order in PDF, backgrounds must be emitted BEFORE text.
+        LayoutResult result = RunLayout("<div style=\"background-color:#0000ff\">Hello World</div>");
+
+        int rectIdx = result.Primitives.FindIndex(p => p is RectPrimitive);
+        int textIdx = result.Primitives.FindIndex(p => p is TextPrimitive);
+
+        Assert.True(rectIdx >= 0, "RectPrimitive not found");
+        Assert.True(textIdx >= 0, "TextPrimitive not found");
+        Assert.True(rectIdx < textIdx, $"Background (idx {rectIdx}) must be before Text (idx {textIdx})");
+    }
+
+    [Fact]
     public void Border_ProducesBorderLinePrimitives()
     {
         LayoutResult result = RunLayout("<div style=\"border:1pt solid black\">box</div>");
@@ -194,6 +207,21 @@ public class BlockLayoutEngineTests
     }
 
     [Fact]
+    public void BackgroundIsDrawnBefore_Image_ForZOrder()
+    {
+        // For correct Z-order in PDF, backgrounds must be emitted BEFORE image.
+        // We use a base64 dummy image to avoid file system issues in tests.
+        string html = "<img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==\" style=\"background-color:#00ff00\" />";
+        LayoutResult result = RunLayout(html);
+
+        int rectIdx = result.Primitives.FindIndex(p => p is RectPrimitive);
+        int imgIdx = result.Primitives.FindIndex(p => p is ImagePrimitive);
+
+        Assert.True(rectIdx >= 0, "RectPrimitive not found");
+        Assert.True(imgIdx >= 0, "ImagePrimitive not found");
+        Assert.True(rectIdx < imgIdx, $"Background (idx {rectIdx}) must be before Image (idx {imgIdx})");
+    }
+    [Fact]
     public void PageBreakBefore_CreatesNewPage()
     {
         LayoutResult result = RunLayout(
@@ -202,6 +230,32 @@ public class BlockLayoutEngineTests
         );
 
         Assert.True(result.PageCount >= 2);
+    }
+
+    [Fact]
+    public void BlockBackground_SynchronizesWithPageBreak()
+    {
+        // This test verifies that if a block starts near the end of a page and 
+        // jumps to the next page, its background (RectPrimitive) follows it.
+        string html = @"<div style='height:1200px'>Space</div>
+                        <div style='background-color:#ff0000; padding:10px'>
+                            <p>This should be on page 2 with red background</p>
+                        </div>";
+        LayoutResult result = RunLayout(html);
+
+        // Find the red background
+        RectPrimitive? bg = result.Primitives.OfType<RectPrimitive>().FirstOrDefault(r => r.Fill.R > 0.9f);
+        TextPrimitive? text = result.Primitives.OfType<TextPrimitive>().FirstOrDefault(t => t.PageIndex == 1);
+
+        Assert.NotNull(bg);
+        Assert.NotNull(text);
+
+        // They should both be on the same page (Page 2, index 1)
+        Assert.Equal(1, bg.PageIndex);
+        Assert.Equal(1, text.PageIndex);
+
+        // The background Y should be less than or equal to text Y
+        Assert.True(bg.Y <= text.Y, $"Background Y ({bg.Y}) should be <= Text Y ({text.Y})");
     }
 
     [Fact]

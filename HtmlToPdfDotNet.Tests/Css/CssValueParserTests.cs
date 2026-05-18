@@ -1,6 +1,4 @@
-using System.Reflection.Metadata;
 using HtmlToPdfDotNet.Library.Commons;
-using Xunit;
 
 namespace HtmlToPdfDotNet.Tests.Css
 {
@@ -59,6 +57,26 @@ namespace HtmlToPdfDotNet.Tests.Css
             Assert.Equal(51 / 255f, c.R, precision: 3);
             Assert.Equal(102 / 255f, c.G, precision: 3);
             Assert.Equal(153 / 255f, c.B, precision: 3);
+        }
+
+        [Fact]
+        public void ParseColor_RgbaFunctionWithSpaces_ParsesCorrectly()
+        {
+            CssColor c = CssValueParser.ParseColor("rgba(255, 255, 255, 0.5)");
+            Assert.Equal(1f, c.R);
+            Assert.Equal(1f, c.G);
+            Assert.Equal(1f, c.B);
+            Assert.Equal(0.5f, c.A);
+        }
+
+        [Fact]
+        public void ParseColor_Hex8_ParsesCorrectly()
+        {
+            CssColor c = CssValueParser.ParseColor("#ffffff40");
+            Assert.Equal(1f, c.R);
+            Assert.Equal(1f, c.G);
+            Assert.Equal(1f, c.B);
+            Assert.Equal(0x40 / 255f, c.A, precision: 3);
         }
 
         // ── ParseEdges ────────────────────────────────────────────────────────────
@@ -131,6 +149,16 @@ namespace HtmlToPdfDotNet.Tests.Css
         {
             CssBorderSide b = CssValueParser.ParseBorderSide("none");
             Assert.False(b.IsVisible);
+        }
+
+        [Fact]
+        public void ParseBorderSide_WithRgbaAndSpaces_ParsesCorrectly()
+        {
+            CssBorderSide b = CssValueParser.ParseBorderSide("1px solid rgba(255, 255, 255, 0.5)");
+            Assert.Equal(1 * Constants.PointsPerPx, b.Width.Points);
+            Assert.Equal(BorderStyle.Solid, b.Style);
+            Assert.Equal(1f, b.Color.R);
+            Assert.Equal(0.5f, b.Color.A);
         }
 
         // ── ParseFontWeight ───────────────────────────────────────────────────────

@@ -156,6 +156,23 @@ public static class Helpers
     }
 
     /// <summary>
+    /// Cleans the HTML string by removing null characters, BOM, and other problematic non-printable control characters.
+    /// </summary>
+    /// <param name="html">The raw HTML string.</param>
+    /// <returns>The cleaned HTML string.</returns>
+    public static string CleanHtml(string html)
+    {
+        if (string.IsNullOrEmpty(html)) return string.Empty;
+
+        // Remove NULL characters, BOM, and other non-printable ASCII control characters
+        string satinizeString = new(html.Where(c => c >= ' ' && c != '\0').ToArray());
+
+        // Decode HTML entities (like &#x2B;)
+        satinizeString = System.Net.WebUtility.HtmlDecode(satinizeString);
+        return satinizeString.Trim('\uFEFF', '\u200B'); // Trim Byte Order Mark and Zero Width Space
+    }
+
+    /// <summary>
     /// Shifts all runs in the line by the given offset.
     /// </summary>
     /// <param name="line">The line to shift.</param>

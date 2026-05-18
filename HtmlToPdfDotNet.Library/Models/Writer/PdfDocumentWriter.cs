@@ -38,7 +38,7 @@ namespace HtmlToPdfDotNet.Library.Models.Writer;
 /// Phase 4 additions:
 ///   • Performs a pre-pass over all <see cref="TextPrimitive"/> objects to
 ///     discover which embedded TTF/OTF fonts and which glyph IDs are used.
-///   • Passes the resulting <see cref="Font.EmbeddedFontInfo"/> alias map to each
+///   • Passes the resulting <see cref="EmbeddedFontInfo"/> alias map to each
 ///     <see cref="ContentStreamBuilder"/> so it can emit GID hex strings for
 ///     embedded fonts and Latin-1 strings for standard fonts.
 /// </summary>

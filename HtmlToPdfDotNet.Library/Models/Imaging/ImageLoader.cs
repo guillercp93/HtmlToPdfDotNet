@@ -153,14 +153,19 @@ public static class ImageLoader
     /// <returns>Image data.</returns>
     private static ImageData LoadFromDataUri(string dataUri)
     {
-        //data:image/png;base64,
-        Match match = Regex.Match(dataUri, @"^data:image/[^;]+;base64,(.+)$", RegexOptions.IgnoreCase);
-        if (!match.Success)
+        // Find the comma that separates the header from the data
+        int commaIdx = dataUri.IndexOf(',');
+        if (commaIdx < 0 || !dataUri.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("Invalid data URI format", nameof(dataUri));
         }
 
-        string base64 = match.Groups[1].Value;
+        // Extract and clean the base64 payload — Razor and HTML sources
+        string base64 = dataUri[(commaIdx + 1)..];
+
+        // Strip everything except valid Base64 characters (A-Z, a-z, 0-9, +, /, =)
+        base64 = Regex.Replace(base64, @"[^A-Za-z0-9+/=]", "");
+
         byte[] bytes = Convert.FromBase64String(base64);
         return LoadFromBytes(bytes);
     }

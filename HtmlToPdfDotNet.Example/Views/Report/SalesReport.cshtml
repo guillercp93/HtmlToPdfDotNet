@@ -1,0 +1,318 @@
+@model HtmlToPdfDotNet.Example.Models.SalesReportModel
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>@Model.Title</title>
+    <style>
+        /* ── Reset & base ───────────────────────────────────────────── */
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            color: #1e293b;
+            background-color: #f8fafc;
+            padding: 10px;
+            width: 500px;
+            margin: 0 auto;
+        }
+
+        /* ── Header ─────────────────────────────────────────────────── */
+        .report-header {
+            background-color: #1e40af;
+            color: #ffffff;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+
+
+        .header-table {
+            width: 100%;
+        }
+
+        .header-table .logo-cell {
+            width: 90px;
+            padding-right: 16px;
+        }
+
+        .header-table .logo-cell img {
+            width: 80px;
+            height: auto;
+            display: block;
+        }
+
+        .report-header .company {
+            font-size: 10px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .report-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .report-header .subtitle {
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .report-header .meta {
+            font-size: 10px;
+            border-top: 1px solid #ffffff40;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+
+        /* ── KPI cards — stacked vertically ─────────────────────────── */
+        .kpi-card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 14px 18px;
+            margin-bottom: 10px;
+        }
+
+        .kpi-card .label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 6px;
+        }
+
+        .kpi-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e40af;
+        }
+
+        .kpi-card .value.green {
+            color: #16a34a;
+        }
+
+        .kpi-card .value.slate {
+            color: #475569;
+        }
+
+        /* ── Section title ───────────────────────────────────────────── */
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        /* ── Detail table ─────────────────────────────────────────────── */
+        .report-table {
+            width: 100%;
+            background-color: #ffffff;
+        }
+
+        .report-table-header {
+            background-color: #1e40af;
+            color: #ffffff;
+        }
+
+        .report-table-header th {
+            padding: 11px;
+            text-align: center;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .idx {
+            width: 24px;
+        }
+
+        .num {
+            text-align: right;
+        }
+
+        .report-table-row {
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        table.report-table tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        table.report-table tbody td {
+            padding: 9px;
+            font-size: 12px;
+        }
+
+        table.report-table tbody td.num {
+            text-align: right;
+        }
+
+        table.report-table tbody td.idx {
+            color: #94a3b8;
+            font-size: 11px;
+            width: 24px;
+        }
+
+        /* ── Category badges ─────────────────────────────────────────── */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .badge-Electronics {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .badge-Accessories {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+
+        .badge-Audio {
+            background-color: #fce7f3;
+            color: #be185d;
+        }
+
+        .badge-Office {
+            background-color: #fef3c7;
+            color: #b45309;
+        }
+
+        .badge-Furniture {
+            background-color: #ede9fe;
+            color: #6d28d9;
+        }
+
+        /* ── Grand total — full-width block ──────────────────────────── */
+        .grand-total-box {
+            background-color: #1e40af;
+            color: #ffffff;
+            padding: 20px 24px;
+            margin-top: 24px;
+            text-align: right;
+        }
+
+        .grand-total-box .gt-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .grand-total-box .gt-value {
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .grand-total-box .gt-units {
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        /* ── Disclaimer ──────────────────────────────────────────────── */
+        .disclaimer {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ── Header ─────────────────────────────────────────────────── -->
+    <div class="report-header">
+        <table class="header-table">
+            <tr>
+                @if (!string.IsNullOrEmpty(Model.LogoDataUri))
+                {
+                    <td class="logo-cell">
+                        <img src="@Model.LogoDataUri" alt="@Model.CompanyName logo" />
+                    </td>
+                }
+                <td class="info-cell">
+                    <div class="company">@Model.CompanyName</div>
+                    <h1>@Model.Title</h1>
+                    <div class="subtitle">@Model.Subtitle</div>
+                    <div class="meta">Generated: @Model.GeneratedAt</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ── KPI cards — one per line ──────────────────────────────── -->
+    <div class="kpi-card">
+        <div class="label">Total Revenue</div>
+        <div class="value green">@Model.GrandTotal.ToString("C")</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="label">Units Sold</div>
+        <div class="value slate">@Model.TotalUnits.ToString("N0")</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="label">Product Lines</div>
+        <div class="value">@Model.Items.Count</div>
+    </div>
+
+    <!-- ── Detail table ───────────────────────────────────────────── -->
+    <div class="section-title">Sales Breakdown</div>
+    <table class="report-table">
+        <thead>
+            <tr class="report-table-header">
+                <th class="idx">#</th>
+                <th>Product</th>
+                <th>Cat.</th>
+                <th class="num">Units</th>
+                <th class="num">Price</th>
+                <th class="num">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                int row = 0;
+            }
+            @foreach (var item in Model.Items)
+            {
+                row++;
+                <tr class="report-table-row">
+                    <td class="idx">@row</td>
+                    <td>@item.Product</td>
+                    <td>
+                        <span class="badge badge-@item.Category">@item.Category</span>
+                    </td>
+                    <td class="num">@item.Units.ToString("N0")</td>
+                    <td class="num">@item.UnitPrice.ToString("C")</td>
+                    <td class="num"><strong>@item.Total.ToString("C")</strong></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <!-- ── Grand total block ──────────────────────────────────────── -->
+    <div class="grand-total-box">
+        <div class="gt-label">Grand Total</div>
+        <div class="gt-value" style="color:#ffffff;">@Model.GrandTotal.ToString("C")</div>
+        <div class="gt-units" style="color:#ffffff;">@Model.TotalUnits.ToString("N0") units across @Model.Items.Count
+            product lines</div>
+    </div>
+
+    <p class="disclaimer">
+        Confidential - for internal use by @Model.CompanyName only.
+    </p>
+
+</body>
+
+</html>
