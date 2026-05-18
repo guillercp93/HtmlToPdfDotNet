@@ -16,7 +16,7 @@ builder.Services.AddScoped<IRazorViewRenderer, RazorViewRenderer>();
 builder.Services.AddSingleton<IPdfGenerator>(_ =>
     new PdfGenerator(new ConversionOptions
     {
-        Page            = HtmlToPdfDotNet.Library.Models.Layout.PageLayout.A4,
+        Page = HtmlToPdfDotNet.Library.Models.Layout.PageLayout.A4,
         CompressStreams = true,
     }));
 

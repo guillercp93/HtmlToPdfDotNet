@@ -2,7 +2,6 @@ using HtmlAgilityPack;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Layout;
 using HtmlToPdfDotNet.Library.Models.Styles;
-using Xunit;
 
 namespace HtmlToPdfDotNet.Tests.Layout;
 

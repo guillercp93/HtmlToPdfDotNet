@@ -1,6 +1,4 @@
-using System.Reflection.Metadata;
 using HtmlToPdfDotNet.Library.Commons;
-using Xunit;
 
 namespace HtmlToPdfDotNet.Tests.Css
 {
