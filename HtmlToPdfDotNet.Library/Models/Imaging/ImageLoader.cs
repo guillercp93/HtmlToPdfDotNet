@@ -191,7 +191,9 @@ public static class ImageLoader
         }
 
         // Standardize directory separator characters
-        string sanitizedSrc = src.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+        string sanitizedSrc = src
+                                .Replace('\\', Path.DirectorySeparatorChar)
+                                .Replace('/', Path.DirectorySeparatorChar);
 
         // Trim leading directory separators to treat rooted relative paths (e.g., "/image.png")
         // as relative to the base directory, preventing breakout.
