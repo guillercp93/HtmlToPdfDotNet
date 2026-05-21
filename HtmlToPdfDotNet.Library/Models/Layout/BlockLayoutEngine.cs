@@ -436,17 +436,7 @@ public sealed class BlockLayoutEngine
         if (string.IsNullOrEmpty(src)) return;
 
         // Load image
-        ImageData? imageData = null;
-        try
-        {
-            imageData = ImageLoader.Load(src, _basePath);
-        }
-        catch (Exception ex)
-        {
-            // if image isn't loaded, skip or placeholder.
-            Console.WriteLine($"Error loading image: {src} - {ex.Message}");
-            return;
-        }
+        ImageData? imageData = ImageLoader.Load(src, _basePath);
 
         if (imageData is null) return;
 

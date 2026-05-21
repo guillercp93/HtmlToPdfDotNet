@@ -63,8 +63,25 @@ public class PdfGenerator : IPdfGenerator
     /// <param name="pdfPath">The destination path for the generated PDF file.</param>
     public void WritePdfFile(string html, string pdfPath)
     {
+        string resolvedPath = pdfPath;
+        if (!string.IsNullOrEmpty(_options.BasePath))
+        {
+            string canonicalBasePath = Path.GetFullPath(_options.BasePath);
+            if (!canonicalBasePath.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                canonicalBasePath += Path.DirectorySeparatorChar;
+            }
+
+            string fullPdfPath = Path.GetFullPath(pdfPath);
+            if (!fullPdfPath.StartsWith(canonicalBasePath, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException($"Access to the path '{pdfPath}' is denied. It lies outside the allowed base directory.");
+            }
+            resolvedPath = fullPdfPath;
+        }
+
         byte[] rawPdf = Convert(html);
-        using FileStream fs = File.OpenWrite(pdfPath);
+        using FileStream fs = File.OpenWrite(resolvedPath);
         fs.Write(rawPdf);
     }
 
