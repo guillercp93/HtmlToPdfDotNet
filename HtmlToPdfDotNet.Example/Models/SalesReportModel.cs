@@ -38,16 +38,11 @@ public class SalesReportModel
 
     public IReadOnlyList<SalesItem> Items { get; init; } =
     [
-        new("Laptop Pro 15\"",   "Electronics",  142,  1_299.99m),
-        new("Wireless Keyboard", "Accessories",  378,    89.99m),
-        new("4K Monitor 27\"",   "Electronics",   95,    549.00m),
-        new("USB-C Hub 7-in-1",  "Accessories",  521,    45.50m),
-        new("Noise-Cancel Headphones", "Audio",  210,    199.00m),
-        new("Mechanical Mouse",  "Accessories",  430,    69.99m),
-        new("Webcam 4K",         "Electronics",  183,    129.00m),
-        new("Desk Lamp LED",     "Office",       260,    39.99m),
-        new("Ergonomic Chair",   "Furniture",     47,    699.00m),
-        new("Standing Desk",     "Furniture",     31,  1_199.00m),
+        new("Laptop Pro 15\"",   "Electronics",  120,  1_499.00m),
+        new("Wireless Headphones", "Audio",       250,    199.99m),
+        new("Ergonomic Office Chair", "Furniture",  85,    349.50m),
+        new("4K UltraWide Monitor", "Electronics",  60,    699.00m),
+        new("Mechanical Keyboard", "Accessories", 410,    129.00m),
     ];
 
     public decimal GrandTotal => Items.Sum(i => i.Total);

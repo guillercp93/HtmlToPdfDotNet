@@ -178,15 +178,49 @@ public static class ImageLoader
     /// <returns>Path to the image file.</returns>
     private static string ResolveFilePath(string src, string? basePath)
     {
-        // absolute path
-        if (Path.IsPathRooted(src)) return src;
-
-        // relative path
         if (string.IsNullOrEmpty(basePath))
         {
             basePath = Directory.GetCurrentDirectory();
         }
 
-        return Path.GetFullPath(Path.Combine(basePath, src));
+        // Canonicalize base path and ensure it has a trailing directory separator
+        string canonicalBasePath = Path.GetFullPath(basePath);
+        if (!canonicalBasePath.EndsWith(Path.DirectorySeparatorChar.ToString()))
+        {
+            canonicalBasePath += Path.DirectorySeparatorChar;
+        }
+
+        // Standardize directory separator characters
+        string sanitizedSrc = src.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+
+        // Trim leading directory separators to treat rooted relative paths (e.g., "/image.png")
+        // as relative to the base directory, preventing breakout.
+        while (sanitizedSrc.StartsWith(Path.DirectorySeparatorChar.ToString()))
+        {
+            sanitizedSrc = sanitizedSrc.Substring(1);
+        }
+
+        // Resolve absolute path. If it contains a drive letter or is rooted (e.g. C:\path),
+        // Path.Combine will prioritize it unless we handle it, so we strip any drive rooted volume separator.
+        if (Path.IsPathRooted(sanitizedSrc))
+        {
+            // If it is absolute, strip any volume descriptors to confine it to the base directory
+            string pathRoot = Path.GetPathRoot(sanitizedSrc) ?? string.Empty;
+            if (!string.IsNullOrEmpty(pathRoot))
+            {
+                sanitizedSrc = sanitizedSrc.Substring(pathRoot.Length);
+            }
+        }
+
+        // Combine and canonicalize the final destination path
+        string resolvedPath = Path.GetFullPath(Path.Combine(canonicalBasePath, sanitizedSrc));
+
+        // Enforce the directory boundary limit
+        if (!resolvedPath.StartsWith(canonicalBasePath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException($"Access to the path '{src}' is denied. It lies outside the allowed base directory.");
+        }
+
+        return resolvedPath;
     }
 }
