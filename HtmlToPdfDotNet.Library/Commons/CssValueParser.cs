@@ -13,6 +13,9 @@ public static class CssValueParser
     /// Supports: px, pt, em, rem, cm, mm, in and numeric values without unit (treated as px).
     /// Returns <see cref="CssLength.Zero"/> if the value is not recognized.
     /// </summary>
+    /// <param name="value">The CSS length value.</param>
+    /// <param name="parentFontSize">The font size of the parent node.</param>
+    /// <returns>The parsed length.</returns>
     public static CssLength ParseLength(string? value, float parentFontSize = Constants.DefaultFontSize)
     {
         if (string.IsNullOrWhiteSpace(value)) return CssLength.Zero;
@@ -57,6 +60,9 @@ public static class CssValueParser
     /// <summary>
     /// Parser a shorthand of 1-4 values (top right bottom left).
     /// </summary>
+    /// <param name="value">The CSS edges value.</param>
+    /// <param name="parentFontSize">The font size of the parent node.</param>
+    /// <returns>The parsed edges.</returns>
     public static CssEdges ParseEdges(string? value, float parentFontSize = Constants.DefaultFontSize)
     {
         if (string.IsNullOrWhiteSpace(value)) return CssEdges.Zero;
@@ -75,6 +81,9 @@ public static class CssValueParser
     #endregion
 
     #region Colors
+    /// <summary>
+    /// Dictionary of named colors.
+    /// </summary>
     private static readonly Dictionary<string, CssColor> NamedColors = new(StringComparer.OrdinalIgnoreCase)
     {
         ["black"] = CssColor.Black,
@@ -168,6 +177,9 @@ public static class CssValueParser
     #endregion
 
     #region Font size
+    /// <summary>
+    /// Dictionary of font size keywords.
+    /// </summary>
     private static readonly Dictionary<string, float> FontSizeKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         ["xx-small"] = 6f,
@@ -185,7 +197,11 @@ public static class CssValueParser
     /// Parser font-size. If it's a keyword, return its equivalent in points.
     /// If it's a value with unit, delegate to ParseLength.
     /// </summary>
-    public static float ParseFontSize(string? value, float parentFontSize = Constants.DefaultFontSize)
+    /// <param name="value">The CSS font-size value.</param>
+    /// <param name="parentFontSize">The font size of the parent node.</param>
+    /// <returns>The parsed font-size.</returns>
+    public static float ParseFontSize(string? value,
+                                      float parentFontSize = Constants.DefaultFontSize)
     {
         if (string.IsNullOrWhiteSpace(value)) return parentFontSize;
 
@@ -213,7 +229,11 @@ public static class CssValueParser
     /// <summary>
     /// Parser a shorthand of border: "1px solid #333" o "2pt dashed red".
     /// </summary>
-    public static CssBorderSide ParseBorderSide(string? value, float parentFontSize = Constants.DefaultFontSize)
+    /// <param name="value">The CSS border value.</param>
+    /// <param name="parentFontSize">The font size of the parent node.</param>
+    /// <returns>The parsed border.</returns>
+    public static CssBorderSide ParseBorderSide(string? value,
+                                                float parentFontSize = Constants.DefaultFontSize)
     {
         if (string.IsNullOrWhiteSpace(value) || value.Trim() == "none")
             return CssBorderSide.None;
@@ -266,6 +286,11 @@ public static class CssValueParser
     #endregion
 
     #region Display / enums
+    /// <summary>
+    /// Parse a CSS display value.
+    /// </summary>
+    /// <param name="value">The CSS display value.</param>
+    /// <returns>The parsed display.</returns>
     public static DisplayType ParseDisplay(string? value) => value?.Trim().ToLowerInvariant() switch
     {
         "block" => DisplayType.Block,
@@ -277,6 +302,11 @@ public static class CssValueParser
         _ => DisplayType.Block,
     };
 
+    /// <summary>
+    /// Parse a CSS text-align value.
+    /// </summary>
+    /// <param name="value">The CSS text-align value.</param>
+    /// <returns>The parsed text-align.</returns>
     public static TextAlign ParseTextAlign(string? value) => value?.Trim().ToLowerInvariant() switch
     {
         "left" => TextAlign.Left,
@@ -286,6 +316,25 @@ public static class CssValueParser
         _ => TextAlign.Left,
     };
 
+    /// <summary>
+    /// Parse a CSS text-transform value.
+    /// </summary>
+    /// <param name="value">The CSS text-transform value.</param>
+    /// <returns>The parsed text-transform.</returns>
+    public static TextTransForm ParseTextTransform(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "capitalize" => TextTransForm.Capitalize,
+        "uppercase" => TextTransForm.Uppercase,
+        "lowercase" => TextTransForm.Lowercase,
+        "full-width" => TextTransForm.FullWidth,
+        _ => TextTransForm.None,
+    };
+
+    /// <summary>
+    /// Parse a CSS font-weight value.
+    /// </summary>
+    /// <param name="value">The CSS font-weight value.</param>
+    /// <returns>The parsed font-weight.</returns>
     public static FontWeight ParseFontWeight(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return FontWeight.Normal;
@@ -295,6 +344,11 @@ public static class CssValueParser
         return FontWeight.Normal;
     }
 
+    /// <summary>
+    /// Parse a CSS font-style value.
+    /// </summary>
+    /// <param name="value">The CSS font-style value.</param>
+    /// <returns>The parsed font-style.</returns>
     public static FontStyle ParseFontStyle(string? value) => value?.Trim().ToLowerInvariant() switch
     {
         "italic" => FontStyle.Italic,
@@ -304,9 +358,21 @@ public static class CssValueParser
     #endregion
 
     #region Helpers
+    /// <summary>
+    /// Tries to parse a float from a string.
+    /// </summary>
+    /// <param name="s">The string to parse.</param>
+    /// <param name="result">The parsed float.</param>
+    /// <returns>True if the string was parsed successfully, false otherwise.</returns>
     private static bool TryParseFloat(string s, out float result)
         => float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out result);
 
+    /// <summary>
+    /// Converts a pair of hexadecimal characters to a byte.
+    /// </summary>
+    /// <param name="hi">The high nibble (first character).</param>
+    /// <param name="lo">The low nibble (second character).</param>
+    /// <returns>The byte value.</returns>
     private static byte HexByte(char hi, char lo)
         => Convert.ToByte($"{hi}{lo}", 16);
     #endregion

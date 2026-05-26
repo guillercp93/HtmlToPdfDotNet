@@ -336,6 +336,9 @@ public sealed class StyleResolver
             case "line-height":
                 style.LineHeight = ParseLineHeight(value, style.FontSize);
                 break;
+            case "text-transform":
+                style.TextTransForm = CssValueParser.ParseTextTransform(value);
+                break;
             case "text-align":
                 style.TextAlign = CssValueParser.ParseTextAlign(value);
                 break;

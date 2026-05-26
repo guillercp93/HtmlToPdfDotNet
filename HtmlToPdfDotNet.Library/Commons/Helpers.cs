@@ -98,10 +98,18 @@ public static class Helpers
     {
         bool bold = style.FontWeight == FontWeight.Bold;
         bool italic = style.FontStyle == FontStyle.Italic || style.FontStyle == FontStyle.Oblique;
-
-        EmbeddedFontInfo? embeddedFont = null;
         string fontName;
+        string transformedText = style.TextTransForm switch
+        {
+            TextTransForm.Capitalize => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(text),
+            TextTransForm.Lowercase => text.ToLowerInvariant(),
+            TextTransForm.Uppercase => text.ToUpperInvariant(),
+            TextTransForm.FullWidth => ToFullWidth(text),
+            _ => text,
+        };
 
+
+        EmbeddedFontInfo? embeddedFont;
         if (registry != null && registry.TryResolve(style.FontFamily, bold, italic, out embeddedFont))
         {
             // Use the registered TTF/OTF font – keep family name in FontName for
@@ -116,7 +124,7 @@ public static class Helpers
 
         return new InlineRun
         {
-            Text = text,
+            Text = transformedText,
             FontName = fontName,
             FontSize = style.FontSize,
             Bold = bold,
@@ -124,6 +132,29 @@ public static class Helpers
             Color = style.Color,
             EmbeddedFont = embeddedFont,
         };
+    }
+
+    /// <summary>
+    /// Converts standard ASCII printable characters and spaces to their Unicode full-width counterparts.
+    /// </summary>
+    /// <param name="input">The text to convert.</param>
+    /// <returns>The text with full-width characters.</returns>
+    private static string ToFullWidth(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+        char[] chars = input.ToCharArray();
+        for (int i = 0; i < chars.Length; i++)
+        {
+            if (chars[i] == ' ')
+            {
+                chars[i] = '\u3000'; // Ideographic Space
+            }
+            else if (chars[i] >= '!' && chars[i] <= '~')
+            {
+                chars[i] = (char)(chars[i] + 0xFEE0);
+            }
+        }
+        return new string(chars);
     }
 
     /// <summary>

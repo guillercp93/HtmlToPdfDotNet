@@ -39,6 +39,7 @@ public sealed class ComputedStyle
 
     #region Text
     public TextAlign TextAlign { get; set; } = TextAlign.Left;
+    public TextTransForm TextTransForm { get; set; } = TextTransForm.None;
     #endregion
 
     #region Page breaks
