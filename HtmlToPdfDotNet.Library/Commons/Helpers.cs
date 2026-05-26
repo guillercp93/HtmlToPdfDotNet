@@ -130,6 +130,7 @@ public static class Helpers
             Bold = bold,
             Italic = italic,
             Color = style.Color,
+            TextDecoration = style.TextDecoration,
             EmbeddedFont = embeddedFont,
         };
     }

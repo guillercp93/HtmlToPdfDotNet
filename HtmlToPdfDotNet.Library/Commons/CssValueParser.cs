@@ -331,6 +331,19 @@ public static class CssValueParser
     };
 
     /// <summary>
+    /// Parse a CSS text-decoration value.
+    /// </summary>
+    /// <param name="value">The CSS text-decoration value.</param>
+    /// <returns>The parsed text-decoration.</returns>
+    public static TextDecoration ParseTextDecoration(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "underline" => TextDecoration.Underline,
+        "overline" => TextDecoration.Overline,
+        "line-through" => TextDecoration.LineThrough,
+        _ => TextDecoration.None,
+    };
+
+    /// <summary>
     /// Parse a CSS font-weight value.
     /// </summary>
     /// <param name="value">The CSS font-weight value.</param>

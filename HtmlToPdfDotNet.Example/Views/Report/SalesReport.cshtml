@@ -208,6 +208,7 @@
         .grand-total-box .gt-label {
             font-size: 10px;
             text-transform: uppercase;
+            text-decoration: underline;
             margin-bottom: 6px;
         }
 
@@ -219,6 +220,7 @@
         .grand-total-box .gt-units {
             font-size: 11px;
             margin-top: 4px;
+            text-decoration: overline;
         }
 
         /* ── Disclaimer ──────────────────────────────────────────────── */
@@ -300,6 +302,16 @@
                     <td class="num"><strong>@item.Total.ToString("C")</strong></td>
                 </tr>
             }
+            <tr class="report-table-row" style="text-decoration: line-through; color: #94a3b8;">
+                <td class="idx">@(row + 1)</td>
+                <td>Discontinued Product</td>
+                <td>
+                    <span class="badge badge-Office" style="text-decoration: line-through;">Office</span>
+                </td>
+                <td class="num">0</td>
+                <td class="num">$0.00</td>
+                <td class="num"><strong>$0.00</strong></td>
+            </tr>
         </tbody>
     </table>
 

@@ -299,6 +299,29 @@ public sealed class BlockLayoutEngine
                     Color = runItem.Color,
                     EmbeddedFont = runItem.EmbeddedFont, // null → standard Type1 font
                 });
+
+                if (runItem.TextDecoration != TextDecoration.None)
+                {
+                    float lineY = runItem.TextDecoration switch
+                    {
+                        TextDecoration.Underline => baselineY + (runItem.FontSize * 0.15f),
+                        TextDecoration.Overline => baselineY - (runItem.FontSize * 0.95f),
+                        TextDecoration.LineThrough => baselineY - (runItem.FontSize * 0.25f),
+                        _ => baselineY
+                    };
+
+                    _result.Primitives.Add(new BorderLinePrimitive
+                    {
+                        PageIndex = _currentPage,
+                        X1 = contentX + runX,
+                        Y1 = lineY,
+                        X2 = contentX + runX + runItem.Width,
+                        Y2 = lineY,
+                        Width = Math.Max(0.5f, runItem.FontSize * 0.07f),
+                        Color = runItem.Color,
+                        Style = BorderStyle.Solid
+                    });
+                }
             }
 
             _cursorY += line.LineHeight;

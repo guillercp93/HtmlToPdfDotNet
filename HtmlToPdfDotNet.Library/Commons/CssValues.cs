@@ -39,6 +39,17 @@ public enum TextTransForm
 }
 
 /// <summary>
+/// Value of text-decoration CSS property
+/// </summary>
+public enum TextDecoration
+{
+    None,
+    Underline,
+    Overline,
+    LineThrough
+}
+
+/// <summary>
 /// Value of font-weight CSS property
 /// </summary>
 public enum FontWeight
