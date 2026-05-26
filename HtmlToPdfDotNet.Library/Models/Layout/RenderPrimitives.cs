@@ -32,6 +32,9 @@ public sealed class RectPrimitive : RenderPrimitive
     public float Height { get; init; }
     public CssColor Fill { get; init; }
     public bool HasFill => Fill.A > 0f;
+    public float BorderRadius { get; init; } = 0f;
+    public CssColor Stroke { get; init; } = CssColor.Transparent;
+    public float StrokeWidth { get; init; } = 0f;
 }
 
 /// <summary>

@@ -313,6 +313,9 @@ public sealed class StyleResolver
             case "border-left":
                 style.BorderLeft = CssValueParser.ParseBorderSide(value, style.FontSize);
                 break;
+            case "border-radius":
+                style.BorderRadius = CssValueParser.ParseLength(value, style.FontSize);
+                break;
             case "color":
                 style.Color = CssValueParser.ParseColor(value);
                 break;
