@@ -172,5 +172,32 @@ namespace HtmlToPdfDotNet.Tests.Css
         {
             Assert.Equal(expected, CssValueParser.ParseFontWeight(input));
         }
+
+        // ── ParseTextTransform ────────────────────────────────────────────────────
+
+        [Theory]
+        [InlineData("capitalize", TextTransForm.Capitalize)]
+        [InlineData("uppercase", TextTransForm.Uppercase)]
+        [InlineData("lowercase", TextTransForm.Lowercase)]
+        [InlineData("full-width", TextTransForm.FullWidth)]
+        [InlineData("none", TextTransForm.None)]
+        [InlineData("INVALID", TextTransForm.None)]
+        public void ParseTextTransform_ReturnsCorrectTransform(string input, TextTransForm expected)
+        {
+            Assert.Equal(expected, CssValueParser.ParseTextTransform(input));
+        }
+
+        // ── ParseTextDecoration ───────────────────────────────────────────────────
+
+        [Theory]
+        [InlineData("underline", TextDecoration.Underline)]
+        [InlineData("overline", TextDecoration.Overline)]
+        [InlineData("line-through", TextDecoration.LineThrough)]
+        [InlineData("none", TextDecoration.None)]
+        [InlineData("INVALID", TextDecoration.None)]
+        public void ParseTextDecoration_ReturnsCorrectDecoration(string input, TextDecoration expected)
+        {
+            Assert.Equal(expected, CssValueParser.ParseTextDecoration(input));
+        }
     }
 }

@@ -162,6 +162,7 @@ public sealed class StyleResolver
             LineHeight = parent.LineHeight,
             TextAlign = parent.TextAlign,
             TextDecoration = parent.TextDecoration,
+            TextTransForm = parent.TextTransForm,
         };
         return s;
     }

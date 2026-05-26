@@ -175,5 +175,47 @@ public class StyleResolverTests
 
         // 100 content + 8+8 padding + 2+2 border = 120
         Assert.Equal(120f, box.BorderBoxWidth, precision: 0);
-    }
+     }
+
+     // ── Custom Style Features (text-transform, border-radius, text-decoration) ──
+
+     [Fact]
+     public void StyleResolver_BorderRadius_ParsesCorrectly()
+     {
+         Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"border-radius: 8px\">box</div>");
+         ComputedStyle div = StyleOf(styles, "div");
+
+         Assert.Equal(6f, div.BorderRadius.Points, precision: 2); // 8 * 0.75 = 6pt
+     }
+
+     [Fact]
+     public void StyleResolver_TextTransform_ParsesAndInherits()
+     {
+         Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"text-transform: uppercase\"><span id=\"child\">test</span></div>");
+         ComputedStyle div = StyleOf(styles, "div");
+         ComputedStyle span = StyleOf(styles, "span");
+
+         Assert.Equal(TextTransForm.Uppercase, div.TextTransForm);
+         Assert.Equal(TextTransForm.Uppercase, span.TextTransForm);
+     }
+
+     [Fact]
+     public void StyleResolver_TextDecoration_ParsesAndInherits()
+     {
+         Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"text-decoration: underline\"><span id=\"child\">test</span></div>");
+         ComputedStyle div = StyleOf(styles, "div");
+         ComputedStyle span = StyleOf(styles, "span");
+
+         Assert.Equal(TextDecoration.Underline, div.TextDecoration);
+         Assert.Equal(TextDecoration.Underline, span.TextDecoration);
+     }
+
+     [Fact]
+     public void StyleResolver_AnchorTag_HasDefaultUnderline()
+     {
+         Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<a href=\"#\">link</a>");
+         ComputedStyle a = StyleOf(styles, "a");
+
+         Assert.Equal(TextDecoration.Underline, a.TextDecoration);
+     }
 }

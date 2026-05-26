@@ -101,13 +101,8 @@ public sealed class ContentStreamBuilder
         }
         else
         {
-            _sb.AppendLine($"{Helpers.F(r.X)} {Helpers.F(pdfY)} {Helpers.F(r.Width)} {Helpers.F(r.Height)} re");
-            if (hasFill && hasStroke)
-                _sb.AppendLine("B");
-            else if (hasFill)
-                _sb.AppendLine("f");
-            else
-                _sb.AppendLine("S");
+            string op = (hasFill && hasStroke) ? "B" : (hasFill ? "f" : "S");
+            _sb.AppendLine($"{Helpers.F(r.X)} {Helpers.F(pdfY)} {Helpers.F(r.Width)} {Helpers.F(r.Height)} re {op}");
         }
 
         _sb.AppendLine("Q");
