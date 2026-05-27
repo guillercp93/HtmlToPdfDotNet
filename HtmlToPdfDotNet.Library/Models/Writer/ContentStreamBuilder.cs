@@ -67,20 +67,96 @@ public sealed class ContentStreamBuilder
     }
 
     #region Drawing primitives
-    /// <summary>Emits PDF operators to draw a filled rectangle.</summary>
-    /// <param name="r">The rectangle primitive to draw, containing position, size, and fill color information.</param>
+    /// <summary>Emits PDF operators to draw a filled and/or bordered rectangle, with optional rounded corners.</summary>
+    /// <param name="r">The rectangle primitive to draw.</param>
     public void DrawRect(RectPrimitive r)
     {
-        if (!r.HasFill) return;
+        bool hasFill = r.HasFill;
+        bool hasStroke = r.StrokeWidth > 0f && r.Stroke.A > 0f;
 
-        SetFillColor(r.Fill);
+        if (!hasFill && !hasStroke) return;
 
-        // PDF re: x y width height re  →  then f to fill
-        // Y inverted: bottom-left corner of the rect in PDF
-        float pdfY = _pageH - r.Y - r.Height;
         _sb.AppendLine("q");
-        _sb.AppendLine($"{Helpers.F(r.X)} {Helpers.F(pdfY)} {Helpers.F(r.Width)} {Helpers.F(r.Height)} re f");
+
+        if (hasFill) SetFillColor(r.Fill);
+        if (hasStroke)
+        {
+            SetStrokeColor(r.Stroke);
+            _sb.AppendLine($"{Helpers.F(r.StrokeWidth)} w");
+        }
+
+        // PDF Y inverted: bottom-left corner of the rect in PDF
+        float pdfY = _pageH - r.Y - r.Height;
+
+        if (r.BorderRadius > 0f)
+        {
+            DrawRoundedRectPath(r.X, pdfY, r.Width, r.Height, r.BorderRadius);
+
+            if (hasFill && hasStroke)
+                _sb.AppendLine("B"); // Fill and Stroke path
+            else if (hasFill)
+                _sb.AppendLine("f"); // Fill path
+            else
+                _sb.AppendLine("S"); // Stroke path
+        }
+        else
+        {
+            string op = (hasFill && hasStroke) ? "B" : (hasFill ? "f" : "S");
+            _sb.AppendLine($"{Helpers.F(r.X)} {Helpers.F(pdfY)} {Helpers.F(r.Width)} {Helpers.F(r.Height)} re {op}");
+        }
+
         _sb.AppendLine("Q");
+    }
+
+    /// <summary>
+    /// Generates a PDF path representation of a rounded rectangle using cubic Bezier curves.
+    /// </summary>
+    /// <param name="x">X-coordinate of the top-left corner.</param>
+    /// <param name="y">Y-coordinate of the top-left corner.</param>
+    /// <param name="w">Width of the rectangle.</param>
+    /// <param name="h">Height of the rectangle.</param>
+    /// <param name="r">Radius of the corners.</param>
+    private void DrawRoundedRectPath(float x, float y, float w, float h, float r)
+    {
+        // Clamp radius so it does not exceed half the width or height
+        r = Math.Min(r, Math.Min(w / 2f, h / 2f));
+
+        // If radius is 0, draw a standard rectangle
+        if (r <= 0f)
+        {
+            _sb.AppendLine($"{Helpers.F(x)} {Helpers.F(y)} {Helpers.F(w)} {Helpers.F(h)} re");
+            return;
+        }
+
+        // Constant for calculating cubic Bezier curve control points.
+        // The value 0.5522847f is derived from (4/3) * (sqrt(2) - 1).
+        // Used to approximate quarter circles with cubic Bezier curves.
+        float k = r * 0.5522847f;
+
+        // Start at top-left, just after the corner arc
+        _sb.AppendLine($"{Helpers.F(x + r)} {Helpers.F(y + h)} m");
+
+        // Top line
+        _sb.AppendLine($"{Helpers.F(x + w - r)} {Helpers.F(y + h)} l");
+        // Top-right corner
+        _sb.AppendLine($"{Helpers.F(x + w - r + k)} {Helpers.F(y + h)} {Helpers.F(x + w)} {Helpers.F(y + h - r + k)} {Helpers.F(x + w)} {Helpers.F(y + h - r)} c");
+
+        // Right line
+        _sb.AppendLine($"{Helpers.F(x + w)} {Helpers.F(y + r)} l");
+        // Bottom-right corner
+        _sb.AppendLine($"{Helpers.F(x + w)} {Helpers.F(y + r - k)} {Helpers.F(x + w - r + k)} {Helpers.F(y)} {Helpers.F(x + w - r)} {Helpers.F(y)} c");
+
+        // Bottom line
+        _sb.AppendLine($"{Helpers.F(x + r)} {Helpers.F(y)} l");
+        // Bottom-left corner
+        _sb.AppendLine($"{Helpers.F(x + r - k)} {Helpers.F(y)} {Helpers.F(x)} {Helpers.F(y + r - k)} {Helpers.F(x)} {Helpers.F(y + r)} c");
+
+        // Left line
+        _sb.AppendLine($"{Helpers.F(x)} {Helpers.F(y + h - r)} l");
+        // Top-left corner
+        _sb.AppendLine($"{Helpers.F(x)} {Helpers.F(y + h - r + k)} {Helpers.F(x + r - k)} {Helpers.F(y + h)} {Helpers.F(x + r)} {Helpers.F(y + h)} c");
+
+        _sb.AppendLine("h"); // Close path
     }
 
     /// <summary>

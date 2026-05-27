@@ -299,6 +299,29 @@ public sealed class BlockLayoutEngine
                     Color = runItem.Color,
                     EmbeddedFont = runItem.EmbeddedFont, // null → standard Type1 font
                 });
+
+                if (runItem.TextDecoration != TextDecoration.None)
+                {
+                    float lineY = runItem.TextDecoration switch
+                    {
+                        TextDecoration.Underline => baselineY + (runItem.FontSize * 0.15f),
+                        TextDecoration.Overline => baselineY - (runItem.FontSize * 0.95f),
+                        TextDecoration.LineThrough => baselineY - (runItem.FontSize * 0.25f),
+                        _ => baselineY
+                    };
+
+                    _result.Primitives.Add(new BorderLinePrimitive
+                    {
+                        PageIndex = _currentPage,
+                        X1 = contentX + runX,
+                        Y1 = lineY,
+                        X2 = contentX + runX + runItem.Width,
+                        Y2 = lineY,
+                        Width = Math.Max(0.5f, runItem.FontSize * 0.07f),
+                        Color = runItem.Color,
+                        Style = BorderStyle.Solid
+                    });
+                }
             }
 
             _cursorY += line.LineHeight;
@@ -364,9 +387,17 @@ public sealed class BlockLayoutEngine
 
         int currentIdx = insertAt ?? _result.Primitives.Count;
 
-        // Background
-        if (box.Style.BackgroundColor.A > 0f)
+        float borderRadius = box.Style.BorderRadius.Points;
+        if (borderRadius > 0f)
         {
+            CssBorderSide activeBorder = box.Style.BorderTop.IsVisible ? box.Style.BorderTop :
+                                         box.Style.BorderBottom.IsVisible ? box.Style.BorderBottom :
+                                         box.Style.BorderLeft.IsVisible ? box.Style.BorderLeft :
+                                         box.Style.BorderRight;
+
+            float strokeWidth = activeBorder.IsVisible ? activeBorder.Width.Points : 0f;
+            CssColor strokeColor = activeBorder.IsVisible ? activeBorder.Color : CssColor.Transparent;
+
             _result.Primitives.Insert(currentIdx++, new RectPrimitive
             {
                 PageIndex = _currentPage,
@@ -375,14 +406,33 @@ public sealed class BlockLayoutEngine
                 Width = bbW,
                 Height = bbH,
                 Fill = box.Style.BackgroundColor,
+                BorderRadius = borderRadius,
+                Stroke = strokeColor,
+                StrokeWidth = strokeWidth
             });
         }
+        else
+        {
+            // Background
+            if (box.Style.BackgroundColor.A > 0f)
+            {
+                _result.Primitives.Insert(currentIdx++, new RectPrimitive
+                {
+                    PageIndex = _currentPage,
+                    X = borderBoxX,
+                    Y = borderBoxTop,
+                    Width = bbW,
+                    Height = bbH,
+                    Fill = box.Style.BackgroundColor,
+                });
+            }
 
-        // Bordes
-        currentIdx = EmitBorder(box.Style.BorderTop, borderBoxX, borderBoxTop, borderBoxX + bbW, borderBoxTop, currentIdx);
-        currentIdx = EmitBorder(box.Style.BorderBottom, borderBoxX, borderBoxTop + bbH, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
-        currentIdx = EmitBorder(box.Style.BorderLeft, borderBoxX, borderBoxTop, borderBoxX, borderBoxTop + bbH, currentIdx);
-        currentIdx = EmitBorder(box.Style.BorderRight, borderBoxX + bbW, borderBoxTop, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
+            // Bordes
+            currentIdx = EmitBorder(box.Style.BorderTop, borderBoxX, borderBoxTop, borderBoxX + bbW, borderBoxTop, currentIdx);
+            currentIdx = EmitBorder(box.Style.BorderBottom, borderBoxX, borderBoxTop + bbH, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
+            currentIdx = EmitBorder(box.Style.BorderLeft, borderBoxX, borderBoxTop, borderBoxX, borderBoxTop + bbH, currentIdx);
+            currentIdx = EmitBorder(box.Style.BorderRight, borderBoxX + bbW, borderBoxTop, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
+        }
     }
 
     /// <summary>

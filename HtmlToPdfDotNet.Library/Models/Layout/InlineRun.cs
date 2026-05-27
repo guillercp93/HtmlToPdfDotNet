@@ -14,6 +14,7 @@ public sealed class InlineRun
     public bool Bold { get; init; }
     public bool Italic { get; init; }
     public CssColor Color { get; init; }
+    public TextDecoration TextDecoration { get; init; } = TextDecoration.None;
     public float Width { get; set; }   // measured
 
     /// <summary>

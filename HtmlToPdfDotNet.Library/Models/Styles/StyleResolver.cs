@@ -44,7 +44,7 @@ public sealed class StyleResolver
             ["em"] = s => { s.FontStyle = FontStyle.Italic; s.Display = DisplayType.Inline; },
             ["small"] = s => { s.FontSize = 9f; s.Display = DisplayType.Inline; },
             ["span"] = s => s.Display = DisplayType.Inline,
-            ["a"] = s => { s.Display = DisplayType.Inline; s.Color = CssValueParser.ParseColor("#0066CC"); },
+            ["a"] = s => { s.Display = DisplayType.Inline; s.Color = CssValueParser.ParseColor("#0066CC"); s.TextDecoration = TextDecoration.Underline; },
             ["label"] = s => s.Display = DisplayType.Inline,
             ["abbr"] = s => s.Display = DisplayType.Inline,
             ["cite"] = s => s.Display = DisplayType.Inline,
@@ -161,6 +161,8 @@ public sealed class StyleResolver
             FontStyle = parent.FontStyle,
             LineHeight = parent.LineHeight,
             TextAlign = parent.TextAlign,
+            TextDecoration = parent.TextDecoration,
+            TextTransForm = parent.TextTransForm,
         };
         return s;
     }
@@ -313,6 +315,9 @@ public sealed class StyleResolver
             case "border-left":
                 style.BorderLeft = CssValueParser.ParseBorderSide(value, style.FontSize);
                 break;
+            case "border-radius":
+                style.BorderRadius = CssValueParser.ParseLength(value, style.FontSize);
+                break;
             case "color":
                 style.Color = CssValueParser.ParseColor(value);
                 break;
@@ -335,6 +340,12 @@ public sealed class StyleResolver
                 break;
             case "line-height":
                 style.LineHeight = ParseLineHeight(value, style.FontSize);
+                break;
+            case "text-transform":
+                style.TextTransForm = CssValueParser.ParseTextTransform(value);
+                break;
+            case "text-decoration":
+                style.TextDecoration = CssValueParser.ParseTextDecoration(value);
                 break;
             case "text-align":
                 style.TextAlign = CssValueParser.ParseTextAlign(value);

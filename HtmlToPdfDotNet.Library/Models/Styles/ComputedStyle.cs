@@ -22,6 +22,7 @@ public sealed class ComputedStyle
     public CssBorderSide BorderRight { get; set; } = CssBorderSide.None;
     public CssBorderSide BorderBottom { get; set; } = CssBorderSide.None;
     public CssBorderSide BorderLeft { get; set; } = CssBorderSide.None;
+    public CssLength BorderRadius { get; set; } = CssLength.Zero;
     #endregion
 
     #region Colors
@@ -39,6 +40,8 @@ public sealed class ComputedStyle
 
     #region Text
     public TextAlign TextAlign { get; set; } = TextAlign.Left;
+    public TextTransForm TextTransForm { get; set; } = TextTransForm.None;
+    public TextDecoration TextDecoration { get; set; } = TextDecoration.None;
     #endregion
 
     #region Page breaks

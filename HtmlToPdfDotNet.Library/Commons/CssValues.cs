@@ -27,6 +27,29 @@ public enum TextAlign
 }
 
 /// <summary>
+/// Value of text-transform CSS property
+/// </summary>
+public enum TextTransForm
+{
+    Capitalize,
+    Uppercase,
+    Lowercase,
+    None,
+    FullWidth
+}
+
+/// <summary>
+/// Value of text-decoration CSS property
+/// </summary>
+public enum TextDecoration
+{
+    None,
+    Underline,
+    Overline,
+    LineThrough
+}
+
+/// <summary>
 /// Value of font-weight CSS property
 /// </summary>
 public enum FontWeight
