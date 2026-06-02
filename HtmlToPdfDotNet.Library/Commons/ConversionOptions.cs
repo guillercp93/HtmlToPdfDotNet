@@ -11,6 +11,9 @@ public class ConversionOptions
 
     internal ConversionOptions(ConversionOptions source)
     {
+        ArgumentNullException.ThrowIfNull(source.Page);
+        ArgumentNullException.ThrowIfNull(source.StyleSheets);
+
         Page = new PageLayout(
             source.Page.Width,
             source.Page.Height,
@@ -23,6 +26,11 @@ public class ConversionOptions
         BasePath = source.BasePath;
         StyleSheets = source.StyleSheets.ToArray();
         Fonts = new FontRegistry(source.Fonts);
+
+        if (!string.IsNullOrWhiteSpace(BasePath) && !Directory.Exists(BasePath))
+        {
+            throw new DirectoryNotFoundException($"Base path not found: {BasePath}");
+        }
     }
 
     /// <summary>

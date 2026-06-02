@@ -54,7 +54,15 @@ public sealed class FontRegistry
                              bool bold = false,
                              bool italic = false)
     {
-        if (!File.Exists(filePath)) return;
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            throw new ArgumentException("Font file path cannot be null, empty, or whitespace.", nameof(filePath));
+        }
+
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException($"Font file not found: {filePath}", filePath);
+        }
 
         string resolvedFamily = (familyName ?? Path.GetFileNameWithoutExtension(filePath)).ToLowerInvariant().Trim();
         FaceKey key = new(resolvedFamily, bold, italic);
@@ -86,7 +94,20 @@ public sealed class FontRegistry
     /// <param name="searchPattern">Glob pattern (default: all TTF/OTF).</param>
     public void RegisterDirectory(string directory, string searchPattern = "*.ttf;*.otf")
     {
-        if (!Directory.Exists(directory)) return;
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            throw new ArgumentException("Font directory cannot be null, empty, or whitespace.", nameof(directory));
+        }
+
+        if (!Directory.Exists(directory))
+        {
+            throw new DirectoryNotFoundException($"Font directory not found: {directory}");
+        }
+
+        if (string.IsNullOrWhiteSpace(searchPattern))
+        {
+            throw new ArgumentException("Font search pattern cannot be null, empty, or whitespace.", nameof(searchPattern));
+        }
 
         string[] patterns = searchPattern.Split(';');
         foreach (string pattern in patterns)

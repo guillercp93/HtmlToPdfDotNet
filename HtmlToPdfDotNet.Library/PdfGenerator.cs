@@ -39,6 +39,8 @@ public class PdfGenerator : IPdfGenerator
     /// <returns>A byte array representing the generated PDF.</returns>
     public byte[] Convert(string html)
     {
+        ArgumentNullException.ThrowIfNullOrEmpty(html);
+
         using MemoryStream ms = new();
         Convert(html, ms);
         return ms.ToArray();
@@ -51,6 +53,13 @@ public class PdfGenerator : IPdfGenerator
     /// <param name="output">The destination stream for the PDF data.</param>
     public void Convert(string html, Stream output)
     {
+        ArgumentNullException.ThrowIfNullOrEmpty(html);
+        ArgumentNullException.ThrowIfNull(output);
+        if (!output.CanWrite)
+        {
+            throw new ArgumentException("The output stream must be writable.", nameof(output));
+        }
+
         LayoutResult layout = RunLayout(html);
         PdfDocumentWriter writer = new(_options.Page, _options.CompressStreams);
         writer.Write(layout, output);
@@ -63,6 +72,12 @@ public class PdfGenerator : IPdfGenerator
     /// <param name="pdfPath">The destination path for the generated PDF file.</param>
     public void WritePdfFile(string html, string pdfPath)
     {
+        ArgumentNullException.ThrowIfNullOrEmpty(html);
+        if (string.IsNullOrWhiteSpace(pdfPath))
+        {
+            throw new ArgumentException("The PDF output path cannot be null, empty, or whitespace.", nameof(pdfPath));
+        }
+
         string resolvedPath = pdfPath;
         if (!string.IsNullOrEmpty(_options.BasePath))
         {
@@ -92,11 +107,13 @@ public class PdfGenerator : IPdfGenerator
     /// <returns>The calculated layout result containing primitives for all pages.</returns>
     public LayoutResult RunLayout(string html)
     {
+        ArgumentNullException.ThrowIfNullOrEmpty(html);
+
         HtmlDocument doc = new();
 
         doc.LoadHtml(Helpers.CleanHtml(html));
 
-        List<CssRule> cssRules = _options.StyleSheets
+        List<CssRule> cssRules = ResolveStyleSheets(_options.StyleSheets)
                                          .SelectMany(CssStyleSheetParser.Parse)
                                          .Concat(CssStyleSheetParser.ParseFromHtml(html))
                                          .ToList();
@@ -107,4 +124,33 @@ public class PdfGenerator : IPdfGenerator
         BlockLayoutEngine engine = new(_options.Page, styles, _options.Fonts, _options.BasePath);
         return engine.Layout(doc.DocumentNode);
     }
+
+    private static IEnumerable<string> ResolveStyleSheets(IEnumerable<string> styleSheets)
+    {
+        foreach (string styleSheet in styleSheets)
+        {
+            if (string.IsNullOrWhiteSpace(styleSheet))
+            {
+                throw new ArgumentException("Stylesheet entries cannot be null, empty, or whitespace.", nameof(styleSheets));
+            }
+
+            if (File.Exists(styleSheet))
+            {
+                yield return File.ReadAllText(styleSheet);
+                continue;
+            }
+
+            if (LooksLikePath(styleSheet))
+            {
+                throw new FileNotFoundException($"Stylesheet file not found: {styleSheet}", styleSheet);
+            }
+
+            yield return styleSheet;
+        }
+    }
+
+    private static bool LooksLikePath(string value)
+        => value.EndsWith(".css", StringComparison.OrdinalIgnoreCase)
+           || value.Contains(Path.DirectorySeparatorChar)
+           || value.Contains(Path.AltDirectorySeparatorChar);
 }

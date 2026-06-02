@@ -19,9 +19,14 @@ public static class ImageLoader
     /// <returns><see cref="ImageData"/></returns>
     public static ImageData Load(string src, string? basePath = null)
     {
-        if (string.IsNullOrEmpty(src))
+        if (src is null)
         {
-            throw new ArgumentException("Image source cannot be null or empty", nameof(src));
+            throw new ArgumentNullException(nameof(src));
+        }
+
+        if (string.IsNullOrWhiteSpace(src))
+        {
+            throw new ArgumentException("Image source cannot be empty or whitespace.", nameof(src));
         }
 
         // Data URI: data:image/png;base64,...
@@ -49,12 +54,18 @@ public static class ImageLoader
     /// <returns><see cref="ImageData"/></returns>
     public static ImageData LoadFromBytes(byte[] bytes)
     {
+        ArgumentNullException.ThrowIfNull(bytes);
+        if (bytes.Length == 0)
+        {
+            throw new ArgumentException("Image bytes cannot be empty.", nameof(bytes));
+        }
+
         ImageFormat format = DetectFormat(bytes);
         return format switch
         {
             ImageFormat.Jpeg => LoadJpeg(bytes),
             ImageFormat.Png => PngDecoder.Decode(bytes),
-            _ => throw new InvalidOperationException("Unsupported image format")
+            _ => throw new NotSupportedException("Unsupported image format. Supported formats are JPEG and PNG.")
         };
     }
 
@@ -166,7 +177,16 @@ public static class ImageLoader
         // Strip everything except valid Base64 characters (A-Z, a-z, 0-9, +, /, =)
         base64 = Regex.Replace(base64, @"[^A-Za-z0-9+/=]", "");
 
-        byte[] bytes = Convert.FromBase64String(base64);
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(base64);
+        }
+        catch (FormatException ex)
+        {
+            throw new ArgumentException("Invalid image data URI. The payload must be valid Base64.", nameof(dataUri), ex);
+        }
+
         return LoadFromBytes(bytes);
     }
 
