@@ -5,6 +5,26 @@ namespace HtmlToPdfDotNet.Library.Commons;
 
 public class ConversionOptions
 {
+    public ConversionOptions()
+    {
+    }
+
+    internal ConversionOptions(ConversionOptions source)
+    {
+        Page = new PageLayout(
+            source.Page.Width,
+            source.Page.Height,
+            new PageMargins(
+                source.Page.Margins.Top,
+                source.Page.Margins.Right,
+                source.Page.Margins.Bottom,
+                source.Page.Margins.Left));
+        CompressStreams = source.CompressStreams;
+        BasePath = source.BasePath;
+        StyleSheets = source.StyleSheets.ToArray();
+        Fonts = new FontRegistry(source.Fonts);
+    }
+
     /// <summary>
     /// Page settings (size and margins).
     /// </summary>

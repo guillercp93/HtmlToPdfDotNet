@@ -30,7 +30,7 @@ public class PdfGenerator : IPdfGenerator
     /// </summary>
     /// <param name="options">Optional conversion options. If null, default settings (A4, compression enabled) are used.</param>
     public PdfGenerator(ConversionOptions? options = null)
-        => _options = options ?? new ConversionOptions();
+        => _options = new ConversionOptions(options ?? new ConversionOptions());
 
     /// <summary>
     /// Converts an HTML string into a PDF byte array.
