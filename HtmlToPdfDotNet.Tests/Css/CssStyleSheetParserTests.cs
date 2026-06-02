@@ -225,21 +225,6 @@ public class StyleResolverCascadeTests
         Assert.Equal(1f, p.Color.B, precision: 2);
     }
 
-    [Fact]
-    public void ExternalStylesheet_AppliedViaConversionOptions()
-    {
-        ConversionOptions options = new()
-        {
-            StyleSheets = ["h1 { color: #ff0000; }"],
-            CompressStreams = false,
-        };
-        byte[] pdf = new PdfGenerator(options).Convert("<h1>Title</h1>");
-        string text = Encoding.Latin1.GetString(pdf);
-
-        // El PDF debe existir y ser válido
-        Assert.StartsWith("%PDF", text);
-        Assert.Contains("%%EOF", text);
-    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

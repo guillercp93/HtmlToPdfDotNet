@@ -10,7 +10,9 @@ public class PdfIntegrationSnapshotTests
     private const string OneByOnePngDataUri =
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC";
 
-    private const string DejaVuRegular = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+    private static readonly string DejaVuRegular = File.Exists("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+        ? "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        : "/usr/share/fonts/TTF/DejaVuSans.ttf";
 
     private static byte[] Generate(string html, bool compress = false, Action<ConversionOptions>? configure = null)
     {
