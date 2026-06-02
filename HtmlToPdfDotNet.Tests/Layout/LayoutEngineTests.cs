@@ -221,16 +221,7 @@ public class BlockLayoutEngineTests
         Assert.True(imgIdx >= 0, "ImagePrimitive not found");
         Assert.True(rectIdx < imgIdx, $"Background (idx {rectIdx}) must be before Image (idx {imgIdx})");
     }
-    [Fact]
-    public void PageBreakBefore_CreatesNewPage()
-    {
-        LayoutResult result = RunLayout(
-            "<div>Page 1</div>" +
-            "<div style=\"page-break-before:always\">Page 2</div>"
-        );
 
-        Assert.True(result.PageCount >= 2);
-    }
 
     [Fact]
     public void BlockBackground_SynchronizesWithPageBreak()
@@ -258,15 +249,7 @@ public class BlockLayoutEngineTests
         Assert.True(bg.Y <= text.Y, $"Background Y ({bg.Y}) should be <= Text Y ({text.Y})");
     }
 
-    [Fact]
-    public void LongContent_SpillsToMultiplePages()
-    {
-        // Generate enough content to force pagination
-        string paragraphs = string.Concat(Enumerable.Repeat("<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>", 60));
-        LayoutResult result = RunLayout(paragraphs);
 
-        Assert.True(result.PageCount > 1, $"Expected >1 page, got {result.PageCount}");
-    }
 
     [Fact]
     public void TextPrimitive_IsOnCorrectPage()

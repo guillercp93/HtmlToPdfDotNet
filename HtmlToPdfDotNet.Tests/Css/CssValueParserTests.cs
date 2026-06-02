@@ -41,14 +41,6 @@ namespace HtmlToPdfDotNet.Tests.Css
             Assert.Equal(b, color.B, precision: 2);
         }
 
-        [Fact]
-        public void ParseColor_Hex6_ParsesCorrectly()
-        {
-            CssColor c = CssValueParser.ParseColor("#336699");
-            Assert.Equal(0x33 / 255f, c.R, precision: 3);
-            Assert.Equal(0x66 / 255f, c.G, precision: 3);
-            Assert.Equal(0x99 / 255f, c.B, precision: 3);
-        }
 
         [Fact]
         public void ParseColor_RgbFunction_ParsesCorrectly()

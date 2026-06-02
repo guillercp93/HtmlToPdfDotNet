@@ -1,5 +1,9 @@
+using System;
+using System.IO;
+using System.Text;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Imaging;
+using HtmlToPdfDotNet.Library.Models.Writer;
 using Xunit;
 
 namespace HtmlToPdfDotNet.Tests.Imaging;
@@ -87,5 +91,144 @@ public class ImagingTests
         var method = typeof(ImageLoader).GetMethod("DetectFormat", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         if (method == null) throw new Exception("DetectFormat method not found");
         return (ImageFormat)method.Invoke(null, new object[] { data })!;
+    }
+
+    [Fact]
+    public void ImageLoader_Load_NullOrEmptyOrWhitespace_ThrowsExceptions()
+    {
+        Assert.Throws<ArgumentNullException>(() => ImageLoader.Load(null!));
+        Assert.Throws<ArgumentException>(() => ImageLoader.Load(""));
+        Assert.Throws<ArgumentException>(() => ImageLoader.Load("   "));
+    }
+
+    [Fact]
+    public void ImageLoader_Load_OutsideBaseDirectory_ThrowsUnauthorizedAccessException()
+    {
+        Assert.Throws<UnauthorizedAccessException>(() => ImageLoader.Load("../outside.png", basePath: "/home/guiller/Projects/HtmlToPdfDotNet/HtmlToPdfDotNet.Tests"));
+    }
+
+    [Fact]
+    public void ImageLoader_LoadFromBytes_ValidJpeg_LoadsCorrectly()
+    {
+        // Minimal JPEG byte array (SOI + SOF0 + EOI)
+        byte[] jpegBytes = { 
+            0xFF, 0xD8,                  // SOI
+            0xFF, 0xC0,                  // SOF0
+            0x00, 0x0B,                  // length of segment (11)
+            0x08,                        // precision (8)
+            0x00, 0x0A,                  // height (10)
+            0x00, 0x14,                  // width (20)
+            0x01,                        // components (1)
+            0x01, 0x11, 0x00,            // component spec
+            0xFF, 0xD9                   // EOI
+        };
+
+        var imageData = ImageLoader.LoadFromBytes(jpegBytes);
+        Assert.Equal(ImageFormat.Jpeg, imageData.Format);
+        Assert.Equal(20, imageData.PixelWidth);
+        Assert.Equal(10, imageData.PixelHeight);
+    }
+
+    [Fact]
+    public void ImageLoader_LoadFromBytes_InvalidJpegNoSof_ThrowsInvalidOperationException()
+    {
+        byte[] badJpeg = { 0xFF, 0xD8, 0xFF, 0xD9 };
+        Assert.Throws<InvalidOperationException>(() => ImageLoader.LoadFromBytes(badJpeg));
+    }
+
+    [Fact]
+    public void ImageResourceBuilder_RegisterImage_DuplicateAlias_ReturnsExistingNumber()
+    {
+        var counter = new ObjectCounter();
+        var xref = new XRefTable();
+        var builder = new ImageResourceBuilder(counter, xref, compress: false);
+
+        var img = new ImageData
+        {
+            PixelWidth = 10,
+            PixelHeight = 10,
+            Format = ImageFormat.Png,
+            RawBytes = new byte[10],
+            HasAlpha = false
+        };
+
+        int firstNum = builder.RegisterImage("img1", img);
+        int secondNum = builder.RegisterImage("img1", img);
+
+        Assert.Equal(firstNum, secondNum);
+        Assert.Single(builder.GetObjects());
+    }
+
+    [Fact]
+    public void ImageResourceBuilder_RegisterPngWithAlpha_CreatesSmask()
+    {
+        var counter = new ObjectCounter();
+        var xref = new XRefTable();
+        var builder = new ImageResourceBuilder(counter, xref, compress: false);
+
+        var img = new ImageData
+        {
+            PixelWidth = 10,
+            PixelHeight = 10,
+            Format = ImageFormat.Png,
+            RawBytes = new byte[10],
+            HasAlpha = true,
+            AlphaBytes = new byte[10]
+        };
+
+        int mainNum = builder.RegisterImage("imgAlpha", img);
+        var objects = builder.GetObjects();
+
+        // Should have created 2 PDF objects: the Smask and the Image itself
+        Assert.Equal(2, objects.Count);
+        
+        string dict = builder.BuildImageDict();
+        Assert.Contains("/imgAlpha", dict);
+    }
+
+    [Fact]
+    public void ImageResourceBuilder_RegisterJpeg_CreatesJpegObject()
+    {
+        var counter = new ObjectCounter();
+        var xref = new XRefTable();
+        var builder = new ImageResourceBuilder(counter, xref, compress: false);
+
+        var img = new ImageData
+        {
+            PixelWidth = 20,
+            PixelHeight = 20,
+            Format = ImageFormat.Jpeg,
+            RawBytes = new byte[20],
+            HasAlpha = false
+        };
+
+        int mainNum = builder.RegisterImage("imgJpeg", img);
+        var objects = builder.GetObjects();
+
+        Assert.Single(objects);
+        using var ms = new MemoryStream();
+        objects[0].WriteTo(ms);
+        string serialized = Encoding.Latin1.GetString(ms.ToArray());
+        Assert.Contains("/DCTDecode", serialized);
+    }
+
+    [Fact]
+    public void ImageResourceBuilder_RegisterPngWithAlphaButNoAlphaBytes_ThrowsArgumentException()
+    {
+        var counter = new ObjectCounter();
+        var xref = new XRefTable();
+        var builder = new ImageResourceBuilder(counter, xref, compress: false);
+
+        var img = new ImageData
+        {
+            PixelWidth = 10,
+            PixelHeight = 10,
+            Format = ImageFormat.Png,
+            RawBytes = new byte[10],
+            HasAlpha = true,
+            AlphaBytes = null // missing alpha bytes
+        };
+
+        Assert.Throws<ArgumentException>(() => builder.RegisterImage("imgBadAlpha", img));
     }
 }

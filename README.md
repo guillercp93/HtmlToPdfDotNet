@@ -121,7 +121,7 @@ generator.WritePdfFile("<h1>Injected Generator</h1>", "di_output.pdf");
 - **`PageLayout`**: Defines the physical page size (e.g., `PageLayout.A4`, `PageLayout.Letter`) and document margins.
 
 ### Best Practices
-- **Reuse the Generator:** The `PdfGenerator` class is thread-safe and should be registered as a Singleton to prevent redundant memory allocations.
+- **Reuse the Generator:** The `PdfGenerator` class captures a snapshot of `ConversionOptions` when it is constructed, is safe to reuse across concurrent conversions, and should be registered as a Singleton to prevent redundant memory allocations. Configure page settings, stylesheets, base paths, and fonts before constructing the generator.
 - **Use External Stylesheets:** Instead of large `<style>` blocks, pass pre-compiled CSS files via `ConversionOptions.StyleSheets` for faster parsing.
 - **Font Subsetting:** When using custom TTF fonts, explicitly register them using the `FontRegistry` to ensure only used glyphs are embedded, drastically reducing output file size.
 

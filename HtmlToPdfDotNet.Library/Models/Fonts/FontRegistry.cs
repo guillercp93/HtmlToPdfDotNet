@@ -22,7 +22,21 @@ public sealed class FontRegistry
     private record FaceKey(string Family, bool Bold, bool Italic);
 
     private readonly Dictionary<FaceKey, EmbeddedFontInfo> _cache = new();
+    private readonly object _sync = new();
     #endregion
+
+    public FontRegistry()
+    {
+    }
+
+    internal FontRegistry(FontRegistry source)
+    {
+        lock (source._sync)
+        {
+            foreach ((FaceKey key, EmbeddedFontInfo info) in source._cache)
+                _cache[key] = info;
+        }
+    }
 
     #region Registration
     /// <summary>
@@ -40,15 +54,30 @@ public sealed class FontRegistry
                              bool bold = false,
                              bool italic = false)
     {
-        if (!File.Exists(filePath)) return;
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            throw new ArgumentException("Font file path cannot be null, empty, or whitespace.", nameof(filePath));
+        }
+
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException($"Font file not found: {filePath}", filePath);
+        }
 
         string resolvedFamily = (familyName ?? Path.GetFileNameWithoutExtension(filePath)).ToLowerInvariant().Trim();
         FaceKey key = new(resolvedFamily, bold, italic);
 
-        if (_cache.ContainsKey(key)) return; // already registered
+        lock (_sync)
+        {
+            if (_cache.ContainsKey(key)) return; // already registered
+        }
 
         EmbeddedFontInfo info = TrueTypeFontParser.Parse(filePath, resolvedFamily, bold, italic);
-        _cache[key] = info;
+        lock (_sync)
+        {
+            if (!_cache.ContainsKey(key))
+                _cache[key] = info;
+        }
     }
 
     /// <summary>
@@ -65,7 +94,20 @@ public sealed class FontRegistry
     /// <param name="searchPattern">Glob pattern (default: all TTF/OTF).</param>
     public void RegisterDirectory(string directory, string searchPattern = "*.ttf;*.otf")
     {
-        if (!Directory.Exists(directory)) return;
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            throw new ArgumentException("Font directory cannot be null, empty, or whitespace.", nameof(directory));
+        }
+
+        if (!Directory.Exists(directory))
+        {
+            throw new DirectoryNotFoundException($"Font directory not found: {directory}");
+        }
+
+        if (string.IsNullOrWhiteSpace(searchPattern))
+        {
+            throw new ArgumentException("Font search pattern cannot be null, empty, or whitespace.", nameof(searchPattern));
+        }
 
         string[] patterns = searchPattern.Split(';');
         foreach (string pattern in patterns)
@@ -76,10 +118,17 @@ public sealed class FontRegistry
                 {
                     DetectStyleFromFileName(file, out string? family, out bool bold, out bool italic);
                     FaceKey key = new(family, bold, italic);
-                    if (_cache.ContainsKey(key)) continue;
+                    lock (_sync)
+                    {
+                        if (_cache.ContainsKey(key)) continue;
+                    }
 
                     EmbeddedFontInfo info = TrueTypeFontParser.Parse(file, family, bold, italic);
-                    _cache[key] = info;
+                    lock (_sync)
+                    {
+                        if (!_cache.ContainsKey(key))
+                            _cache[key] = info;
+                    }
                 }
                 catch
                 {
@@ -118,10 +167,13 @@ public sealed class FontRegistry
 
         foreach (string fam in lookups)
         {
-            if (_cache.TryGetValue(new FaceKey(fam, bold, italic), out info)) return true;
-            if (bold && _cache.TryGetValue(new FaceKey(fam, false, italic), out info)) return true;
-            if (italic && _cache.TryGetValue(new FaceKey(fam, bold, false), out info)) return true;
-            if (_cache.TryGetValue(new FaceKey(fam, false, false), out info)) return true;
+            lock (_sync)
+            {
+                if (_cache.TryGetValue(new FaceKey(fam, bold, italic), out info)) return true;
+                if (bold && _cache.TryGetValue(new FaceKey(fam, false, italic), out info)) return true;
+                if (italic && _cache.TryGetValue(new FaceKey(fam, bold, false), out info)) return true;
+                if (_cache.TryGetValue(new FaceKey(fam, false, false), out info)) return true;
+            }
         }
 
         info = null;
@@ -138,15 +190,27 @@ public sealed class FontRegistry
         string family = familyName.ToLowerInvariant().Trim();
         foreach (string alias in FamilyAliases(family))
         {
-            if (_cache.Keys.Any(k => k.Family == alias))
-                return true;
+            lock (_sync)
+            {
+                if (_cache.Keys.Any(k => k.Family == alias))
+                    return true;
+            }
         }
         return false;
     }
 
     /// <summary>Returns all registered fonts (for debugging / listing).</summary>
     /// <returns>An enumerable of all registered fonts.</returns>
-    public IEnumerable<EmbeddedFontInfo> AllFonts => _cache.Values;
+    public IEnumerable<EmbeddedFontInfo> AllFonts
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _cache.Values.ToArray();
+            }
+        }
+    }
     #endregion
 
     #region Helpers

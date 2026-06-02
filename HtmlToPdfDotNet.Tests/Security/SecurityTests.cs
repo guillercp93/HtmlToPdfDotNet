@@ -318,9 +318,9 @@ public class SecurityTests : IDisposable
     }
 
     [Fact]
-    public void ImageLoader_Load_NullSrc_ThrowsArgumentException()
+    public void ImageLoader_Load_NullSrc_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentException>(() => ImageLoader.Load(null!, _sandbox));
+        Assert.Throws<ArgumentNullException>(() => ImageLoader.Load(null!, _sandbox));
     }
 
     #endregion

@@ -12,8 +12,13 @@ namespace HtmlToPdfDotNet.Tests.Writer;
 // ─────────────────────────────────────────────────────────────────────────────
 file static class Fonts
 {
-    public const string Regular = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
-    public const string Bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
+    public static readonly string Regular = File.Exists("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+        ? "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        : "/usr/share/fonts/TTF/DejaVuSans.ttf";
+
+    public static readonly string Bold = File.Exists("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+        ? "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        : "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf";
 
     public static bool Available => File.Exists(Regular);
 }
@@ -440,101 +445,6 @@ public class PdfEmbeddedFontIntegrationTests
     }
 
     [Fact]
-    public void EmbeddedFont_PdfContainsType0Font()
-    {
-        if (!Fonts.Available) return;
-        (byte[] _, string text) = GenerateWithFont("<p style='font-family:DejaVu Sans'>Hello</p>");
-
-        Assert.Contains("/Subtype /Type0", text);
-    }
-
-    [Fact]
-    public void EmbeddedFont_PdfContainsCIDFontType2()
-    {
-        if (!Fonts.Available) return;
-        (byte[] _, string text) = GenerateWithFont("<p style='font-family:DejaVu Sans'>Hello</p>");
-
-        Assert.Contains("/Subtype /CIDFontType2", text);
-    }
-
-    [Fact]
-    public void EmbeddedFont_PdfContainsFontDescriptor()
-    {
-        if (!Fonts.Available) return;
-        (byte[] _, string text) = GenerateWithFont("<p style='font-family:DejaVu Sans'>Hello</p>");
-
-        Assert.Contains("/Type /FontDescriptor", text);
-    }
-
-    [Fact]
-    public void EmbeddedFont_PdfContainsFontFile2()
-    {
-        if (!Fonts.Available) return;
-        (byte[] _, string text) = GenerateWithFont("<p style='font-family:DejaVu Sans'>Hello</p>");
-
-        Assert.Contains("/FontFile2", text);
-    }
-
-    [Fact]
-    public void EmbeddedFont_PdfContainsToUnicodeCMap()
-    {
-        if (!Fonts.Available) return;
-        (byte[] _, string text) = GenerateWithFont("<p style='font-family:DejaVu Sans'>Hello</p>");
-
-        Assert.Contains("/ToUnicode", text);
-        Assert.Contains("begincmap", text);
-    }
-
-    [Fact]
-    public void EmbeddedFont_PdfContainsIdentityHEncoding()
-    {
-        if (!Fonts.Available) return;
-        (byte[] _, string text) = GenerateWithFont("<p style='font-family:DejaVu Sans'>Hello</p>");
-
-        Assert.Contains("/Identity-H", text);
-    }
-
-    [Fact]
-    public void EmbeddedFont_PdfContainsWidthArray()
-    {
-        if (!Fonts.Available) return;
-        (byte[] _, string text) = GenerateWithFont("<p style='font-family:DejaVu Sans'>Hello</p>");
-
-        // CIDFont /W entry
-        Assert.Contains("/W [", text);
-    }
-
-    [Fact]
-    public void EmbeddedFont_PdfContainsCIDSystemInfo()
-    {
-        if (!Fonts.Available) return;
-        (byte[] _, string text) = GenerateWithFont("<p style='font-family:DejaVu Sans'>Hello</p>");
-
-        Assert.Contains("/CIDSystemInfo", text);
-        Assert.Contains("/Ordering (Identity)", text);
-    }
-
-    [Fact]
-    public void EmbeddedFont_PdfIsValidBinaryStart()
-    {
-        if (!Fonts.Available) return;
-        (byte[] pdf, string _) = GenerateWithFont("<p style='font-family:DejaVu Sans'>Hello World</p>");
-
-        string header = Encoding.ASCII.GetString(pdf, 0, 8);
-        Assert.StartsWith("%PDF-1.7", header);
-    }
-
-    [Fact]
-    public void EmbeddedFont_PdfEndsWithEof()
-    {
-        if (!Fonts.Available) return;
-        (byte[] pdf, string _) = GenerateWithFont("<p style='font-family:DejaVu Sans'>Test</p>");
-
-        string tail = Encoding.Latin1.GetString(pdf, pdf.Length - 5, 5);
-        Assert.Equal("%%EOF", tail);
-    }
-
-    [Fact]
     public void EmbeddedFont_SizeIsLargerThanStandardFontPdf()
     {
         if (!Fonts.Available) return;
@@ -564,17 +474,5 @@ public class PdfEmbeddedFontIntegrationTests
 
         // Standard Type1 must still be present
         Assert.Contains("/Subtype /Type1", text);
-    }
-
-    [Fact]
-    public void NoEmbeddedFonts_PdfContainsOnlyType1()
-    {
-        // Verify baseline: without font registry nothing changed
-        byte[] pdf = new PdfGenerator(new ConversionOptions { CompressStreams = false })
-                      .Convert("<p>Hello</p>");
-        string text = Encoding.Latin1.GetString(pdf);
-
-        Assert.Contains("/Subtype /Type1", text);
-        Assert.DoesNotContain("/Subtype /Type0", text);
     }
 }

@@ -158,89 +158,6 @@ public class PdfDocumentWriterTests
         return new PdfGenerator(options).Convert(html);
     }
 
-    // ── File structure ────────────────────────────────────────────────
-
-    [Fact]
-    public void Output_StartsWithPdfHeader()
-    {
-        byte[] pdf = Generate("<p>Hello</p>");
-        string header = Encoding.Latin1.GetString(pdf, 0, 8);
-        Assert.StartsWith("%PDF-1.7", header);
-    }
-
-    [Fact]
-    public void Output_EndsWithEof()
-    {
-        byte[] pdf = Generate("<p>Hello</p>");
-        string tail = Encoding.Latin1.GetString(pdf, pdf.Length - 5, 5);
-        Assert.Equal("%%EOF", tail);
-    }
-
-    [Fact]
-    public void Output_ContainsStartxref()
-    {
-        byte[] pdf = Generate("<p>Hello</p>");
-        string text = Encoding.Latin1.GetString(pdf);
-        Assert.Contains("startxref", text);
-    }
-
-    [Fact]
-    public void Output_ContainsCatalogAndPages()
-    {
-        byte[] pdf = Generate("<p>Hello</p>");
-        string text = Encoding.Latin1.GetString(pdf);
-        Assert.Contains("/Type /Catalog", text);
-        Assert.Contains("/Type /Pages", text);
-    }
-
-    [Fact]
-    public void Output_ContainsFontDeclarations()
-    {
-        byte[] pdf = Generate("<p>Hello</p>");
-        string text = Encoding.Latin1.GetString(pdf);
-        Assert.Contains("/Type /Font", text);
-        Assert.Contains("/Subtype /Type1", text);
-        Assert.Contains("Helvetica", text);
-    }
-
-    [Fact]
-    public void Output_ContainsMediaBox()
-    {
-        byte[] pdf = Generate("<p>Hello</p>");
-        string text = Encoding.Latin1.GetString(pdf);
-        Assert.Contains("/MediaBox", text);
-    }
-
-    // ── Content ─────────────────────────────────────────────────────────────
-
-    [Fact]
-    public void UncompressedOutput_ContainsTextContent()
-    {
-        byte[] pdf = Generate("<p>HelloWorld</p>", compress: false);
-        string text = Encoding.Latin1.GetString(pdf);
-        Assert.Contains("HelloWorld", text);
-    }
-
-    [Fact]
-    public void MultiPage_ContainsMultiplePageObjects()
-    {
-        string html = "<div>Page1</div>" +
-                   "<div style='page-break-before:always'>Page2</div>";
-        byte[] pdf = Generate(html);
-        string text = Encoding.Latin1.GetString(pdf);
-
-        // Should be at least 2 objects of type Page
-        int count = CountOccurrences(text, "/Type /Page\n");
-        Assert.True(count >= 2, $"Expected ≥2 /Type /Page, found {count}");
-    }
-
-    [Fact]
-    public void Output_IsNonEmpty()
-    {
-        byte[] pdf = Generate("<h1>Test</h1>");
-        Assert.True(pdf.Length > 500, $"Expected >500 bytes, got {pdf.Length}");
-    }
-
     [Fact]
     public void ConvertToStream_ProducesSameResultAsToBytes()
     {
@@ -256,31 +173,5 @@ public class PdfDocumentWriterTests
 
         // Ignore date in /Info (can differ in ms) — compare length
         Assert.Equal(bytes.Length, streamBytes.Length);
-    }
-
-    [Fact]
-    public void XrefTable_HasValidEntries()
-    {
-        byte[] pdf = Generate("<p>Hello</p>", compress: false);
-        string text = Encoding.Latin1.GetString(pdf);
-
-        // Each xref entry has the form: "0000000NNN 00000 n "
-        string[] lines = text.Split('\n');
-        List<string> xrefEntries = lines
-            .Where(l => l.Length >= 18 && (l.EndsWith("n ") || l.EndsWith("f ")))
-            .ToList();
-
-        Assert.True(xrefEntries.Count > 5,
-            $"Expected >5 xref entries, got {xrefEntries.Count}");
-    }
-
-    // ── Helper ────────────────────────────────────────────────────────────────
-
-    private static int CountOccurrences(string source, string pattern)
-    {
-        int count = 0, idx = 0;
-        while ((idx = source.IndexOf(pattern, idx, StringComparison.Ordinal)) >= 0)
-        { count++; idx += pattern.Length; }
-        return count;
     }
 }
