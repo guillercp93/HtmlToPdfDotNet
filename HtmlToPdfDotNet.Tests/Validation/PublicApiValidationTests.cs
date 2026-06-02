@@ -2,6 +2,9 @@ using HtmlToPdfDotNet.Library;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Fonts;
 using HtmlToPdfDotNet.Library.Models.Imaging;
+using HtmlToPdfDotNet.Library.Models.Layout;
+using HtmlToPdfDotNet.Library.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HtmlToPdfDotNet.Tests.Validation;
 
@@ -138,5 +141,29 @@ public class PublicApiValidationTests : IDisposable
         string dataUri = "data:image/png;base64,not-valid-base64";
 
         Assert.Throws<ArgumentException>(() => ImageLoader.Load(dataUri));
+    }
+
+    [Fact]
+    public void PageSize_ContainsPredefinedDimensions()
+    {
+        Assert.True(PageSize.A4.Width > 0);
+        Assert.True(PageSize.A4.Height > 0);
+        Assert.True(PageSize.Letter.Width > 0);
+        Assert.True(PageSize.Letter.Height > 0);
+        Assert.True(PageSize.Legal.Width > 0);
+        Assert.True(PageSize.Legal.Height > 0);
+    }
+
+    [Fact]
+    public void DependencyInjection_AddHtmlToPdfDotNet_RegistersPdfGenerator()
+    {
+        var services = new ServiceCollection();
+        services.AddHtmlToPdfDotNet();
+
+        var serviceProvider = services.BuildServiceProvider();
+        var generator = serviceProvider.GetService<IPdfGenerator>();
+
+        Assert.NotNull(generator);
+        Assert.IsType<PdfGenerator>(generator);
     }
 }
