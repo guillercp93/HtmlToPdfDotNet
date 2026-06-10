@@ -46,7 +46,7 @@ public sealed class BlockLayoutEngine
         _registry = registry;
         _contentTop = page.Margins.Top;
         _contentLeft = page.Margins.Left;
-        _pageContentH = page.ContentHeight;
+        _pageContentH = page.ContentHeight - page.ReservedHeaderFooterHeight;
         _basePath = basePath;
     }
 
