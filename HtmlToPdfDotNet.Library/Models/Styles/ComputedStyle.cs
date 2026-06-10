@@ -45,8 +45,15 @@ public sealed class ComputedStyle
     #endregion
 
     #region Page breaks
-    public bool PageBreakBefore { get; set; } = false;
-    public bool PageBreakAfter { get; set; } = false;
+    public PageBreakAction PageBreakBefore { get; set; } = PageBreakAction.Auto;
+    public PageBreakAction PageBreakAfter { get; set; } = PageBreakAction.Auto;
+    public PageBreakInside PageBreakInside { get; set; } = PageBreakInside.Auto;
+    #endregion
+
+    #region Flexbox
+    public FlexDirection FlexDirection { get; set; } = FlexDirection.Row;
+    public JustifyContent JustifyContent { get; set; } = JustifyContent.FlexStart;
+    public AlignItems AlignItems { get; set; } = AlignItems.Stretch;
     #endregion
 
     /// <summary>

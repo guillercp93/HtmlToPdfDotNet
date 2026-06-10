@@ -116,12 +116,122 @@ public class StyleResolverTests
     }
 
     [Fact]
-    public void InlineStyle_PageBreakBefore_SetsFlag()
+    public void InlineStyle_PageBreakBeforeAlways_SetsPageBreakAction()
     {
         Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"page-break-before: always\">page</div>");
         ComputedStyle div = StyleOf(styles, "div");
 
-        Assert.True(div.PageBreakBefore);
+        Assert.Equal(PageBreakAction.Always, div.PageBreakBefore);
+    }
+
+    [Fact]
+    public void InlineStyle_PageBreakBeforeAvoid_SetsPageBreakAction()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"page-break-before: avoid\">page</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(PageBreakAction.Avoid, div.PageBreakBefore);
+    }
+
+    [Fact]
+    public void InlineStyle_PageBreakAfterAlways_SetsPageBreakAction()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"page-break-after: always\">page</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(PageBreakAction.Always, div.PageBreakAfter);
+    }
+
+    [Fact]
+    public void InlineStyle_PageBreakAfterAvoid_SetsPageBreakAction()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"page-break-after: avoid\">page</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(PageBreakAction.Avoid, div.PageBreakAfter);
+    }
+
+    [Fact]
+    public void InlineStyle_PageBreakInsideAvoid_SetsPageBreakInside()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"page-break-inside: avoid\">content</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(PageBreakInside.Avoid, div.PageBreakInside);
+    }
+
+    [Fact]
+    public void PageBreakInside_DefaultIsAuto()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div>no style</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(PageBreakInside.Auto, div.PageBreakInside);
+    }
+
+    // ── Flexbox properties ──────────────────────────────────────────────
+
+    [Fact]
+    public void InlineStyle_DisplayFlex_ParsesCorrectly()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"display: flex\">flex</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(DisplayType.Flex, div.Display);
+    }
+
+    [Fact]
+    public void InlineStyle_FlexDirectionRow_ParsesCorrectly()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"display: flex; flex-direction: row\">flex</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(FlexDirection.Row, div.FlexDirection);
+    }
+
+    [Fact]
+    public void InlineStyle_FlexDirectionColumn_ParsesCorrectly()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"display: flex; flex-direction: column\">flex</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(FlexDirection.Column, div.FlexDirection);
+    }
+
+    [Fact]
+    public void InlineStyle_JustifyContentCenter_ParsesCorrectly()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"display: flex; justify-content: center\">flex</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(JustifyContent.Center, div.JustifyContent);
+    }
+
+    [Fact]
+    public void InlineStyle_JustifyContentSpaceBetween_ParsesCorrectly()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"display: flex; justify-content: space-between\">flex</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(JustifyContent.SpaceBetween, div.JustifyContent);
+    }
+
+    [Fact]
+    public void InlineStyle_AlignItemsCenter_ParsesCorrectly()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"display: flex; align-items: center\">flex</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(AlignItems.Center, div.AlignItems);
+    }
+
+    [Fact]
+    public void InlineStyle_AlignItemsStretch_ParsesCorrectly()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style=\"display: flex; align-items: stretch\">flex</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(AlignItems.Stretch, div.AlignItems);
     }
 
     // ── BoxModel ──────────────────────────────────────────────────────────────

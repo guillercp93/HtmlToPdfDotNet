@@ -187,6 +187,57 @@ public readonly struct CssEdges
 }
 
 /// <summary>
+/// Value of page-break-before and page-break-after CSS properties.
+/// </summary>
+public enum PageBreakAction
+{
+    Auto,
+    Always,
+    Avoid
+}
+
+/// <summary>
+/// Value of page-break-inside CSS property.
+/// </summary>
+public enum PageBreakInside
+{
+    Auto,
+    Avoid
+}
+
+/// <summary>
+/// Value of flex-direction CSS property.
+/// </summary>
+public enum FlexDirection
+{
+    Row,
+    Column
+}
+
+/// <summary>
+/// Value of justify-content CSS property.
+/// </summary>
+public enum JustifyContent
+{
+    FlexStart,
+    FlexEnd,
+    Center,
+    SpaceBetween,
+    SpaceAround
+}
+
+/// <summary>
+/// Value of align-items CSS property.
+/// </summary>
+public enum AlignItems
+{
+    FlexStart,
+    FlexEnd,
+    Center,
+    Stretch
+}
+
+/// <summary>
 /// Represents a CSS border style.
 /// </summary>
 public enum BorderStyle

@@ -351,10 +351,22 @@ public sealed class StyleResolver
                 style.TextAlign = CssValueParser.ParseTextAlign(value);
                 break;
             case "page-break-before":
-                style.PageBreakBefore = value.Trim().Equals("always", StringComparison.OrdinalIgnoreCase);
+                style.PageBreakBefore = ParsePageBreakAction(value);
                 break;
             case "page-break-after":
-                style.PageBreakAfter = value.Trim().Equals("always", StringComparison.OrdinalIgnoreCase);
+                style.PageBreakAfter = ParsePageBreakAction(value);
+                break;
+            case "page-break-inside":
+                style.PageBreakInside = ParsePageBreakInside(value);
+                break;
+            case "flex-direction":
+                style.FlexDirection = ParseFlexDirection(value);
+                break;
+            case "justify-content":
+                style.JustifyContent = ParseJustifyContent(value);
+                break;
+            case "align-items":
+                style.AlignItems = ParseAlignItems(value);
                 break;
         }
     }
@@ -406,6 +418,82 @@ public sealed class StyleResolver
             "courier new" => "Courier",
             "courier" => "Courier",
             _ => first,
+        };
+    }
+    #endregion
+
+    #region Page break & Flexbox parsers
+    /// <summary>
+    /// Parses a page-break-before or page-break-after value.
+    /// </summary>
+    private static PageBreakAction ParsePageBreakAction(string value)
+    {
+        string v = value.Trim().ToLowerInvariant();
+        return v switch
+        {
+            "always" => PageBreakAction.Always,
+            "avoid" => PageBreakAction.Avoid,
+            _ => PageBreakAction.Auto,
+        };
+    }
+
+    /// <summary>
+    /// Parses a page-break-inside value.
+    /// </summary>
+    private static PageBreakInside ParsePageBreakInside(string value)
+    {
+        string v = value.Trim().ToLowerInvariant();
+        return v switch
+        {
+            "avoid" => PageBreakInside.Avoid,
+            _ => PageBreakInside.Auto,
+        };
+    }
+
+    /// <summary>
+    /// Parses a flex-direction value.
+    /// </summary>
+    private static FlexDirection ParseFlexDirection(string value)
+    {
+        string v = value.Trim().ToLowerInvariant();
+        return v switch
+        {
+            "row" => FlexDirection.Row,
+            "column" => FlexDirection.Column,
+            _ => FlexDirection.Row,
+        };
+    }
+
+    /// <summary>
+    /// Parses a justify-content value.
+    /// </summary>
+    private static JustifyContent ParseJustifyContent(string value)
+    {
+        string v = value.Trim().ToLowerInvariant();
+        return v switch
+        {
+            "flex-start" => JustifyContent.FlexStart,
+            "flex-end" => JustifyContent.FlexEnd,
+            "center" => JustifyContent.Center,
+            "space-between" => JustifyContent.SpaceBetween,
+            "space-around" => JustifyContent.SpaceAround,
+            _ => JustifyContent.FlexStart,
+        };
+    }
+
+    /// <summary>
+    /// Parses an align-items value.
+    /// </summary>
+    private static AlignItems ParseAlignItems(string value)
+    {
+        string v = value.Trim().ToLowerInvariant();
+        return v switch
+        {
+            "flex-start" => AlignItems.FlexStart,
+            "flex-end" => AlignItems.FlexEnd,
+            "center" => AlignItems.Center,
+            "stretch" => AlignItems.Stretch,
+            _ => AlignItems.Stretch,
         };
     }
     #endregion
