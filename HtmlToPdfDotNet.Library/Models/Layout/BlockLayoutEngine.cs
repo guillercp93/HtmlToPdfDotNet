@@ -125,6 +125,22 @@ public sealed class BlockLayoutEngine
                                          _registry,
                                          _basePath);
             }
+            else if (display == DisplayType.Flex)
+            {
+                FlexLayoutEngine.Layout(child,
+                                        style,
+                                        _styles,
+                                        x,
+                                        availableWidth,
+                                        _result,
+                                        _currentPage,
+                                        _cursorY,
+                                        _pageContentH,
+                                        out _cursorY,
+                                        out _currentPage,
+                                        _registry,
+                                        _basePath);
+            }
             else if (display == DisplayType.Block || display == DisplayType.InlineBlock)
             {
                 LayoutBlock(child, style, x, availableWidth);

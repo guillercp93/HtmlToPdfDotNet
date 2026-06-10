@@ -62,6 +62,16 @@ public class PdfGenerator : IPdfGenerator
 
         LayoutResult layout = RunLayout(html);
 
+        // Shift all body content primitives by the page's top margin and reserved header height
+        float contentTop = _options.Page.Margins.Top + _options.Page.ReservedHeaderFooterHeight;
+        if (contentTop > 0f)
+        {
+            for (int i = 0; i < layout.Primitives.Count; i++)
+            {
+                layout.Primitives[i] = ShiftPrimitiveY(layout.Primitives[i], contentTop);
+            }
+        }
+
         // Layout and attach header/footer primitives if configured
         if (_options.HeaderFooter != null)
         {
@@ -281,6 +291,16 @@ public class PdfGenerator : IPdfGenerator
                 Width = blp.Width,
                 Color = blp.Color,
                 Style = blp.Style,
+            },
+            ImagePrimitive ip => new ImagePrimitive
+            {
+                PageIndex = ip.PageIndex,
+                X = ip.X,
+                Y = ip.Y + dy,
+                Width = ip.Width,
+                Height = ip.Height,
+                ImageData = ip.ImageData,
+                XObjectAlias = ip.XObjectAlias,
             },
             _ => prim,
         };

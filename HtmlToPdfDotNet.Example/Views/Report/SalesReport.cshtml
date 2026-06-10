@@ -71,13 +71,21 @@
             margin-top: 10px;
         }
 
-        /* ── KPI cards — stacked vertically ─────────────────────────── */
+        /* ── KPI cards — flex row layout ──────────────────────────── */
+        .kpi-container {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
         .kpi-card {
             background-color: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
             padding: 14px 18px;
-            margin-bottom: 10px;
+            flex: 1;
+            page-break-inside: avoid;
         }
 
         .kpi-card .label {
@@ -110,6 +118,8 @@
             margin-bottom: 10px;
             padding-bottom: 8px;
             border-bottom: 2px solid #e2e8f0;
+            page-break-inside: avoid;
+            page-break-before: avoid;
         }
 
         /* ── Detail table ─────────────────────────────────────────────── */
@@ -196,6 +206,11 @@
             color: #6d28d9;
         }
 
+        .badge-Stationery {
+            background-color: #e0f2fe;
+            color: #0284c7;
+        }
+
         /* ── Grand total — full-width block ──────────────────────────── */
         .grand-total-box {
             background-color: #1e40af;
@@ -203,6 +218,7 @@
             padding: 20px 24px;
             margin-top: 24px;
             text-align: right;
+            page-break-inside: avoid;
         }
 
         .grand-total-box .gt-label {
@@ -255,20 +271,20 @@
         </table>
     </div>
 
-    <!-- ── KPI cards — one per line ──────────────────────────────── -->
-    <div class="kpi-card">
-        <div class="label">Total Revenue</div>
-        <div class="value green">@Model.GrandTotal.ToString("C")</div>
-    </div>
-
-    <div class="kpi-card">
-        <div class="label">Units Sold</div>
-        <div class="value slate">@Model.TotalUnits.ToString("N0")</div>
-    </div>
-
-    <div class="kpi-card">
-        <div class="label">Product Lines</div>
-        <div class="value">@Model.Items.Count</div>
+    <!-- ── KPI cards — flex row with gap ─────────────────────────── -->
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <div class="label">Total Revenue</div>
+            <div class="value green">@Model.GrandTotal.ToString("C")</div>
+        </div>
+        <div class="kpi-card">
+            <div class="label">Units Sold</div>
+            <div class="value slate">@Model.TotalUnits.ToString("N0")</div>
+        </div>
+        <div class="kpi-card">
+            <div class="label">Product Lines</div>
+            <div class="value">@Model.Items.Count</div>
+        </div>
     </div>
 
     <!-- ── Detail table ───────────────────────────────────────────── -->

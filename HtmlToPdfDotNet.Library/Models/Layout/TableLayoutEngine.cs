@@ -321,9 +321,10 @@ public static class TableLayoutEngine
                 var rl = rowLayouts[c];
                 HtmlNode cell = row.Cells[c];
                 ComputedStyle cellStyle = styles.TryGetValue(cell, out ComputedStyle? cs) ? cs : new ComputedStyle();
+                ComputedStyle nodeStyle = styles.TryGetValue(row.Node, out ComputedStyle? ns) ? ns : cellStyle;
 
                 // Background
-                if (cellStyle.BackgroundColor.A > 0f)
+                if (nodeStyle.BackgroundColor.A > 0f)
                 {
                     layout.Primitives.Add(new RectPrimitive
                     {
@@ -332,7 +333,7 @@ public static class TableLayoutEngine
                         Y = 0f,
                         Width = rl.W,
                         Height = rowHeight,
-                        Fill = cellStyle.BackgroundColor
+                        Fill = nodeStyle.BackgroundColor
                     });
                 }
 
