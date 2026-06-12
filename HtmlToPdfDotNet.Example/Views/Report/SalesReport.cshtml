@@ -71,7 +71,7 @@
             margin-top: 10px;
         }
 
-        /* ── KPI cards- flex row layout ──────────────────────────── */
+        /* ── KPI cards — flex row layout ──────────────────────────── */
         .kpi-container {
             display: flex;
             flex-direction: row;
@@ -120,86 +120,6 @@
             border-bottom: 2px solid #e2e8f0;
             page-break-inside: avoid;
             page-break-before: avoid;
-        }
-
-        /* ── Lists- ul / ol / li markers ────────────────────────────── */
-        .highlights-list {
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 16px 20px 16px 36px;
-            margin-bottom: 16px;
-        }
-
-        .highlights-list li {
-            margin-bottom: 6px;
-            font-size: 12px;
-            line-height: 1.5;
-        }
-
-        .highlights-list li:last-child {
-            margin-bottom: 0;
-        }
-
-        .top-products-list {
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 16px 20px 16px 44px;
-            margin-bottom: 16px;
-        }
-
-        .top-products-list li {
-            margin-bottom: 8px;
-            font-size: 12px;
-            line-height: 1.5;
-        }
-
-        .top-products-list li:last-child {
-            margin-bottom: 0;
-        }
-
-        .top-products-list .product-name {
-            font-weight: 700;
-        }
-
-        .top-products-list .product-revenue {
-            color: #16a34a;
-        }
-
-        /* Nested list demo (lower-alpha) */
-        .sub-list {
-            list-style-type: lower-alpha;
-            margin-top: 6px;
-            margin-left: 24px;
-        }
-
-        .sub-list li {
-            font-size: 11px;
-            color: #64748b;
-        }
-
-        /* ── Link / annotation demo ──────────────────────────────────── */
-        .link-ref {
-            font-size: 11px;
-            margin: 16px 0 0;
-            text-align: center;
-            padding: 10px;
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-        }
-
-        .link-ref a {
-            color: #1d4ed8;
-        }
-
-        .link-ref a:hover {
-            text-decoration: underline;
-        }
-
-        .inline-link {
-            color: #1d4ed8;
         }
 
         /* ── Detail table ─────────────────────────────────────────────── */
@@ -291,7 +211,7 @@
             color: #0284c7;
         }
 
-        /* ── Grand total- full-width block ──────────────────────────── */
+        /* ── Grand total — full-width block ──────────────────────────── */
         .grand-total-box {
             background-color: #1e40af;
             color: #ffffff;
@@ -351,7 +271,7 @@
         </table>
     </div>
 
-    <!-- ── KPI cards- flex row with gap ─────────────────────────── -->
+    <!-- ── KPI cards — flex row with gap ─────────────────────────── -->
     <div class="kpi-container">
         <div class="kpi-card">
             <div class="label">Total Revenue</div>
@@ -366,38 +286,6 @@
             <div class="value">@Model.Items.Count</div>
         </div>
     </div>
-
-    <!-- ── Key Highlights- unordered list ────────────────────────── -->
-    <div class="section-title">Key Highlights</div>
-    <ul class="highlights-list">
-        <li>Total revenue reached <strong>@Model.GrandTotal.ToString("C")</strong>, driven by
-            <strong>Electronics</strong> and <strong>Accessories</strong> categories.</li>
-        <li>Over <strong>@Model.TotalUnits.ToString("N0")</strong> units sold across @Model.Items.Count product lines- a
-            @(Model.TotalUnits / 1000).@(Model.TotalUnits % 1000 / 100)x increase year-over-year.</li>
-        <li>New product categories expanded: <strong>Audio</strong> and <strong>Stationery</strong> show strong initial
-            traction with combined revenue targets on track.</li>
-        <li>Operational efficiency improved- supply chain costs reduced by 12% through vendor consolidation.</li>
-    </ul>
-
-    <!-- ── Top Products- ordered list (decimal) with nested alpha ─── -->
-    <div class="section-title">Top 5 Best Sellers</div>
-    <ol class="top-products-list">
-        @{
-            var topItems = Model.Items.OrderByDescending(i => i.Total).Take(5).ToList();
-        }
-        @foreach (var item in topItems)
-        {
-            <li>
-                <span class="product-name">@item.Product</span>
-                - <span class="product-revenue">@item.Total.ToString("C")</span>
-                (@item.Units.ToString("N0") units)
-                <ul class="sub-list">
-                    <li>Category margin: @((item.UnitPrice * 0.35m).ToString("C")) per unit</li>
-                    <li>Quarter-over-quarter growth: +@(new Random().Next(5, 30))%</li>
-                </ul>
-            </li>
-        }
-    </ol>
 
     <!-- ── Detail table ───────────────────────────────────────────── -->
     <div class="section-title">Sales Breakdown</div>
@@ -451,17 +339,8 @@
             product lines</div>
     </div>
 
-    <!-- ── Hyperlink demo- inline link + reference box ───────────── -->
-    <div class="link-ref">
-        <span style="font-family: 'Noto Sans Symbols 2'">📊</span> View the full interactive dashboard at
-        <a href="https://reporting.acmecorp.example/sales/Q1-2026">reporting.acmecorp.example</a>
-        - or
-        <a href="https://reporting.acmecorp.example/api/sales/Q1-2026.pdf">download the raw data</a>.
-    </div>
-
     <p class="disclaimer">
         Confidential - for internal use by @Model.CompanyName only.
-        Data aggregated as of <a href="https://status.acmecorp.example">@Model.GeneratedAt</a>.
     </p>
 
 </body>

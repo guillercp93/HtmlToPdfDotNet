@@ -104,7 +104,7 @@ public static class FlexLayoutEngine
         float startY = newCursorY;
 
         // Measure and layout each item
-        MeasureFlexItems(items, styles, contentWidth, pageContentH, registry, basePath, style.FlexDirection, style.Gap.Points);
+        MeasureFlexItems(items, styles, contentWidth, pageContentH, registry, basePath);
 
         // Position and emit based on flex-direction
         if (style.FlexDirection == FlexDirection.Row)
@@ -193,26 +193,15 @@ public static class FlexLayoutEngine
         float containerContentWidth,
         float pageContentH,
         FontRegistry? registry,
-        string? basePath,
-        FlexDirection flexDirection,
-        float gap = 0f)
+        string? basePath)
     {
-        int count = items.Count;
-        float totalGapSpace = gap * Math.Max(0, count - 1);
-        float adjustedWidth = Math.Max(0f, containerContentWidth - totalGapSpace);
-
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < items.Count; i++)
         {
             var item = items[i];
             float childMarginH = item.Style.Margin.Left.Points + item.Style.Margin.Right.Points;
             float childBorderH = item.Style.BorderLeft.Width.Points + item.Style.BorderRight.Width.Points;
             float childPaddingH = item.Style.Padding.Left.Points + item.Style.Padding.Right.Points;
-            float itemTotalH = childMarginH + childBorderH + childPaddingH;
-
-            // For row layout each item only gets a fraction of the adjusted width
-            float childContentWidth = flexDirection == FlexDirection.Row
-                ? Math.Max(0f, adjustedWidth / count - itemTotalH)
-                : Math.Max(0f, containerContentWidth - childMarginH - childBorderH - childPaddingH);
+            float childContentWidth = Math.Max(0f, containerContentWidth - childMarginH - childBorderH - childPaddingH);
 
             // Layout the child inline to measure its natural height
             PageLayout childPage = new(childContentWidth, pageContentH, new PageMargins(0f));
@@ -258,10 +247,6 @@ public static class FlexLayoutEngine
         if (count == 0) return;
 
         // Allocate equal width per item in the row
-        float gap = containerStyle.Gap.Points;
-        float totalGapSpace = gap * (count - 1);
-        float adjustedContentWidth = Math.Max(0f, contentWidth - totalGapSpace);
-
         float totalAllocatedWidth = 0f;
         float[] allocatedWidths = new float[count];
         for (int i = 0; i < count; i++)
@@ -271,16 +256,16 @@ public static class FlexLayoutEngine
             float paddingH = items[i].Style.Padding.Left.Points + items[i].Style.Padding.Right.Points;
             float itemTotalH = marginH + borderH + paddingH;
 
-            float share = Math.Max(0f, adjustedContentWidth / count - itemTotalH);
+            float share = Math.Max(0f, contentWidth / count - itemTotalH);
             allocatedWidths[i] = share;
             totalAllocatedWidth += share + itemTotalH;
         }
 
         // Compute remaining space for justify-content
-        float remainingSpace = Math.Max(0f, contentWidth - totalAllocatedWidth - totalGapSpace);
+        float remainingSpace = Math.Max(0f, contentWidth - totalAllocatedWidth);
 
-        // Calculate X offsets based on justify-content (with gap)
-        float[] xPositions = CalculateJustifyPositions(allocatedWidths, items, remainingSpace, containerStyle.JustifyContent, gap);
+        // Calculate X offsets based on justify-content
+        float[] xPositions = CalculateJustifyPositions(allocatedWidths, items, remainingSpace, containerStyle.JustifyContent);
 
         // Determine row height (tallest item)
         float rowHeight = items.Max(i => i.TotalHeight);
@@ -313,76 +298,13 @@ public static class FlexLayoutEngine
                 }
             }
 
-            float itemMarginLeft = item.Style.Margin.Left.Points;
-            float itemMarginTop = item.Style.Margin.Top.Points;
-            float itemX = contentX + xPositions[i] + itemMarginLeft;
-            float itemY = newCursorY + yOffset + itemMarginTop;
-
-            // ── Emit flex item's own background & border box ─────────────
-            // The inner BlockLayoutEngine only processes the item's children,
-            // NOT the item itself, so we must emit the box here.
-            float bbW = allocatedWidths[i]
-                        + item.Style.BorderLeft.Width.Points + item.Style.BorderRight.Width.Points
-                        + item.Style.Padding.Left.Points + item.Style.Padding.Right.Points;
-            float bbH = item.TotalHeight - itemMarginTop - item.Style.Margin.Bottom.Points;
-
-            float borderRadius = item.Style.BorderRadius.Points;
-            if (borderRadius > 0f)
-            {
-                CssBorderSide activeBorder = item.Style.BorderTop.IsVisible ? item.Style.BorderTop :
-                                              item.Style.BorderBottom.IsVisible ? item.Style.BorderBottom :
-                                              item.Style.BorderLeft.IsVisible ? item.Style.BorderLeft :
-                                              item.Style.BorderRight;
-
-                float strokeWidth = activeBorder.IsVisible ? activeBorder.Width.Points : 0f;
-                CssColor strokeColor = activeBorder.IsVisible ? activeBorder.Color : CssColor.Transparent;
-
-                result.Primitives.Add(new RectPrimitive
-                {
-                    PageIndex = newPage,
-                    X = itemX,
-                    Y = itemY,
-                    Width = bbW,
-                    Height = bbH,
-                    Fill = item.Style.BackgroundColor,
-                    BorderRadius = borderRadius,
-                    Stroke = strokeColor,
-                    StrokeWidth = strokeWidth,
-                });
-            }
-            else
-            {
-                // Background rect
-                if (item.Style.BackgroundColor.A > 0f)
-                {
-                    result.Primitives.Add(new RectPrimitive
-                    {
-                        PageIndex = newPage,
-                        X = itemX,
-                        Y = itemY,
-                        Width = bbW,
-                        Height = bbH,
-                        Fill = item.Style.BackgroundColor,
-                    });
-                }
-
-                // Four border lines
-                EmitFlexBorder(result, newPage,
-                    itemX, itemY, itemX + bbW, itemY, item.Style.BorderTop);
-                EmitFlexBorder(result, newPage,
-                    itemX, itemY + bbH, itemX + bbW, itemY + bbH, item.Style.BorderBottom);
-                EmitFlexBorder(result, newPage,
-                    itemX, itemY, itemX, itemY + bbH, item.Style.BorderLeft);
-                EmitFlexBorder(result, newPage,
-                    itemX + bbW, itemY, itemX + bbW, itemY + bbH, item.Style.BorderRight);
-            }
+            float itemX = contentX + xPositions[i]
+                          + item.Style.Margin.Left.Points;
+            float itemY = newCursorY + yOffset
+                          + item.Style.Margin.Top.Points;
 
             // Append flex item's primitives with shifted positions
-            float padLeft = item.Style.Padding.Left.Points
-                          + item.Style.BorderLeft.Width.Points;
-            float padTop  = item.Style.Padding.Top.Points
-                          + item.Style.BorderTop.Width.Points;
-            CopyPrimitives(item.InnerResult, result, newPage, itemX + padLeft, itemY + padTop);
+            CopyPrimitives(item.InnerResult, result, newPage, itemX, itemY);
         }
 
         newCursorY += rowHeight;
@@ -412,17 +334,15 @@ public static class FlexLayoutEngine
         float totalUsedHeight = items.Sum(i => i.TotalHeight);
 
         // Remaining vertical space for justify-content
-        float colGap = containerStyle.Gap.Points;
-        float totalColGap = colGap * Math.Max(0, count - 1);
         float remainingSpace = 0f;
-        float containerHeight = containerStyle.Height.IsAuto ? totalUsedHeight + totalColGap : containerStyle.Height.Points;
-        if (!containerStyle.Height.IsAuto && containerStyle.Height.Points > totalUsedHeight + totalColGap)
+        float containerHeight = containerStyle.Height.IsAuto ? totalUsedHeight : containerStyle.Height.Points;
+        if (!containerStyle.Height.IsAuto && containerStyle.Height.Points > totalUsedHeight)
         {
-            remainingSpace = containerStyle.Height.Points - totalUsedHeight - totalColGap;
+            remainingSpace = containerStyle.Height.Points - totalUsedHeight;
         }
 
-        // Calculate Y offsets based on justify-content (with gap)
-        float[] yPositions = CalculateColumnJustifyPositions(items, remainingSpace, containerStyle.JustifyContent, colGap);
+        // Calculate Y offsets based on justify-content
+        float[] yPositions = CalculateColumnJustifyPositions(items, remainingSpace, containerStyle.JustifyContent);
 
         // Emit shifted primitives
         for (int i = 0; i < count; i++)
@@ -464,64 +384,7 @@ public static class FlexLayoutEngine
                 itemY = newCursorY + yPositions[i] + item.Style.Margin.Top.Points;
             }
 
-            // ── Emit flex item's own background & border box ─────────────
-            float colBbW = contentWidth - crossAxisRemaining - item.Style.Margin.Right.Points;
-            float colBbH = item.TotalHeight - item.Style.Margin.Top.Points - item.Style.Margin.Bottom.Points;
-            float colBorderRadius = item.Style.BorderRadius.Points;
-
-            if (colBorderRadius > 0f)
-            {
-                CssBorderSide activeBorder = item.Style.BorderTop.IsVisible ? item.Style.BorderTop :
-                                              item.Style.BorderBottom.IsVisible ? item.Style.BorderBottom :
-                                              item.Style.BorderLeft.IsVisible ? item.Style.BorderLeft :
-                                              item.Style.BorderRight;
-
-                float strokeWidth = activeBorder.IsVisible ? activeBorder.Width.Points : 0f;
-                CssColor strokeColor = activeBorder.IsVisible ? activeBorder.Color : CssColor.Transparent;
-
-                result.Primitives.Add(new RectPrimitive
-                {
-                    PageIndex = newPage,
-                    X = itemX,
-                    Y = itemY,
-                    Width = colBbW,
-                    Height = colBbH,
-                    Fill = item.Style.BackgroundColor,
-                    BorderRadius = colBorderRadius,
-                    Stroke = strokeColor,
-                    StrokeWidth = strokeWidth,
-                });
-            }
-            else
-            {
-                if (item.Style.BackgroundColor.A > 0f)
-                {
-                    result.Primitives.Add(new RectPrimitive
-                    {
-                        PageIndex = newPage,
-                        X = itemX,
-                        Y = itemY,
-                        Width = colBbW,
-                        Height = colBbH,
-                        Fill = item.Style.BackgroundColor,
-                    });
-                }
-
-                EmitFlexBorder(result, newPage,
-                    itemX, itemY, itemX + colBbW, itemY, item.Style.BorderTop);
-                EmitFlexBorder(result, newPage,
-                    itemX, itemY + colBbH, itemX + colBbW, itemY + colBbH, item.Style.BorderBottom);
-                EmitFlexBorder(result, newPage,
-                    itemX, itemY, itemX, itemY + colBbH, item.Style.BorderLeft);
-                EmitFlexBorder(result, newPage,
-                    itemX + colBbW, itemY, itemX + colBbW, itemY + colBbH, item.Style.BorderRight);
-            }
-
-            float colPadLeft = item.Style.Padding.Left.Points
-                             + item.Style.BorderLeft.Width.Points;
-            float colPadTop  = item.Style.Padding.Top.Points
-                             + item.Style.BorderTop.Width.Points;
-            CopyPrimitives(item.InnerResult, result, newPage, itemX + colPadLeft, itemY + colPadTop);
+            CopyPrimitives(item.InnerResult, result, newPage, itemX, itemY);
 
             newCursorY = Math.Max(newCursorY, itemY + item.TotalHeight - yPositions[i] - item.Style.Margin.Top.Points);
         }
@@ -538,8 +401,7 @@ public static class FlexLayoutEngine
         float[] allocatedWidths,
         List<FlexItemLayout> items,
         float remainingSpace,
-        JustifyContent justify,
-        float gap = 0f)
+        JustifyContent justify)
     {
         int count = allocatedWidths.Length;
         float[] positions = new float[count];
@@ -564,7 +426,6 @@ public static class FlexLayoutEngine
                 {
                     positions[i] = currentX;
                     currentX += totalItemWidths[i];
-                    if (i < count - 1) currentX += gap;
                 }
                 break;
             }
@@ -575,30 +436,29 @@ public static class FlexLayoutEngine
                 {
                     positions[i] = currentX;
                     currentX += totalItemWidths[i];
-                    if (i < count - 1) currentX += gap;
                 }
                 break;
             }
             case JustifyContent.SpaceBetween when count > 1:
             {
-                float flexGap = (remainingSpace - gap * (count - 1)) / (count - 1);
+                float gap = remainingSpace / (count - 1);
                 float currentX = 0f;
                 for (int i = 0; i < count; i++)
                 {
                     positions[i] = currentX;
-                    currentX += totalItemWidths[i] + flexGap + gap;
+                    currentX += totalItemWidths[i] + gap;
                 }
                 break;
             }
             case JustifyContent.SpaceAround:
             {
-                float flexGap = (remainingSpace - gap * (count - 1)) / count;
-                float halfGap = flexGap / 2f;
+                float gap = remainingSpace / count;
+                float halfGap = gap / 2f;
                 float currentX = halfGap;
                 for (int i = 0; i < count; i++)
                 {
                     positions[i] = currentX;
-                    currentX += totalItemWidths[i] + flexGap + gap;
+                    currentX += totalItemWidths[i] + gap;
                 }
                 break;
             }
@@ -609,7 +469,6 @@ public static class FlexLayoutEngine
                 {
                     positions[i] = currentX;
                     currentX += totalItemWidths[i];
-                    if (i < count - 1) currentX += gap;
                 }
                 break;
             }
@@ -624,8 +483,7 @@ public static class FlexLayoutEngine
     private static float[] CalculateColumnJustifyPositions(
         List<FlexItemLayout> items,
         float remainingSpace,
-        JustifyContent justify,
-        float gap = 0f)
+        JustifyContent justify)
     {
         int count = items.Count;
         float[] positions = new float[count];
@@ -640,7 +498,6 @@ public static class FlexLayoutEngine
                 {
                     positions[i] = currentY;
                     currentY += items[i].TotalHeight;
-                    if (i < count - 1) currentY += gap;
                 }
                 break;
             }
@@ -651,30 +508,29 @@ public static class FlexLayoutEngine
                 {
                     positions[i] = currentY;
                     currentY += items[i].TotalHeight;
-                    if (i < count - 1) currentY += gap;
                 }
                 break;
             }
             case JustifyContent.SpaceBetween when count > 1:
             {
-                float flexGap = (remainingSpace - gap * (count - 1)) / (count - 1);
+                float gap = remainingSpace / (count - 1);
                 float currentY = 0f;
                 for (int i = 0; i < count; i++)
                 {
                     positions[i] = currentY;
-                    currentY += items[i].TotalHeight + flexGap + gap;
+                    currentY += items[i].TotalHeight + gap;
                 }
                 break;
             }
             case JustifyContent.SpaceAround:
             {
-                float flexGap = (remainingSpace - gap * (count - 1)) / count;
-                float halfGap = flexGap / 2f;
+                float gap = remainingSpace / count;
+                float halfGap = gap / 2f;
                 float currentY = halfGap;
                 for (int i = 0; i < count; i++)
                 {
                     positions[i] = currentY;
-                    currentY += items[i].TotalHeight + flexGap + gap;
+                    currentY += items[i].TotalHeight + gap;
                 }
                 break;
             }
@@ -685,7 +541,6 @@ public static class FlexLayoutEngine
                 {
                     positions[i] = currentY;
                     currentY += items[i].TotalHeight;
-                    if (i < count - 1) currentY += gap;
                 }
                 break;
             }
@@ -772,30 +627,6 @@ public static class FlexLayoutEngine
                     break;
             }
         }
-    }
-
-    #endregion
-
-    #region Border emission for flex items
-
-    /// <summary>
-    /// Emits a border line for a flex item if the border side is visible.
-    /// </summary>
-    private static void EmitFlexBorder(LayoutResult result, int page,
-        float x1, float y1, float x2, float y2, CssBorderSide side)
-    {
-        if (!side.IsVisible) return;
-        result.Primitives.Add(new BorderLinePrimitive
-        {
-            PageIndex = page,
-            X1 = x1,
-            Y1 = y1,
-            X2 = x2,
-            Y2 = y2,
-            Width = side.Width.Points,
-            Color = side.Color,
-            Style = side.Style,
-        });
     }
 
     #endregion

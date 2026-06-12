@@ -56,9 +56,9 @@ public sealed class StyleResolver
 
             // Layout
             ["p"] = s => { s.Margin = Helpers.DefaultMargin(Constants.DefaultMargin); },
-            ["ul"] = s => { s.Margin = new CssEdges(new CssLength(Constants.DefaultMargin)); s.Padding = Helpers.DefaultPadding(40f); },
-            ["ol"] = s => { s.ListStyleType = ListStyleType.Decimal; s.Margin = new CssEdges(new CssLength(Constants.DefaultMargin)); s.Padding = Helpers.DefaultPadding(40f); },
-            ["li"] = s => s.Display = DisplayType.ListItem,
+            ["ul"] = s => { s.Margin = new CssEdges(new CssLength(Constants.DefaultMargin)); s.Padding = Helpers.DefaultPadding(20f); },
+            ["ol"] = s => { s.Margin = new CssEdges(new CssLength(Constants.DefaultMargin)); s.Padding = Helpers.DefaultPadding(20f); },
+            ["li"] = s => s.Display = DisplayType.Block,
             ["blockquote"] = s => { s.Margin = new CssEdges(new CssLength(8f), new CssLength(32f)); s.Padding = new CssEdges(new CssLength(Constants.DefaultPadding)); },
 
             // Display none
@@ -163,7 +163,6 @@ public sealed class StyleResolver
             TextAlign = parent.TextAlign,
             TextDecoration = parent.TextDecoration,
             TextTransForm = parent.TextTransForm,
-            ListStyleType = parent.ListStyleType,
         };
         return s;
     }
@@ -234,9 +233,6 @@ public sealed class StyleResolver
         {
             case "display":
                 style.Display = CssValueParser.ParseDisplay(value);
-                break;
-            case "list-style-type":
-                style.ListStyleType = CssValueParser.ParseListStyleType(value);
                 break;
             case "width":
                 style.Width = CssValueParser.ParseLength(value, style.FontSize);
@@ -371,10 +367,6 @@ public sealed class StyleResolver
                 break;
             case "align-items":
                 style.AlignItems = ParseAlignItems(value);
-                break;
-            case "gap":
-                CssLength gap = CssValueParser.ParseLength(value, style.FontSize);
-                if (gap.Points >= 0f) style.Gap = gap;
                 break;
         }
     }

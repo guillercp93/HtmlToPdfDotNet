@@ -11,14 +11,6 @@ public sealed class ComputedStyle
     public DisplayType Display { get; set; } = DisplayType.Block;
     #endregion
 
-    #region List
-    /// <summary>
-    /// Gets or sets the list-style-type for list items.
-    /// Defaults to <see cref="ListStyleType.Disc"/>.
-    /// </summary>
-    public ListStyleType ListStyleType { get; set; } = ListStyleType.Disc;
-    #endregion
-
     #region Box model
     public CssLength Width { get; set; } = CssLength.Auto;
     public CssLength Height { get; set; } = CssLength.Auto;
@@ -62,7 +54,6 @@ public sealed class ComputedStyle
     public FlexDirection FlexDirection { get; set; } = FlexDirection.Row;
     public JustifyContent JustifyContent { get; set; } = JustifyContent.FlexStart;
     public AlignItems AlignItems { get; set; } = AlignItems.Stretch;
-    public CssLength Gap { get; set; } = CssLength.Zero;
     #endregion
 
     /// <summary>

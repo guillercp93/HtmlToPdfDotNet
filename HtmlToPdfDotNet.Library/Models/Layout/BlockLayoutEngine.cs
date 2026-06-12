@@ -29,11 +29,6 @@ public sealed class BlockLayoutEngine
 
     #endregion
 
-    #region List state
-    private int _listCounter;
-    private bool _isOrderedList;
-    #endregion
-
     /// <summary>
     /// Initializes a new instance of the <see cref="BlockLayoutEngine"/> class.
     /// </summary>
@@ -83,35 +78,6 @@ public sealed class BlockLayoutEngine
     {
         float startY = _cursorY;
 
-        // Save list counter to restore after processing nested lists
-        // (each list container creates its own CSS counter scope)
-        int savedListCounter = _listCounter;
-        bool savedOrderedList = _isOrderedList;
-
-        // Detect list container to reset counter
-        if (parent.Name.Equals("ol", StringComparison.OrdinalIgnoreCase))
-        {
-            _listCounter = 1;
-            _isOrderedList = true;
-        }
-        else if (parent.Name.Equals("ul", StringComparison.OrdinalIgnoreCase))
-        {
-            // Check if <ul> has an ordered marker type (e.g., lower-alpha via CSS override)
-            bool isOrderedMarker = _styles.TryGetValue(parent, out ComputedStyle? ulStyle)
-                && ulStyle.ListStyleType is ListStyleType.Decimal
-                    or ListStyleType.LowerAlpha or ListStyleType.UpperAlpha
-                    or ListStyleType.LowerRoman or ListStyleType.UpperRoman;
-
-            _listCounter = isOrderedMarker ? 1 : 0;
-            _isOrderedList = isOrderedMarker;
-        }
-
-        // Buffer for consecutive inline content (text + inline elements) so they
-        // are laid out as a single inline flow instead of one line per element.
-        List<InlineRun> inlineBuffer = [];
-        _styles.TryGetValue(parent, out ComputedStyle? parentStyle);
-        TextAlign parentTextAlign = parentStyle?.TextAlign ?? TextAlign.Left;
-
         foreach (HtmlNode child in parent.ChildNodes)
         {
             if (!_styles.TryGetValue(child, out ComputedStyle? style)) continue;
@@ -122,28 +88,12 @@ public sealed class BlockLayoutEngine
                 string text = Helpers.NormalizeText(child.InnerText);
                 if (!string.IsNullOrWhiteSpace(text))
                 {
-                    inlineBuffer.Add(Helpers.MakeRun(text, style, _registry));
+                    LayoutTextRuns([Helpers.MakeRun(text, style, _registry)], x, availableWidth, style.TextAlign);
                 }
                 continue;
             }
 
             if (child.NodeType != HtmlNodeType.Element) continue;
-
-            // Inline elements → buffer their runs for continuous inline flow
-            if (style.Display == DisplayType.Inline)
-            {
-                inlineBuffer.AddRange(CollectInlineRuns(child));
-                continue;
-            }
-
-            // ── Block / non-inline elements ──
-            // Flush pending inline runs before any block-level element
-            if (inlineBuffer.Count > 0)
-            {
-                LayoutTextRuns(inlineBuffer, x, availableWidth, parentTextAlign);
-                inlineBuffer.Clear();
-            }
-
             // Explicit page breaks (before the element)
             if (style.PageBreakBefore == PageBreakAction.Always)
             {
@@ -191,14 +141,8 @@ public sealed class BlockLayoutEngine
                                         _registry,
                                         _basePath);
             }
-            else if (display is DisplayType.Block or DisplayType.InlineBlock or DisplayType.ListItem)
+            else if (display == DisplayType.Block || display == DisplayType.InlineBlock)
             {
-                // Emit list marker for <li> items before the block content
-                if (display == DisplayType.ListItem)
-                {
-                    EmitListMarker(child, style, x);
-                }
-
                 LayoutBlock(child, style, x, availableWidth);
             }
             else
@@ -212,16 +156,6 @@ public sealed class BlockLayoutEngine
                 AdvancePage();
             }
         }
-
-        // Flush any remaining inline content at the end of the container
-        if (inlineBuffer.Count > 0)
-        {
-            LayoutTextRuns(inlineBuffer, x, availableWidth, parentTextAlign);
-        }
-
-        // Restore parent list counter (each list has its own CSS counter scope)
-        _listCounter = savedListCounter;
-        _isOrderedList = savedOrderedList;
 
         return _cursorY - startY;
     }
@@ -370,10 +304,8 @@ public sealed class BlockLayoutEngine
                 AdvancePage();
             }
 
-            // Line top Y (before advancing cursor)
-            float lineTopY = _cursorY;
             // Baseline Y (reference: inside the page, Y from top)
-            float baselineY = lineTopY + line.Ascent;
+            float baselineY = _cursorY + line.Ascent;
 
             foreach ((InlineRun runItem, float runX) in line.Items)
             {
@@ -415,20 +347,6 @@ public sealed class BlockLayoutEngine
                         Style = BorderStyle.Solid
                     });
                 }
-
-                // Capture link annotation for this run fragment
-                if (runItem.LinkUri != null)
-                {
-                    _result.Annotations.Add(new LinkAnnotationPrimitive
-                    {
-                        PageIndex = _currentPage,
-                        X = contentX + runX,
-                        Y = lineTopY,
-                        Width = runItem.Width,
-                        Height = line.LineHeight,
-                        Uri = runItem.LinkUri,
-                    });
-                }
             }
 
             _cursorY += line.LineHeight;
@@ -451,25 +369,11 @@ public sealed class BlockLayoutEngine
 
     /// <summary>
     /// Recursively collects runs from the node tree, handling nested inline elements.
-    /// When an &lt;a&gt; element is encountered, its href is captured and passed down
-    /// to all descendant text runs so they can be turned into link annotations.
     /// </summary>
     /// <param name="node">The node to collect runs from.</param>
     /// <param name="runs">The list of <see cref="InlineRun"/> objects to add to.</param>
-    /// <param name="currentLinkUri">
-    ///   The active link URI inherited from an ancestor &lt;a&gt; element, or <c>null</c>.
-    /// </param>
-    private void CollectRunsRecursive(HtmlNode node, List<InlineRun> runs, string? currentLinkUri = null)
+    private void CollectRunsRecursive(HtmlNode node, List<InlineRun> runs)
     {
-        // If this node is an <a> element itself (not just a child), capture its href
-        if (node.NodeType == HtmlNodeType.Element
-            && node.Name.Equals("a", StringComparison.OrdinalIgnoreCase))
-        {
-            string href = node.GetAttributeValue("href", "");
-            if (!string.IsNullOrEmpty(href))
-                currentLinkUri = href;
-        }
-
         foreach (HtmlNode child in node.ChildNodes)
         {
             if (!_styles.TryGetValue(child, out ComputedStyle? style)) continue;
@@ -478,25 +382,16 @@ public sealed class BlockLayoutEngine
             if (child.NodeType == HtmlNodeType.Text)
             {
                 string text = Helpers.NormalizeText(child.InnerText);
-                if (!string.IsNullOrWhiteSpace(text))
+                if (!string.IsNullOrEmpty(text))
                 {
-                    runs.Add(Helpers.MakeRun(text, style, _registry, currentLinkUri));
+                    runs.Add(Helpers.MakeRun(text, style, _registry));
                 }
             }
             else if (child.NodeType == HtmlNodeType.Element)
             {
-                // Check for <a> element to capture its href attribute
-                string? childLinkUri = currentLinkUri;
-                if (child.Name.Equals("a", StringComparison.OrdinalIgnoreCase))
-                {
-                    string href = child.GetAttributeValue("href", "");
-                    if (!string.IsNullOrEmpty(href))
-                        childLinkUri = href;
-                }
-
                 if (style.Display == DisplayType.Inline || style.Display == DisplayType.InlineBlock)
                 {
-                    CollectRunsRecursive(child, runs, childLinkUri);
+                    CollectRunsRecursive(child, runs);
                 }
                 // Blocks inside inline → ignore in this pass (edge case)
             }
@@ -609,95 +504,6 @@ public sealed class BlockLayoutEngine
     {
         if (_cursorY > _pageContentH) AdvancePage();
     }
-
-    #region List markers
-    /// <summary>
-    /// Emits a list marker (bullet, number, etc.) for a list-item element.
-    /// Called before laying out the <li> block content.
-    /// </summary>
-    private void EmitListMarker(HtmlNode node, ComputedStyle style, float contentX)
-    {
-        string? marker = GetListMarker(style.ListStyleType, _listCounter);
-        if (marker == null) return;
-
-        // Measure marker width for positioning
-        InlineRun markerRun = Helpers.MakeRun(marker, style, _registry);
-        float markerWidth = Helpers.MeasureText(marker, markerRun);
-
-        // Position marker just to the left of the content area (in the padding area)
-        float markerX = contentX - markerWidth - 5f;
-
-        // Baseline Y: approximate first line position
-        float baselineY = _cursorY + style.FontSize * 0.8f;
-
-        _result.Primitives.Add(new TextPrimitive
-        {
-            PageIndex = _currentPage,
-            X = markerX,
-            Y = baselineY,
-            Text = marker,
-            FontName = markerRun.FontName,
-            FontSize = style.FontSize,
-            Bold = style.FontWeight == FontWeight.Bold,
-            Italic = style.FontStyle == FontStyle.Italic,
-            Color = style.Color,
-            EmbeddedFont = markerRun.EmbeddedFont,
-        });
-
-        if (_isOrderedList && style.ListStyleType != ListStyleType.None)
-        {
-            _listCounter++;
-        }
-    }
-
-    /// <summary>
-    /// Returns the marker string for the given list-style-type and counter value.
-    /// Returns null for <see cref="ListStyleType.None"/>.
-    /// </summary>
-    private static string? GetListMarker(ListStyleType type, int counter)
-    {
-        return type switch
-        {
-            ListStyleType.Disc => "\u00B7",
-            ListStyleType.Circle => "\u00B0",
-            ListStyleType.Square => "\u25AA",
-            ListStyleType.Decimal => $"{counter}.",
-            ListStyleType.LowerAlpha => $"{IntToAlpha(counter, false)}.",
-            ListStyleType.UpperAlpha => $"{IntToAlpha(counter, true)}.",
-            ListStyleType.LowerRoman => $"{IntToRoman(counter).ToLowerInvariant()}.",
-            ListStyleType.UpperRoman => $"{IntToRoman(counter)}.",
-            ListStyleType.None => null,
-            _ => "\u00B7",
-        };
-    }
-
-    /// <summary>
-    /// Converts an integer to a Roman numeral string.
-    /// Supports values 1-3999; larger values return the decimal string.
-    /// </summary>
-    internal static string IntToRoman(int num)
-    {
-        if (num < 1 || num > 3999) return num.ToString();
-        string[] thousands = ["", "M", "MM", "MMM"];
-        string[] hundreds = ["", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM"];
-        string[] tens = ["", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC"];
-        string[] ones = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
-        return thousands[num / 1000] + hundreds[(num % 1000) / 100]
-             + tens[(num % 100) / 10] + ones[num % 10];
-    }
-
-    /// <summary>
-    /// Converts an integer to an alphabetic marker (a, b, c, ..., z, aa, ab, ...).
-    /// </summary>
-    internal static string IntToAlpha(int num, bool upper)
-    {
-        if (num < 1) return num.ToString();
-        int index = (num - 1) % 26;
-        char c = upper ? (char)('A' + index) : (char)('a' + index);
-        int repeat = (num - 1) / 26;
-        return new string(c, repeat + 1);
-    }
-    #endregion
 
     private void LayoutImage(HtmlNode imgNode, ComputedStyle style, float parentX, float availableWidth)
     {
