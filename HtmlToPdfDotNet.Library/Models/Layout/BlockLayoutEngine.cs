@@ -46,7 +46,7 @@ public sealed class BlockLayoutEngine
         _registry = registry;
         _contentTop = page.Margins.Top;
         _contentLeft = page.Margins.Left;
-        _pageContentH = page.ContentHeight;
+        _pageContentH = page.ContentHeight - page.ReservedHeaderFooterHeight;
         _basePath = basePath;
     }
 
@@ -95,7 +95,7 @@ public sealed class BlockLayoutEngine
 
             if (child.NodeType != HtmlNodeType.Element) continue;
             // Explicit page breaks (before the element)
-            if (style.PageBreakBefore)
+            if (style.PageBreakBefore == PageBreakAction.Always)
             {
                 AdvancePage();
             }
@@ -104,7 +104,7 @@ public sealed class BlockLayoutEngine
             if (child.Name.Equals("img", StringComparison.OrdinalIgnoreCase))
             {
                 LayoutImage(child, style, x, availableWidth);
-                if (style.PageBreakAfter) AdvancePage();
+                if (style.PageBreakAfter == PageBreakAction.Always) AdvancePage();
                 continue;
             }
 
@@ -125,6 +125,22 @@ public sealed class BlockLayoutEngine
                                          _registry,
                                          _basePath);
             }
+            else if (display == DisplayType.Flex)
+            {
+                FlexLayoutEngine.Layout(child,
+                                        style,
+                                        _styles,
+                                        x,
+                                        availableWidth,
+                                        _result,
+                                        _currentPage,
+                                        _cursorY,
+                                        _pageContentH,
+                                        out _cursorY,
+                                        out _currentPage,
+                                        _registry,
+                                        _basePath);
+            }
             else if (display == DisplayType.Block || display == DisplayType.InlineBlock)
             {
                 LayoutBlock(child, style, x, availableWidth);
@@ -135,7 +151,7 @@ public sealed class BlockLayoutEngine
             }
 
             // Explicit page breaks (after the element)
-            if (style.PageBreakAfter)
+            if (style.PageBreakAfter == PageBreakAction.Always)
             {
                 AdvancePage();
             }
@@ -163,12 +179,21 @@ public sealed class BlockLayoutEngine
 
         float boxTop = _cursorY; // start of border box
 
-        // Check if it fits on the page (if it's smaller than the entire page)
-        float estimatedHeight = style.FontSize * style.LineHeight * 2 + style.Padding.Vertical.Points;
-        if (estimatedHeight < _pageContentH && _cursorY + estimatedHeight > _pageContentH)
+        // page-break-inside: avoid — if block would fit on a fresh page but not this one, advance
+        if (style.PageBreakInside == PageBreakInside.Avoid)
         {
-            AdvancePage();
-            boxTop = _cursorY;
+            float estimatedHeight;
+            if (!style.Height.IsAuto)
+                estimatedHeight = style.Height.Points + style.Padding.Vertical.Points
+                                  + style.BorderTop.Width.Points + style.BorderBottom.Width.Points;
+            else
+                estimatedHeight = style.FontSize * style.LineHeight * 2 + style.Padding.Vertical.Points;
+
+            if (estimatedHeight < _pageContentH && _cursorY + estimatedHeight > _pageContentH)
+            {
+                AdvancePage();
+                boxTop = _cursorY;
+            }
         }
 
         // Move cursor to start of content area

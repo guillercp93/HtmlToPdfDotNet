@@ -41,10 +41,19 @@ namespace HtmlToPdfDotNet.Library.Models.Writer;
 ///   • Passes the resulting <see cref="EmbeddedFontInfo"/> alias map to each
 ///     <see cref="ContentStreamBuilder"/> so it can emit GID hex strings for
 ///     embedded fonts and Latin-1 strings for standard fonts.
+///   • Emits per-page header and footer primitives (when present in the
+///     layout result) before and after page content respectively.
 /// </summary>
 public sealed class PdfDocumentWriter
 {
+    /// <summary>
+    /// Page layout configuration.
+    /// </summary>
     private readonly PageLayout _page;
+
+    /// <summary>
+    /// Compression flag.
+    /// </summary>
     private readonly bool _compress;
 
     /// <summary>
@@ -76,6 +85,15 @@ public sealed class PdfDocumentWriter
         // ── Font resource builder ────────────────────────────────────────
         FontResourceBuilder fontBuilder = new(counter, xref);
         List<TextPrimitive> allText = layout.Primitives.OfType<TextPrimitive>().ToList();
+
+        // Include header/footer text primitives in font analysis
+        if (layout.PageHeaders != null)
+            foreach (List<RenderPrimitive> headerPage in layout.PageHeaders)
+                allText.AddRange(headerPage.OfType<TextPrimitive>());
+        if (layout.PageFooters != null)
+            foreach (List<RenderPrimitive> footerPage in layout.PageFooters)
+                allText.AddRange(footerPage.OfType<TextPrimitive>());
+
         fontBuilder.Analyze(allText);
 
         // ── Create all font PDF objects ────────────────────────────────────
@@ -99,28 +117,26 @@ public sealed class PdfDocumentWriter
             int pageNum = counter.Next();
             pageObjectNums.Add(pageNum);
 
-            List<RenderPrimitive> primitives = layout.ForPage(i).ToList();
-
-            // Build content stream (handles both standard and embedded fonts)
             ContentStreamBuilder csBuilder = new(_page.Height, embeddedAliases);
-            foreach (RenderPrimitive prim in primitives)
+
+            // 1. Emit header primitives (if any) for this page
+            if (layout.PageHeaders != null && i < layout.PageHeaders.Count)
             {
-                switch (prim)
-                {
-                    case RectPrimitive r:
-                        csBuilder.DrawRect(r);
-                        break;
-                    case BorderLinePrimitive b:
-                        csBuilder.DrawBorderLine(b);
-                        break;
-                    case TextPrimitive t:
-                        csBuilder.DrawText(t);
-                        break;
-                    case ImagePrimitive img:
-                        csBuilder.DrawImage(img);
-                        if (img.ImageData != null) imageBuilder.RegisterImage(img.XObjectAlias, img.ImageData);
-                        break;
-                }
+                foreach (RenderPrimitive prim in layout.PageHeaders[i])
+                    EmitPrimitive(csBuilder, prim, imageBuilder);
+            }
+
+            // 2. Emit page content primitives
+            foreach (RenderPrimitive prim in layout.ForPage(i))
+            {
+                EmitPrimitive(csBuilder, prim, imageBuilder);
+            }
+
+            // 3. Emit footer primitives (if any) for this page
+            if (layout.PageFooters != null && i < layout.PageFooters.Count)
+            {
+                foreach (RenderPrimitive prim in layout.PageFooters[i])
+                    EmitPrimitive(csBuilder, prim, imageBuilder);
             }
 
             byte[] streamBytes = csBuilder.Build(_compress);
@@ -204,5 +220,34 @@ public sealed class PdfDocumentWriter
         using MemoryStream ms = new();
         Write(layout, ms);
         return ms.ToArray();
+    }
+
+    /// <summary>
+    /// Dispatches a render primitive to the appropriate <see cref="ContentStreamBuilder"/> method.
+    /// </summary>
+    /// <param name="csBuilder">The content stream builder.</param>
+    /// <param name="prim">The render primitive to emit.</param>
+    /// <param name="imageBuilder">The image resource builder.</param>
+    private static void EmitPrimitive(ContentStreamBuilder csBuilder,
+                                      RenderPrimitive prim,
+                                      ImageResourceBuilder imageBuilder)
+    {
+        switch (prim)
+        {
+            case RectPrimitive r:
+                csBuilder.DrawRect(r);
+                break;
+            case BorderLinePrimitive b:
+                csBuilder.DrawBorderLine(b);
+                break;
+            case TextPrimitive t:
+                csBuilder.DrawText(t);
+                break;
+            case ImagePrimitive img:
+                csBuilder.DrawImage(img);
+                if (img.ImageData != null)
+                    imageBuilder.RegisterImage(img.XObjectAlias, img.ImageData);
+                break;
+        }
     }
 }

@@ -17,6 +17,18 @@ public static class TableLayoutEngine
     }
 
     /// <summary>
+    /// Cached layout data for a thead row, used for repeating headers on new pages.
+    /// </summary>
+    private sealed class TheadRowLayout
+    {
+        public float Height;
+        /// <summary>
+        /// Primitives with Y coordinates relative to the row's top (cursorY = 0).
+        /// </summary>
+        public List<RenderPrimitive> Primitives = [];
+    }
+
+    /// <summary>
     /// Layout the table.
     /// </summary>
     /// <param name="tableNode">The table node.</param>
@@ -54,20 +66,26 @@ public static class TableLayoutEngine
         newCursorY += tableStyle.Margin.Top.Points;
         float tableX = x + tableStyle.Margin.Left.Points;
 
-        // 1. Structural collection: Collect rows and their cells once.
-        List<RowData> rows = CollectRowsWithCells(tableNode);
-        if (rows.Count == 0) return 0f;
+        // 1. Structural collection: Collect all rows plus separate thead rows.
+        List<RowData> allRows = CollectRowsWithCells(tableNode, out List<RowData> theadRows);
+        if (allRows.Count == 0) return 0f;
 
         // Detect max columns
-        int colCount = rows.Max(r => r.Cells.Count);
+        int colCount = allRows.Max(r => r.Cells.Count);
         if (colCount == 0) return 0f;
 
         // 2. Column distribution
         float tableWidth = availableWidth - tableStyle.Margin.Left.Points - tableStyle.Margin.Right.Points;
-        float[] colWidths = DistributeColumnWidths(rows[0].Cells, colCount, tableWidth, styles);
+        float[] colWidths = DistributeColumnWidths(allRows[0].Cells, colCount, tableWidth, styles);
 
-        // 3. Layout for each row
-        foreach (RowData row in rows)
+        // 3. Pre-compute thead row layouts for repetition on page breaks
+        List<TheadRowLayout> theadLayouts = PreLayoutTheadRows(theadRows, styles, colWidths, tableX, pageContentH, registry, basePath);
+
+        // Track which rows are thead for quick lookup
+        HashSet<HtmlNode> theadNodeSet = new(theadRows.Select(r => r.Node));
+
+        // 4. Layout for each row
+        foreach (RowData row in allRows)
         {
             float rowHeight = 0f;
 
@@ -108,6 +126,12 @@ public static class TableLayoutEngine
                 newCursorY = 0f;
                 result.PageCount = Math.Max(result.PageCount, newPage + 1);
                 result.Primitives.Add(new PageBreakPrimitive { PageIndex = newPage - 1 });
+
+                // After a page break, re-emit thead rows at the top of the new page
+                if (theadLayouts.Count > 0)
+                {
+                    EmitTheadRows(result, theadLayouts, newPage, tableX, tableWidth, tableStyle, ref newCursorY);
+                }
             }
 
             // Second pass: Emit primitives shifted to the row/cell position
@@ -236,25 +260,293 @@ public static class TableLayoutEngine
         return newCursorY - cursorY;
     }
 
+    #region Thead Repetition
+
+    /// <summary>
+    /// Pre-layouts all thead rows to cache their height and primitives for repetition.
+    /// </summary>
+    /// <param name="theadRows">The thead rows.</param>
+    /// <param name="styles">The computed styles.</param>
+    /// <param name="colWidths">The column widths.</param>
+    /// <param name="tableX">The X coordinate of the table.</param>
+    /// <param name="pageContentH">The content height of the page.</param>
+    /// <param name="registry">The font registry.</param>
+    /// <param name="basePath">The base path.</param>
+    /// <returns>A list of <see cref="TheadRowLayout"/>.</returns>
+    private static List<TheadRowLayout> PreLayoutTheadRows(
+        List<RowData> theadRows,
+        Dictionary<HtmlNode, ComputedStyle> styles,
+        float[] colWidths,
+        float tableX,
+        float pageContentH,
+        FontRegistry? registry,
+        string? basePath)
+    {
+        List<TheadRowLayout> layouts = new(theadRows.Count);
+        int colCount = colWidths.Length;
+
+        foreach (RowData row in theadRows)
+        {
+            var layout = new TheadRowLayout();
+            float rowHeight = 0f;
+            float cellX = tableX;
+            var rowLayouts = new List<(float X, float W, LayoutResult Result)>();
+
+            // First pass: measure cells
+            for (int c = 0; c < row.Cells.Count && c < colCount; c++)
+            {
+                HtmlNode cell = row.Cells[c];
+                float colW = colWidths[c];
+                ComputedStyle cellStyle = styles.TryGetValue(cell, out ComputedStyle? cs) ? cs : new ComputedStyle();
+                float contentWidth = Math.Max(0, colW - cellStyle.Padding.Left.Points - cellStyle.Padding.Right.Points);
+
+                PageLayout cellPage = new(contentWidth, pageContentH, new PageMargins(0f));
+                BlockLayoutEngine cellResolver = new(cellPage, styles, registry, basePath);
+                LayoutResult innerLayout = cellResolver.Layout(cell);
+
+                float contentH = innerLayout.TotalHeight;
+                float cellH = contentH + cellStyle.Padding.Top.Points + cellStyle.Padding.Bottom.Points;
+                if (contentH == 0f) cellH += cellStyle.FontSize * 1.5f;
+
+                rowLayouts.Add((cellX, colW, innerLayout));
+                rowHeight = Math.Max(rowHeight, cellH);
+                cellX += colW;
+            }
+
+            layout.Height = rowHeight;
+
+            // Second pass: generate primitives at Y=0 (relative to row top)
+            for (int c = 0; c < rowLayouts.Count; c++)
+            {
+                var rl = rowLayouts[c];
+                HtmlNode cell = row.Cells[c];
+                ComputedStyle cellStyle = styles.TryGetValue(cell, out ComputedStyle? cs) ? cs : new ComputedStyle();
+                ComputedStyle nodeStyle = styles.TryGetValue(row.Node, out ComputedStyle? ns) ? ns : cellStyle;
+
+                // Background
+                if (nodeStyle.BackgroundColor.A > 0f)
+                {
+                    layout.Primitives.Add(new RectPrimitive
+                    {
+                        PageIndex = 0, // will be set per-page on emission
+                        X = rl.X,
+                        Y = 0f,
+                        Width = rl.W,
+                        Height = rowHeight,
+                        Fill = nodeStyle.BackgroundColor
+                    });
+                }
+
+                // Borders
+                EmitCellsBorderRelative(layout.Primitives, 0, rl.X, 0f, rl.W, rowHeight, cellStyle);
+
+                // Content
+                float offsetX = rl.X + cellStyle.Padding.Left.Points;
+                float offsetY = cellStyle.Padding.Top.Points;
+
+                foreach (RenderPrimitive prim in rl.Result.Primitives)
+                {
+                    if (prim is TextPrimitive tp)
+                    {
+                        layout.Primitives.Add(new TextPrimitive
+                        {
+                            PageIndex = 0,
+                            X = offsetX + tp.X,
+                            Y = offsetY + tp.Y,
+                            Text = tp.Text,
+                            FontName = tp.FontName,
+                            FontSize = tp.FontSize,
+                            Bold = tp.Bold,
+                            Italic = tp.Italic,
+                            Color = tp.Color,
+                            EmbeddedFont = tp.EmbeddedFont
+                        });
+                    }
+                    else if (prim is RectPrimitive rp)
+                    {
+                        layout.Primitives.Add(new RectPrimitive
+                        {
+                            PageIndex = 0,
+                            X = offsetX + rp.X,
+                            Y = offsetY + rp.Y,
+                            Width = rp.Width,
+                            Height = rp.Height,
+                            Fill = rp.Fill
+                        });
+                    }
+                }
+            }
+
+            layouts.Add(layout);
+        }
+
+        return layouts;
+    }
+
+    /// <summary>
+    /// Emits all cached thead row primitives at the current page position,
+    /// updating <paramref name="cursorY"/> to account for thead heights.
+    /// </summary>
+    /// <param name="result">The layout result.</param>
+    /// <param name="theadLayouts">The thead layouts.</param>
+    /// <param name="page">The current page.</param>
+    /// <param name="tableX">The X coordinate of the table.</param>
+    /// <param name="tableWidth">The width of the table.</param>
+    /// <param name="tableStyle">The style of the table.</param>
+    /// <param name="cursorY">The Y coordinate of the table.</param>
+    /// <returns>The updated cursorY.</returns>
+    private static void EmitTheadRows(
+        LayoutResult result,
+        List<TheadRowLayout> theadLayouts,
+        int page,
+        float tableX,
+        float tableWidth,
+        ComputedStyle tableStyle,
+        ref float cursorY)
+    {
+        foreach (TheadRowLayout thead in theadLayouts)
+        {
+            // Table background slice for thead
+            if (tableStyle.BackgroundColor.A > 0f)
+            {
+                result.Primitives.Add(new RectPrimitive
+                {
+                    PageIndex = page,
+                    X = tableX,
+                    Y = cursorY,
+                    Width = tableWidth,
+                    Height = thead.Height,
+                    Fill = tableStyle.BackgroundColor
+                });
+            }
+
+            // Thead primitives (shifted to cursorY)
+            foreach (RenderPrimitive prim in thead.Primitives)
+            {
+                switch (prim)
+                {
+                    case TextPrimitive tp:
+                        result.Primitives.Add(new TextPrimitive
+                        {
+                            PageIndex = page,
+                            X = tp.X,
+                            Y = cursorY + tp.Y,
+                            Text = tp.Text,
+                            FontName = tp.FontName,
+                            FontSize = tp.FontSize,
+                            Bold = tp.Bold,
+                            Italic = tp.Italic,
+                            Color = tp.Color,
+                            EmbeddedFont = tp.EmbeddedFont
+                        });
+                        break;
+                    case RectPrimitive rp:
+                        result.Primitives.Add(new RectPrimitive
+                        {
+                            PageIndex = page,
+                            X = rp.X,
+                            Y = cursorY + rp.Y,
+                            Width = rp.Width,
+                            Height = rp.Height,
+                            Fill = rp.Fill
+                        });
+                        break;
+                    case BorderLinePrimitive blp:
+                        result.Primitives.Add(new BorderLinePrimitive
+                        {
+                            PageIndex = page,
+                            X1 = blp.X1,
+                            Y1 = cursorY + blp.Y1,
+                            X2 = blp.X2,
+                            Y2 = cursorY + blp.Y2,
+                            Width = blp.Width,
+                            Color = blp.Color,
+                            Style = blp.Style
+                        });
+                        break;
+                }
+            }
+
+            cursorY += thead.Height;
+        }
+    }
+
+    /// <summary>
+    /// Emits cell borders with Y coordinates relative to the row top (not absolute).
+    /// </summary>
+    /// <param name="primitives">The list of render primitives.</param>
+    /// <param name="page">The current page.</param>
+    /// <param name="x">The X coordinate of the cell.</param>
+    /// <param name="y">The Y coordinate of the cell.</param>
+    /// <param name="width">The width of the cell.</param>
+    /// <param name="height">The height of the cell.</param>
+    /// <param name="style">The style of the cell.</param>
+    /// <returns>The updated cursorY.</returns>
+    private static void EmitCellsBorderRelative(List<RenderPrimitive> primitives, int page,
+        float x, float y, float width, float height, ComputedStyle style)
+    {
+        EmitBorderLineRelative(primitives, page, x, y, x + width, y, style.BorderTop);
+        EmitBorderLineRelative(primitives, page, x, y + height, x + width, y + height, style.BorderBottom);
+        EmitBorderLineRelative(primitives, page, x, y, x, y + height, style.BorderLeft);
+        EmitBorderLineRelative(primitives, page, x + width, y, x + width, y + height, style.BorderRight);
+    }
+
+    /// <summary>
+    /// Emits a single border line primitive.
+    /// </summary>
+    /// <param name="primitives">The list of render primitives.</param>
+    /// <param name="page">The current page.</param>
+    /// <param name="x1">The X coordinate of the first point.</param>
+    /// <param name="y1">The Y coordinate of the first point.</param>
+    /// <param name="x2">The X coordinate of the second point.</param>
+    /// <param name="y2">The Y coordinate of the second point.</param>
+    /// <param name="side">The border side.</param>
+    private static void EmitBorderLineRelative(List<RenderPrimitive> primitives, int page,
+        float x1, float y1, float x2, float y2, CssBorderSide side)
+    {
+        if (side.IsVisible)
+        {
+            primitives.Add(new BorderLinePrimitive
+            {
+                PageIndex = page,
+                X1 = x1,
+                Y1 = y1,
+                X2 = x2,
+                Y2 = y2,
+                Color = side.Color,
+                Width = side.Width.Points,
+                Style = side.Style
+            });
+        }
+    }
+
+    #endregion
+
     #region Structure
     /// <summary>
     /// Collect all rows and their cells from the table.
     /// </summary>
     /// <param name="table">The table node.</param>
+    /// <param name="theadRows">Output: rows that belong to &lt;thead&gt; sections.</param>
     /// <returns>The list of row data.</returns>
-    private static List<RowData> CollectRowsWithCells(HtmlNode table)
+    private static List<RowData> CollectRowsWithCells(HtmlNode table, out List<RowData> theadRows)
     {
         List<RowData> rows = new();
+        theadRows = new();
         // Only look at direct children (thead, tbody, tfoot) to avoid nesting issues
         foreach (HtmlNode section in table.ChildNodes)
         {
-            if (section.Name.Equals("thead", StringComparison.OrdinalIgnoreCase) ||
-                section.Name.Equals("tbody", StringComparison.OrdinalIgnoreCase) ||
-                section.Name.Equals("tfoot", StringComparison.OrdinalIgnoreCase))
+            bool isThead = section.Name.Equals("thead", StringComparison.OrdinalIgnoreCase);
+            bool isTBody = section.Name.Equals("tbody", StringComparison.OrdinalIgnoreCase);
+            bool isTFoot = section.Name.Equals("tfoot", StringComparison.OrdinalIgnoreCase);
+
+            if (isThead || isTBody || isTFoot)
             {
                 foreach (HtmlNode? tr in section.ChildNodes.Where(n => n.Name.Equals("tr", StringComparison.OrdinalIgnoreCase)))
                 {
-                    rows.Add(new RowData { Node = tr, Cells = GetCells(tr) });
+                    RowData row = new() { Node = tr, Cells = GetCells(tr) };
+                    rows.Add(row);
+                    if (isThead) theadRows.Add(row);
                 }
             }
             else if (section.Name.Equals("tr", StringComparison.OrdinalIgnoreCase))

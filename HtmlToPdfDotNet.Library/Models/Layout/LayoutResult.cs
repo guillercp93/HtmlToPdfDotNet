@@ -20,6 +20,25 @@ public sealed class LayoutResult
     /// </summary>
     public float TotalHeight { get; set; }
 
+    /// <summary>
+    /// Per-page header primitives, indexed by page number.
+    /// Each entry contains the primitives for the header of that page.
+    /// Null when no header is configured.
+    /// </summary>
+    public List<List<RenderPrimitive>>? PageHeaders { get; set; }
+
+    /// <summary>
+    /// Per-page footer primitives, indexed by page number.
+    /// Each entry contains the primitives for the footer of that page.
+    /// Null when no footer is configured.
+    /// </summary>
+    public List<List<RenderPrimitive>>? PageFooters { get; set; }
+
+    /// <summary>
+    /// Returns an enumerable collection of render primitives for the specified page.
+    /// </summary>
+    /// <param name="pageIndex">The 0-based index of the page.</param>
+    /// <returns>An enumerable collection of render primitives for the specified page.</returns>
     public IEnumerable<RenderPrimitive> ForPage(int pageIndex)
         => Primitives.Where(p => p.PageIndex == pageIndex);
 }
