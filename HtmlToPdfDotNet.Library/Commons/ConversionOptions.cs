@@ -9,6 +9,34 @@ namespace HtmlToPdfDotNet.Library.Commons;
 /// </summary>
 public class ConversionOptions
 {
+    public ConversionOptions()
+    {
+    }
+
+    internal ConversionOptions(ConversionOptions source)
+    {
+        ArgumentNullException.ThrowIfNull(source.Page);
+        ArgumentNullException.ThrowIfNull(source.StyleSheets);
+
+        Page = new PageLayout(
+            source.Page.Width,
+            source.Page.Height,
+            new PageMargins(
+                source.Page.Margins.Top,
+                source.Page.Margins.Right,
+                source.Page.Margins.Bottom,
+                source.Page.Margins.Left));
+        CompressStreams = source.CompressStreams;
+        BasePath = source.BasePath;
+        StyleSheets = source.StyleSheets.ToArray();
+        Fonts = new FontRegistry(source.Fonts);
+
+        if (!string.IsNullOrWhiteSpace(BasePath) && !Directory.Exists(BasePath))
+        {
+            throw new DirectoryNotFoundException($"Base path not found: {BasePath}");
+        }
+    }
+
     /// <summary>
     /// Page settings (size and margins).
     /// </summary>
