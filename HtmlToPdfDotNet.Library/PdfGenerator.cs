@@ -70,6 +70,27 @@ public class PdfGenerator : IPdfGenerator
             {
                 layout.Primitives[i] = ShiftPrimitiveY(layout.Primitives[i], contentTop);
             }
+
+            // Also shift link annotation Y coordinates so they stay aligned with
+            // the shifted primitive positions.
+            if (layout.Annotations.Count > 0)
+            {
+                var shiftedAnnotations = new List<LinkAnnotationPrimitive>(layout.Annotations.Count);
+                foreach (LinkAnnotationPrimitive annot in layout.Annotations)
+                {
+                    shiftedAnnotations.Add(new LinkAnnotationPrimitive
+                    {
+                        PageIndex = annot.PageIndex,
+                        X = annot.X,
+                        Y = annot.Y + contentTop,
+                        Width = annot.Width,
+                        Height = annot.Height,
+                        Uri = annot.Uri,
+                    });
+                }
+                layout.Annotations.Clear();
+                layout.Annotations.AddRange(shiftedAnnotations);
+            }
         }
 
         // Layout and attach header/footer primitives if configured
@@ -301,6 +322,15 @@ public class PdfGenerator : IPdfGenerator
                 Height = ip.Height,
                 ImageData = ip.ImageData,
                 XObjectAlias = ip.XObjectAlias,
+            },
+            LinkAnnotationPrimitive lap => new LinkAnnotationPrimitive
+            {
+                PageIndex = lap.PageIndex,
+                X = lap.X,
+                Y = lap.Y + dy,
+                Width = lap.Width,
+                Height = lap.Height,
+                Uri = lap.Uri,
             },
             _ => prim,
         };

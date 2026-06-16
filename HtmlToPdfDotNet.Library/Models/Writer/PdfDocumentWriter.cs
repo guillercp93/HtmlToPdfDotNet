@@ -1,3 +1,4 @@
+using System.Text;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Fonts;
 using HtmlToPdfDotNet.Library.Models.Imaging;
@@ -107,6 +108,35 @@ public sealed class PdfDocumentWriter
         // which TextPrimitives need GID-hex encoding.
         IReadOnlyDictionary<EmbeddedFontInfo, string> embeddedAliases = fontBuilder.EmbeddedAliases;
 
+        // ── Build link annotation objects ──────────────────────────────────
+        // Pre-create all annotation objects so their object numbers are known
+        // when building page objects (which may reference them via /Annots).
+        List<PdfObject> annotationObjects = new();
+        Dictionary<int, List<int>> annotationsByPage = new();
+        foreach (LinkAnnotationPrimitive annot in layout.Annotations)
+        {
+            if (!annotationsByPage.ContainsKey(annot.PageIndex))
+                annotationsByPage[annot.PageIndex] = new List<int>();
+
+            int annotNum = counter.Next();
+            annotationsByPage[annot.PageIndex].Add(annotNum);
+
+            // Convert from top-left (layout) to bottom-left (PDF) coordinates
+            float pdfY1 = _page.Height - annot.Y - annot.Height;
+            float pdfY2 = _page.Height - annot.Y;
+
+            string annotBody =
+                $"<< /Type /Annot\n" +
+                $"   /Subtype /Link\n" +
+                $"   /Rect [{Helpers.F(annot.X)} {Helpers.F(pdfY1)} {Helpers.F(annot.X + annot.Width)} {Helpers.F(pdfY2)}]\n" +
+                $"   /Border [0 0 0]\n" +
+                $"   /A << /S /URI /URI ({EscapePdfString(annot.Uri)}) >>\n" +
+                $">>";
+            PdfObject annotObj = new(annotNum, annotBody);
+            annotationObjects.Add(annotObj);
+            xref.Add(annotObj);
+        }
+
         // ── Build page object pairs ────────────────────────────────────────
         List<int> pageObjectNums = new();
         List<(PdfObject PageObj, PdfObject ContentObj)> pageContentPairs = new();
@@ -151,12 +181,19 @@ public sealed class PdfDocumentWriter
             string imgDict = imageBuilder.BuildImageDict();
             string xobjRes = string.IsNullOrEmpty(imgDict) ? "" : $"/XObject {imgDict}";
 
+            // Link annotations for this page
+            string annotsRef = "";
+            if (annotationsByPage.TryGetValue(i, out List<int>? pageAnnotNums) && pageAnnotNums.Count > 0)
+            {
+                annotsRef = " /Annots [" + string.Join(" ", pageAnnotNums.Select(n => $"{n} 0 R")) + "]";
+            }
+
             string pageBody =
                 $"<< /Type /Page\n" +
                 $"   /Parent {pagesNum} 0 R\n" +
                 $"   /MediaBox [0 0 {Helpers.F(_page.Width)} {Helpers.F(_page.Height)}]\n" +
                 $"   /Resources << /Font {fontDict} {xobjRes} >>\n" +
-                $"   /Contents {contentNum} 0 R\n" +
+                $"   /Contents {contentNum} 0 R{annotsRef}\n" +
                 $">>";
             PdfObject pageObj = new(pageNum, pageBody);
             xref.Add(pageObj);
@@ -194,6 +231,7 @@ public sealed class PdfDocumentWriter
 
         foreach (PdfObject fo in fontObjects) fo.WriteTo(output);
         foreach (PdfObject io in imagesObjects) io.WriteTo(output);
+        foreach (PdfObject ao in annotationObjects) ao.WriteTo(output);
 
         foreach ((PdfObject pageObj, PdfObject contentObj) in pageContentPairs)
         {
@@ -223,14 +261,45 @@ public sealed class PdfDocumentWriter
     }
 
     /// <summary>
+    /// Escapes special characters in a PDF string literal for use in annotation URIs.
+    /// </summary>
+    private static string EscapePdfString(string s)
+    {
+        StringBuilder sb = new(s.Length);
+        for (int i = 0; i < s.Length; i++)
+        {
+            char ch = s[i];
+            switch (ch)
+            {
+                case '(' : sb.Append("\\("); break;
+                case ')' : sb.Append("\\)"); break;
+                case '\\': sb.Append("\\\\"); break;
+                default:
+                    if (char.IsHighSurrogate(ch))
+                    {
+                        if (i + 1 < s.Length && char.IsLowSurrogate(s[i + 1]))
+                            i++;
+                        sb.Append(' ');
+                    }
+                    else
+                    {
+                        sb.Append(ch > 255 ? ' ' : ch);
+                    }
+                    break;
+            }
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// Dispatches a render primitive to the appropriate <see cref="ContentStreamBuilder"/> method.
     /// </summary>
     /// <param name="csBuilder">The content stream builder.</param>
     /// <param name="prim">The render primitive to emit.</param>
     /// <param name="imageBuilder">The image resource builder.</param>
     private static void EmitPrimitive(ContentStreamBuilder csBuilder,
-                                      RenderPrimitive prim,
-                                      ImageResourceBuilder imageBuilder)
+                                       RenderPrimitive prim,
+                                       ImageResourceBuilder imageBuilder)
     {
         switch (prim)
         {

@@ -85,8 +85,21 @@ public sealed class FontResourceBuilder
                 _usedGids[font] = new SortedSet<int> { 0 }; // always include .notdef
             }
 
-            foreach (char ch in prim.Text)
-                _usedGids[font].Add(font.GetGlyphId(ch));
+            for (int i = 0; i < prim.Text.Length; i++)
+            {
+                int codepoint;
+                if (char.IsHighSurrogate(prim.Text[i]) && i + 1 < prim.Text.Length && char.IsLowSurrogate(prim.Text[i + 1]))
+                {
+                    codepoint = char.ConvertToUtf32(prim.Text[i], prim.Text[i + 1]);
+                    i++; // consume low surrogate
+                }
+                else
+                {
+                    codepoint = prim.Text[i];
+                }
+
+                _usedGids[font].Add(font.GetGlyphId(codepoint));
+            }
         }
     }
     #endregion

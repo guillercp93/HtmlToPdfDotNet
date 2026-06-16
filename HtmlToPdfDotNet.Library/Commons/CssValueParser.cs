@@ -299,7 +299,27 @@ public static class CssValueParser
         "none" => DisplayType.None,
         "flex" => DisplayType.Flex,
         "table" => DisplayType.Table,
+        "list-item" => DisplayType.ListItem,
         _ => DisplayType.Block,
+    };
+
+    /// <summary>
+    /// Parse a CSS list-style-type value.
+    /// </summary>
+    /// <param name="value">The CSS list-style-type value.</param>
+    /// <returns>The parsed list-style-type.</returns>
+    public static ListStyleType ParseListStyleType(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "disc" => ListStyleType.Disc,
+        "circle" => ListStyleType.Circle,
+        "square" => ListStyleType.Square,
+        "decimal" => ListStyleType.Decimal,
+        "lower-alpha" => ListStyleType.LowerAlpha,
+        "upper-alpha" => ListStyleType.UpperAlpha,
+        "lower-roman" => ListStyleType.LowerRoman,
+        "upper-roman" => ListStyleType.UpperRoman,
+        "none" => ListStyleType.None,
+        _ => ListStyleType.Disc,
     };
 
     /// <summary>

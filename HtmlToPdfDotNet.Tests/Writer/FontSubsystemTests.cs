@@ -113,6 +113,49 @@ public class TrueTypeFontParserTests
         // Reasonable range: 100..1200 PDF units
         Assert.InRange(w, 100, 1200);
     }
+
+    /// <summary>
+    /// Bug: cmap Format 12 (UCS-4) was not being parsed, so astral-plane codepoints
+    /// like U+1F4CA (📊) would map to GID 0 (.notdef).
+    ///
+    /// GIVEN a font that has a Format 12 cmap subtable (DejaVu Sans)
+    /// WHEN parsed by TrueTypeFontParser
+    /// THEN astral-plane codepoints like U+1D538 (double-struck A)
+    /// MUST map to a non-zero glyph ID
+    /// </summary>
+    [Fact]
+    public void Parse_DejaVuSans_AstralPlaneCodepointMapsToNonZeroGid()
+    {
+        if (!Fonts.Available) return;
+        EmbeddedFontInfo info = TrueTypeFontParser.Parse(Fonts.Regular, "DejaVu Sans", false, false);
+
+        // U+1D538: Mathematical double-struck capital A (DejaVu has this)
+        int gid = info.GetGlyphId(0x1D538);
+
+        // Should map to a real glyph, NOT GID 0 (.notdef)
+        Assert.True(gid > 0,
+            $"Astral-plane codepoint U+1D538 should map to GID > 0, got {gid}");
+    }
+
+    /// <summary>
+    /// Verifies that multiple astral-plane codepoints from different Format 12
+    /// groups resolve correctly (ensuring proper sequential group iteration).
+    /// </summary>
+    [Fact]
+    public void Parse_DejaVuSans_MultipleAstralCodepoints_AllNonZero()
+    {
+        if (!Fonts.Available) return;
+        EmbeddedFontInfo info = TrueTypeFontParser.Parse(Fonts.Regular, "DejaVu Sans", false, false);
+
+        // Check astral-plane codepoints across different Format 12 groups
+        int[] codepoints = [0x1D300, 0x1D538, 0x1D53B, 0x1D552, 0x1D5A0, 0x1D7D8];
+        foreach (int cp in codepoints)
+        {
+            int gid = info.GetGlyphId(cp);
+            Assert.True(gid > 0,
+                $"Astral-plane codepoint U+{cp:X} should map to GID > 0, got {gid}");
+        }
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -224,6 +267,68 @@ public class ToUnicodeCMapBuilderTests
         Assert.Contains("begincmap", text);
         Assert.Contains("endcmap", text);
     }
+
+    #region Astral-Plane (Emoji) Codepoints
+
+    /// <summary>
+    /// Bug: ToUnicode CMap builder truncated astral-plane codepoints to 4-digit hex,
+    /// producing invalid entries like &lt;F4CA&gt; instead of &lt;0001F4CA&gt;.
+    ///
+    /// GIVEN a GID-to-Unicode mapping containing codepoint U+1F4CA (📊)
+    /// WHEN Build() is called
+    /// THEN the output MUST contain "&lt;0001F4CA&gt;" (8-digit zero-padded hex) NOT "&lt;F4CA&gt;"
+    /// </summary>
+    [Fact]
+    public void Build_AstralPlane_Uses8DigitHex()
+    {
+        Dictionary<int, int> cmap = new()
+        {
+            [42] = 0x1F4CA, // 📊 (bar chart)
+        };
+        string text = Encoding.ASCII.GetString(ToUnicodeCMapBuilder.Build(cmap, "TestFont"));
+
+        Assert.Contains("<0001F4CA>", text);
+        // MUST NOT truncate to 4-digit
+        Assert.DoesNotContain("<F4CA>", text);
+    }
+
+    /// <summary>
+    /// BMP codepoints MUST still use 4-digit hex.
+    /// GIVEN a mapping containing U+0041 ('A')
+    /// WHEN Build() is called
+    /// THEN the output MUST contain "&lt;0041&gt;" (4-digit hex)
+    /// </summary>
+    [Fact]
+    public void Build_BmpCodepoint_Uses4DigitHex()
+    {
+        Dictionary<int, int> cmap = new()
+        {
+            [36] = 0x0041, // 'A'
+        };
+        string text = Encoding.ASCII.GetString(ToUnicodeCMapBuilder.Build(cmap, "TestFont"));
+
+        Assert.Contains("<0041>", text);
+    }
+
+    /// <summary>
+    /// The codespacerange must cover the full Unicode range.
+    /// GIVEN a mapping that includes an astral-plane codepoint
+    /// WHEN Build() is called
+    /// THEN the output MUST contain "&lt;0000&gt; &lt;10FFFF&gt;"
+    /// </summary>
+    [Fact]
+    public void Build_Codespacerange_CoversFullUnicode()
+    {
+        Dictionary<int, int> cmap = new()
+        {
+            [1] = 0x1F4A9, // 💩
+        };
+        string text = Encoding.ASCII.GetString(ToUnicodeCMapBuilder.Build(cmap, "TestFont"));
+
+        Assert.Contains("<0000> <10FFFF>", text);
+    }
+
+    #endregion
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

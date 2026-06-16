@@ -174,4 +174,55 @@ public class PdfDocumentWriterTests
         // Ignore date in /Info (can differ in ms) — compare length
         Assert.Equal(bytes.Length, streamBytes.Length);
     }
+
+    /// <summary>
+    /// 5.6: Verifies that a LayoutResult with LinkAnnotationPrimitives produces PDF
+    /// content containing annotation structures (/Annots, /Type /Annot, /Subtype /Link, etc.).
+    /// </summary>
+    [Fact]
+    public void LinkAnnotation_AppearsInPdfOutput()
+    {
+        var options = new ConversionOptions { CompressStreams = false };
+        var converter = new PdfGenerator(options);
+        byte[] pdf = converter.Convert("<a href=\"https://example.com\">link</a>");
+        string pdfStr = Encoding.Latin1.GetString(pdf);
+
+        Assert.Contains("/Annots", pdfStr);
+        Assert.Contains("/Type /Annot", pdfStr);
+        Assert.Contains("/Subtype /Link", pdfStr);
+        Assert.Contains("/URI", pdfStr);
+        Assert.Contains("https://example.com", pdfStr);
+    }
+
+    /// <summary>
+    /// 5.6: Verifies that multiple links produce multiple annotations in the PDF output.
+    /// </summary>
+    [Fact]
+    public void MultipleLinks_AllAppearInPdfOutput()
+    {
+        var options = new ConversionOptions { CompressStreams = false };
+        var converter = new PdfGenerator(options);
+        byte[] pdf = converter.Convert(
+            "<a href=\"https://first.com\">first</a> " +
+            "<a href=\"https://second.com\">second</a>");
+        string pdfStr = Encoding.Latin1.GetString(pdf);
+
+        Assert.Contains("/Annots", pdfStr);
+        Assert.Contains("https://first.com", pdfStr);
+        Assert.Contains("https://second.com", pdfStr);
+    }
+
+    /// <summary>
+    /// 5.6: Verifies that a link without href does NOT produce /Annots in the PDF output.
+    /// </summary>
+    [Fact]
+    public void AnchorWithoutHref_DoesNotProduceAnnotsInPdf()
+    {
+        var options = new ConversionOptions { CompressStreams = false };
+        var converter = new PdfGenerator(options);
+        byte[] pdf = converter.Convert("<a>plain text</a>");
+        string pdfStr = Encoding.Latin1.GetString(pdf);
+
+        Assert.DoesNotContain("/Annots", pdfStr);
+    }
 }

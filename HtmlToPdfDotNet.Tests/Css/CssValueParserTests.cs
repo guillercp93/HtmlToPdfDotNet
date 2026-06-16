@@ -153,6 +153,41 @@ namespace HtmlToPdfDotNet.Tests.Css
             Assert.Equal(0.5f, b.Color.A);
         }
 
+        // ── ParseDisplay ───────────────────────────────────────────────────────
+
+        [Fact]
+        public void ParseDisplay_ListItem_ReturnsListItem()
+        {
+            Assert.Equal(DisplayType.ListItem, CssValueParser.ParseDisplay("list-item"));
+        }
+
+        [Fact]
+        public void ParseDisplay_ListItemWithUpperCase_ReturnsListItem()
+        {
+            Assert.Equal(DisplayType.ListItem, CssValueParser.ParseDisplay("LIST-ITEM"));
+        }
+
+        // ── ParseListStyleType ──────────────────────────────────────────────────
+
+        [Theory]
+        [InlineData("disc", ListStyleType.Disc)]
+        [InlineData("circle", ListStyleType.Circle)]
+        [InlineData("square", ListStyleType.Square)]
+        [InlineData("decimal", ListStyleType.Decimal)]
+        [InlineData("lower-alpha", ListStyleType.LowerAlpha)]
+        [InlineData("upper-alpha", ListStyleType.UpperAlpha)]
+        [InlineData("lower-roman", ListStyleType.LowerRoman)]
+        [InlineData("upper-roman", ListStyleType.UpperRoman)]
+        [InlineData("none", ListStyleType.None)]
+        [InlineData("DISC", ListStyleType.Disc)]
+        [InlineData("invalid-value", ListStyleType.Disc)]
+        [InlineData("", ListStyleType.Disc)]
+        [InlineData(null, ListStyleType.Disc)]
+        public void ParseListStyleType_ReturnsCorrectValue(string? input, ListStyleType expected)
+        {
+            Assert.Equal(expected, CssValueParser.ParseListStyleType(input));
+        }
+
         // ── ParseFontWeight ───────────────────────────────────────────────────────
 
         [Theory]

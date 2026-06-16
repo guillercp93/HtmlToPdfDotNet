@@ -100,3 +100,25 @@ public sealed class ImagePrimitive : RenderPrimitive
 /// Explicit page break (separation mark between pages).
 /// </summary>
 public sealed class PageBreakPrimitive : RenderPrimitive { }
+
+/// <summary>
+/// A link annotation that makes a rectangular region of a page clickable,
+/// navigating to the specified URI when activated.
+/// </summary>
+public sealed class LinkAnnotationPrimitive : RenderPrimitive
+{
+    /// <summary>Left edge of the clickable region (top-left origin).</summary>
+    public float X { get; init; }
+
+    /// <summary>Top edge of the clickable region (top-left origin).</summary>
+    public float Y { get; init; }
+
+    /// <summary>Width of the clickable region.</summary>
+    public float Width { get; init; }
+
+    /// <summary>Height of the clickable region.</summary>
+    public float Height { get; init; }
+
+    /// <summary>The URI that the link navigates to.</summary>
+    public string Uri { get; init; } = "";
+}

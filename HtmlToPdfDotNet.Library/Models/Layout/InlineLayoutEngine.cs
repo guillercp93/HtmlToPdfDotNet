@@ -58,7 +58,8 @@ public static class InlineLayoutEngine
                         Color = run.Color,
                         EmbeddedFont = run.EmbeddedFont,
                         Width = wordWidth,
-                        TextDecoration = run.TextDecoration
+                        TextDecoration = run.TextDecoration,
+                        LinkUri = run.LinkUri,
                     }, curX));
                     Helpers.UpdateMetrics(line, run);
                     curX += wordWidth;
@@ -76,7 +77,8 @@ public static class InlineLayoutEngine
                         Color = run.Color,
                         EmbeddedFont = run.EmbeddedFont,
                         Width = wordWidth,
-                        TextDecoration = run.TextDecoration
+                        TextDecoration = run.TextDecoration,
+                        LinkUri = run.LinkUri,
                     }, curX));
                     Helpers.UpdateMetrics(line, run);
                     curX += wordWidth;

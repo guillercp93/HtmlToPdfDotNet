@@ -302,9 +302,20 @@ public sealed class ContentStreamBuilder
     private static string BuildGidHexString(string text, EmbeddedFontInfo font)
     {
         StringBuilder sb = new(text.Length * 4);
-        foreach (char ch in text)
+        for (int i = 0; i < text.Length; i++)
         {
-            int gid = font.GetGlyphId(ch);
+            int codepoint;
+            if (char.IsHighSurrogate(text[i]) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
+            {
+                codepoint = char.ConvertToUtf32(text[i], text[i + 1]);
+                i++; // consume low surrogate
+            }
+            else
+            {
+                codepoint = text[i];
+            }
+
+            int gid = font.GetGlyphId(codepoint);
             sb.Append(gid.ToString("X4"));
         }
         return sb.ToString();
@@ -314,15 +325,27 @@ public sealed class ContentStreamBuilder
     private static string EscapePdfString(string s)
     {
         StringBuilder sb = new(s.Length);
-        foreach (char ch in s)
+        for (int i = 0; i < s.Length; i++)
         {
+            char ch = s[i];
             switch (ch)
             {
                 case '(': sb.Append("\\("); break;
                 case ')': sb.Append("\\)"); break;
                 case '\\': sb.Append("\\\\"); break;
                 default:
-                    sb.Append(ch > 255 ? '?' : ch);
+                    // Surrogate pair (emoji, astral-plane) — not in Latin-1,
+                    // replace with space to keep word separation
+                    if (char.IsHighSurrogate(ch))
+                    {
+                        if (i + 1 < s.Length && char.IsLowSurrogate(s[i + 1]))
+                            i++; // consume low surrogate
+                        sb.Append(' ');
+                    }
+                    else
+                    {
+                        sb.Append(ch > 255 ? ' ' : ch);
+                    }
                     break;
             }
         }

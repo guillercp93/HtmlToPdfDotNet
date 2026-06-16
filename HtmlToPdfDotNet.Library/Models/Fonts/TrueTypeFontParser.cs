@@ -232,15 +232,27 @@ public sealed class TrueTypeFontParser
             // Priority 2: Platform 0 (Unicode) Format 4
             best = candidates.FirstOrDefault(c => c.Platform == 0 && c.Format == 4);
         }
-        if (best != default)
-            return ParseFormat4(table[best.SubtableOffset..]);
 
-        // Priority 3: Platform 3 Encoding 10 Format 12 (full Unicode)
+        Dictionary<int, int> result = new();
+
+        if (best != default)
+        {
+            // Format 4 covers BMP only (U+0000–U+FFFF). Parse it for basic chars.
+            Dictionary<int, int> fmt4 = ParseFormat4(table[best.SubtableOffset..]);
+            foreach (var kv in fmt4) result[kv.Key] = kv.Value;
+        }
+
+        // Priority 3: Platform 3 Encoding 10 Format 12 (full Unicode, 32-bit).
+        // Always merge Format 12 when available — it covers astral-plane codepoints
+        // (> U+FFFF) that Format 4 cannot represent, such as emoji.
         var fmt12 = candidates.FirstOrDefault(c => c.Platform == 3 && c.Encoding == 10 && c.Format == 12);
         if (fmt12 != default)
-            return ParseFormat12(table[fmt12.SubtableOffset..]);
+        {
+            Dictionary<int, int> fmt12map = ParseFormat12(table[fmt12.SubtableOffset..]);
+            foreach (var kv in fmt12map) result.TryAdd(kv.Key, kv.Value);
+        }
 
-        return new Dictionary<int, int>();
+        return result;
     }
 
     /// <summary>Parses a cmap Format 4 subtable (BMP, segmented coverage).</summary>

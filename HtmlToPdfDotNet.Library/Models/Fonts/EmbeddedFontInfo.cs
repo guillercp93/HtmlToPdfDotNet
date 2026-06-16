@@ -128,9 +128,20 @@ public sealed class EmbeddedFontInfo
     {
         if (string.IsNullOrEmpty(text) || UnitsPerEm == 0) return 0f;
         double total = 0;
-        foreach (char ch in text)
+        for (int i = 0; i < text.Length; i++)
         {
-            int gid = GetGlyphId(ch);
+            int codepoint;
+            if (char.IsHighSurrogate(text[i]) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
+            {
+                codepoint = char.ConvertToUtf32(text[i], text[i + 1]);
+                i++; // consume low surrogate
+            }
+            else
+            {
+                codepoint = text[i];
+            }
+
+            int gid = GetGlyphId(codepoint);
             total += GetAdvanceWidth(gid);
         }
         return (float)(total / UnitsPerEm * fontSize);
