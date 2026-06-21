@@ -7,12 +7,47 @@ namespace HtmlToPdfDotNet.Library.Commons;
 /// </summary>
 public enum DisplayType
 {
+    /// <summary>Block-level element.</summary>
     Block,
+    /// <summary>Inline element.</summary>
     Inline,
+    /// <summary>Inline-block element.</summary>
     InlineBlock,
+    /// <summary>Display none (element is not rendered).</summary>
     None,
+    /// <summary>Flex container.</summary>
     Flex,
-    Table
+    /// <summary>Table element.</summary>
+    Table,
+    /// <summary>List-item element, typically used by &lt;li&gt;.</summary>
+    ListItem
+}
+
+/// <summary>
+/// Value of list-style-type CSS property.
+/// Specifies the style of the list item marker for &lt;li&gt; elements.
+/// </summary>
+/// <see cref="https://developer.mozilla.org/en-US/docs/Web/CSS/list-style-type"/>
+public enum ListStyleType
+{
+    /// <summary>A filled circle (bullet, "•"). Default value.</summary>
+    Disc,
+    /// <summary>A hollow circle ("◦").</summary>
+    Circle,
+    /// <summary>A filled square ("■").</summary>
+    Square,
+    /// <summary>Decimal numbers (1., 2., 3., …).</summary>
+    Decimal,
+    /// <summary>Lowercase alphabetic (a., b., c., …).</summary>
+    LowerAlpha,
+    /// <summary>Uppercase alphabetic (A., B., C., …).</summary>
+    UpperAlpha,
+    /// <summary>Lowercase Roman numerals (i., ii., iii., …).</summary>
+    LowerRoman,
+    /// <summary>Uppercase Roman numerals (I., II., III., …).</summary>
+    UpperRoman,
+    /// <summary>No marker is displayed.</summary>
+    None
 }
 
 /// <summary>

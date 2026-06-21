@@ -18,6 +18,11 @@ public sealed class InlineRun
     public float Width { get; set; }   // measured
 
     /// <summary>
+    /// When non-null, this run is part of a hyperlink and contains the target URI.
+    /// </summary>
+    public string? LinkUri { get; init; }
+
+    /// <summary>
     /// When non-null, this run is rendered with an embedded TTF/OTF font instead
     /// of a standard PDF Type1 font.  The value is taken from <see cref="FontRegistry"/>.
     /// </summary>

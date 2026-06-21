@@ -322,10 +322,85 @@ public class StyleResolverTests
 
      [Fact]
      public void StyleResolver_AnchorTag_HasDefaultUnderline()
-     {
-         Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<a href=\"#\">link</a>");
-         ComputedStyle a = StyleOf(styles, "a");
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<a href=\"#\">link</a>");
+        ComputedStyle a = StyleOf(styles, "a");
 
-         Assert.Equal(TextDecoration.Underline, a.TextDecoration);
-     }
+        Assert.Equal(TextDecoration.Underline, a.TextDecoration);
+    }
+
+    // ── Gap property ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Bug: CSS gap property was not parsed for flex containers.
+    ///
+    /// GIVEN a div with style "gap: 10px"
+    /// WHEN resolved
+    /// THEN ComputedStyle.Gap.Points MUST be 7.5 (10px * 0.75 PointsPerPx)
+    /// </summary>
+    [Fact]
+    public void GapProperty_ParsesPxValue()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style='gap: 10px;'>content</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        // 10px = 7.5pt
+        Assert.Equal(7.5f, div.Gap.Points, precision: 2);
+    }
+
+    /// <summary>
+    /// GIVEN a div with style "gap: 5pt"
+    /// WHEN resolved
+    /// THEN ComputedStyle.Gap.Points MUST be 5
+    /// </summary>
+    [Fact]
+    public void GapProperty_ParsesPtValue()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style='gap: 5pt;'>content</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(5f, div.Gap.Points);
+    }
+
+    /// <summary>
+    /// GIVEN a div with style "gap: 0"
+    /// WHEN resolved
+    /// THEN ComputedStyle.Gap MUST be zero
+    /// </summary>
+    [Fact]
+    public void GapProperty_Zero_ParsesAsZero()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style='gap: 0;'>content</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(0f, div.Gap.Points);
+    }
+
+    /// <summary>
+    /// GIVEN an element without gap style
+    /// WHEN resolved
+    /// THEN ComputedStyle.Gap MUST default to zero
+    /// </summary>
+    [Fact]
+    public void GapProperty_Default_IsZero()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div>content</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(0f, div.Gap.Points);
+    }
+
+    /// <summary>
+    /// GIVEN a negative gap value
+    /// WHEN resolved
+    /// THEN Gap MUST be treated as zero (invalid according to CSS spec)
+    /// </summary>
+    [Fact]
+    public void GapProperty_Negative_FallsBackToZero()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<div style='gap: -10px;'>content</div>");
+        ComputedStyle div = StyleOf(styles, "div");
+
+        Assert.Equal(0f, div.Gap.Points);
+    }
 }

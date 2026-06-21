@@ -72,7 +72,7 @@ public static class Helpers
             if (child.NodeType == HtmlNodeType.Text) continue;
             if (child.NodeType != HtmlNodeType.Element) continue;
             if (!parentStyle.TryGetValue(child, out ComputedStyle? style)) continue;
-            if (style.Display == DisplayType.Block || style.Display == DisplayType.Table)
+            if (style.Display is DisplayType.Block or DisplayType.Table or DisplayType.ListItem)
             {
                 return false;
             }
@@ -94,7 +94,7 @@ public static class Helpers
     /// <returns>
     ///   An <see cref="InlineRun"/> representing the text with the given style.
     /// </returns>
-    public static InlineRun MakeRun(string text, ComputedStyle style, FontRegistry? registry = null)
+    public static InlineRun MakeRun(string text, ComputedStyle style, FontRegistry? registry = null, string? linkUri = null)
     {
         bool bold = style.FontWeight == FontWeight.Bold;
         bool italic = style.FontStyle == FontStyle.Italic || style.FontStyle == FontStyle.Oblique;
@@ -131,6 +131,7 @@ public static class Helpers
             Italic = italic,
             Color = style.Color,
             TextDecoration = style.TextDecoration,
+            LinkUri = linkUri,
             EmbeddedFont = embeddedFont,
         };
     }
@@ -167,7 +168,7 @@ public static class Helpers
     {
         if (string.IsNullOrEmpty(raw)) return string.Empty;
         // Replace line breaks and tabs with space
-        ReadOnlySpan<char> span = raw.Trim().AsSpan();
+        ReadOnlySpan<char> span = raw.Trim('\r', '\n', '\t').AsSpan();
         StringBuilder buffer = new(raw.Length);
         bool lastWasSpace = false;
 

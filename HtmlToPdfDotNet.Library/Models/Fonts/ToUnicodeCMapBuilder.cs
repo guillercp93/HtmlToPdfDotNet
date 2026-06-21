@@ -42,7 +42,7 @@ public static class ToUnicodeCMapBuilder
         sb.AppendLine($"/CMapName /{fontName}-UTF16 def");
         sb.AppendLine("/CMapType 2 def");
         sb.AppendLine("1 begincodespacerange");
-        sb.AppendLine("<0000> <FFFF>");
+        sb.AppendLine("<0000> <10FFFF>");
         sb.AppendLine("endcodespacerange");
 
         // ── bfchar blocks (max 100 per block) ────────────────────────────────
@@ -54,8 +54,9 @@ public static class ToUnicodeCMapBuilder
             for (int j = 0; j < count; j++)
             {
                 (int gid, int unicode) = pairs[i + j];
-                // <GGGG> <UUUU>
-                sb.AppendLine($"<{gid:X4}> <{unicode:X4}>");
+                // BMP: <XXXX>, astral: <XXXXXXXX>
+                string unicodeStr = unicode <= 0xFFFF ? $"{unicode:X4}" : $"{unicode:X8}";
+                sb.AppendLine($"<{gid:X4}> <{unicodeStr}>");
             }
             sb.AppendLine("endbfchar");
         }

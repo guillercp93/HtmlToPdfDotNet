@@ -14,11 +14,22 @@ builder.Services.AddScoped<IRazorViewRenderer, RazorViewRenderer>();
 
 // ── HtmlToPdfDotNet ───────────────────────────────────────────────────────
 builder.Services.AddSingleton<IPdfGenerator>(_ =>
-    new PdfGenerator(new ConversionOptions
+{
+    ConversionOptions opts = new()
     {
         Page = HtmlToPdfDotNet.Library.Models.Layout.PageLayout.A4,
         CompressStreams = true,
-    }));
+    };
+
+    // Register system font for emoji/symbol rendering
+    string symbolsFont = "/usr/share/fonts/noto/NotoSansSymbols2-Regular.ttf";
+    if (File.Exists(symbolsFont))
+    {
+        opts.Fonts.RegisterFont(symbolsFont, familyName: "Noto Sans Symbols 2");
+    }
+
+    return new PdfGenerator(opts);
+});
 
 // ── Build & configure pipeline ────────────────────────────────────────────
 WebApplication app = builder.Build();

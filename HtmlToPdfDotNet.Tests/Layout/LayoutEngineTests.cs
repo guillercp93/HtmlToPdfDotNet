@@ -305,4 +305,15 @@ public class BlockLayoutEngineTests
         Assert.NotEmpty(page0);
         Assert.NotEmpty(page1);
     }
+
+    // ── List markers ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void UnorderedList_EmitsBulletMarker()
+    {
+        LayoutResult result = RunLayout("<ul><li>Item</li></ul>");
+
+        // Should contain a bullet character primitive for the <li> marker
+        Assert.Contains(result.Primitives, p => p is TextPrimitive t && t.Text.Contains("\u00B7"));
+    }
 }

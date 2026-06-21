@@ -64,8 +64,19 @@ public static class StandardFontMetrics
         Dictionary<char, int> widths = GetWidthTable(pdfFontName);
         float total = 0f;
 
-        foreach (char ch in text)
+        for (int i = 0; i < text.Length; i++)
         {
+            char ch = text[i];
+
+            // Skip surrogate pairs (emoji etc.) — count as space width for standard fonts
+            if (char.IsHighSurrogate(ch))
+            {
+                if (i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
+                    i++;
+                total += widths.GetValueOrDefault(' ', 278);
+                continue;
+            }
+
             if (widths.TryGetValue(ch, out int w))
             {
                 total += w;
