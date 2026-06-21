@@ -35,6 +35,12 @@ public sealed class LayoutResult
     public List<List<RenderPrimitive>>? PageFooters { get; set; }
 
     /// <summary>
+    /// Gets the list of link annotations for the document.
+    /// Each annotation defines a clickable region on a specific page.
+    /// </summary>
+    public List<LinkAnnotationPrimitive> Annotations { get; } = new();
+
+    /// <summary>
     /// Returns an enumerable collection of render primitives for the specified page.
     /// </summary>
     /// <param name="pageIndex">The 0-based index of the page.</param>

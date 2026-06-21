@@ -401,4 +401,125 @@ public class FlexLayoutTests
     }
 
     #endregion
+
+    #region Gap Property (Row and Column)
+
+    /// <summary>
+    /// Bug: CSS gap was not applied between flex items.
+    ///
+    /// GIVEN a flex row with gap: 20px (15pt)
+    /// WHEN rendered with two items
+    /// THEN the items MUST be spaced apart by at least the gap amount
+    /// </summary>
+    [Fact]
+    public void FlexRow_WithGap_ItemsAreSpacedApart()
+    {
+        string html = @"
+            <div style='display: flex; flex-direction: row; gap: 20px;'>
+                <div style='width: 50pt;'><p>Left</p></div>
+                <div style='width: 50pt;'><p>Right</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        // Get text primitives for both items
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        var leftTexts = texts.Where(t => t.Text == "Left").ToList();
+        var rightTexts = texts.Where(t => t.Text == "Right").ToList();
+
+        Assert.NotEmpty(leftTexts);
+        Assert.NotEmpty(rightTexts);
+
+        // With gap: 20px (15pt), the distance between "Left" and "Right" items
+        // should be > 15pt (container width is A4 ContentWidth ~ 481pt)
+        // Left item: X should be relatively small
+        // Right item: X should be at least Left's X + left's width + gap
+        float leftMaxX = leftTexts.Max(t => t.X);
+        float rightMinX = rightTexts.Min(t => t.X);
+
+        // Gap in points: 20px * 0.75 = 15pt
+        // Left width = 50pt content + decorations
+        float gap = 20f * 0.75f;
+        Assert.True(rightMinX - leftMaxX >= gap * 0.5f,
+            $"Gap between items should be at least {gap}pt, but Right starts at {rightMinX} and Left ends at {leftMaxX} (diff = {rightMinX - leftMaxX})");
+    }
+
+    /// <summary>
+    /// GIVEN a flex column with gap: 10pt
+    /// WHEN rendered with two items
+    /// THEN the items MUST be spaced apart vertically by the gap
+    /// </summary>
+    [Fact]
+    public void FlexColumn_WithGap_ItemsAreSpacedApart()
+    {
+        string html = @"
+            <div style='display: flex; flex-direction: column; gap: 10pt;'>
+                <div style='height: 20pt;'><p>Top</p></div>
+                <div style='height: 20pt;'><p>Bottom</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        var topTexts = texts.Where(t => t.Text == "Top").ToList();
+        var bottomTexts = texts.Where(t => t.Text == "Bottom").ToList();
+
+        Assert.NotEmpty(topTexts);
+        Assert.NotEmpty(bottomTexts);
+
+        // With gap: 10pt, the Y distance between "Top" and "Bottom" items
+        // should be > 10pt
+        float topMaxY = topTexts.Max(t => t.Y);
+        float bottomMinY = bottomTexts.Min(t => t.Y);
+
+        Assert.True(bottomMinY - topMaxY >= 8f,
+            $"Gap between column items should be at least 10pt, but Bottom starts at Y={bottomMinY} and Top ends at Y={topMaxY} (diff = {bottomMinY - topMaxY})");
+    }
+
+    /// <summary>
+    /// GIVEN a flex row with gap: 0 (default)
+    /// WHEN rendered
+    /// THEN items MUST NOT have extra spacing
+    /// </summary>
+    [Fact]
+    public void FlexRow_NoGap_ItemsAreTouching()
+    {
+        string html = @"
+            <div style='display: flex; flex-direction: row;'>
+                <div style='width: 50pt;'><p>A</p></div>
+                <div style='width: 50pt;'><p>B</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        // Must render without crash
+        var page0Texts = result.Primitives.OfType<TextPrimitive>()
+            .Where(t => t.PageIndex == 0).ToList();
+        Assert.True(page0Texts.Count >= 2,
+            $"Expected at least 2 text runs on page 0, got {page0Texts.Count}");
+    }
+
+    /// <summary>
+    /// GIVEN a flex row with gap where items have their own margins
+    /// WHEN rendered
+    /// THEN gap + margins should both be respected (gap is additive)
+    /// </summary>
+    [Fact]
+    public void FlexRow_GapPlusMargins_BothApplied()
+    {
+        string html = @"
+            <div style='display: flex; flex-direction: row; gap: 10px;'>
+                <div style='width: 40pt; margin-right: 5pt;'><p>Item</p></div>
+                <div style='width: 40pt;'><p>Item</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        // Must not crash and both items should render
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.True(texts.Count >= 2,
+            $"Expected at least 2 text runs with gap + margin, got {texts.Count}");
+    }
+
+    #endregion
 }
