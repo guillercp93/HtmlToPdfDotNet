@@ -57,7 +57,7 @@ A benchmark baseline must run on correct layout.
 
 ## Next step
 
-All tasks done; review of T2+T3 slice. Pending decision: T1b for T1 review follow-ups (basis-first `flex: 200px 2 3` rejected; unit allowlist rejects vw/vh/ch/pc/content). Follow-up: percent basis needs CssLength percent mode.
+All tasks done. T2+T3 review (lineage review-29fac6e365fcad7a) approved after one correction (3a81b57) and acknowledged; reviewed boundary = 3a81b57. Pending decision: T1b for T1 review follow-ups (basis-first `flex: 200px 2 3` rejected; unit allowlist rejects vw/vh/ch/pc/content). Follow-up: percent basis needs CssLength percent mode.
 
 ## Evidence
 
@@ -66,3 +66,4 @@ All tasks done; review of T2+T3 slice. Pending decision: T1b for T1 review follo
 - T2: commit ab26dc3 (review under_budget, pending in slice).
 - T3: RED 7 failing (BlockLayoutEngineTests), GREEN 473/473. Decisions: split box draws top border on first part, bottom on last; text-only blocks now honor CSS line-height (default line spacing becomes 1.2x font size instead of 1.0x — visible global change).
 - Follow-ups (not fixed): `line-height: 200%` and `flex: 50%` resolve to 0 (no percent mode in CssLength); InlineLayoutEngine ignores line-height smaller than natural font height.
+- T2+T3 review: CRITICAL R3-auto-basis-nested-autowidth-rect corrected in 3a81b57 (RED then GREEN, 474/474). Advisory follow-ups: R3-global-line-height-change (default spacing 1.0x -> 1.2x), R3-rounded-split-closed-strokes (rounded split boxes draw closed strokes on every part).
