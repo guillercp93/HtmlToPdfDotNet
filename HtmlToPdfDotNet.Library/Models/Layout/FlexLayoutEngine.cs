@@ -188,10 +188,12 @@ public static class FlexLayoutEngine
     private const float MeasureWidth = 10000f;
 
     /// <summary>
-    /// Returns <c>true</c> when a primitive's right edge reaches the measurement width,
-    /// i.e. it belongs to an auto-width box stretched to the measurement page.
+    /// Returns <c>true</c> when a primitive's right edge lies in the far half of the
+    /// measurement width, i.e. it belongs to an auto-width box stretched to the measurement
+    /// page. Using half the width (rather than a tolerance near the edge) keeps the check
+    /// independent of ancestor padding, borders, and margins that inset the stretched box.
     /// </summary>
-    private static bool SpansMeasureWidth(float rightEdge) => rightEdge >= MeasureWidth - 1f;
+    private static bool SpansMeasureWidth(float rightEdge) => rightEdge > MeasureWidth / 2f;
 
     /// <summary>
     /// Roughly estimates the container height before layout, for page-break-inside decisions.

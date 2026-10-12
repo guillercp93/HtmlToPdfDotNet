@@ -1064,5 +1064,33 @@ public class FlexLayoutTests
         Assert.Equal(inner.X + 120f, next.X, 0.5f);
     }
 
+    /// <summary>
+    /// Scenario: flex-basis:auto item with right insets around an auto-width child
+    /// GIVEN a non-growing padded, bordered item whose auto-width child has a background
+    /// WHEN laid out next to a fixed sibling
+    /// THEN the stretched child box does not inflate the item's basis to the measuring width
+    /// </summary>
+    [Fact]
+    public void FlexRow_AutoBasis_PaddedItemWithAutoWidthChild_KeepsContentWidth()
+    {
+        string html = @"
+            <div style='display: flex; width: 400pt;'>
+                <div style='flex: 0 1 auto; padding-right: 20pt; border-right: 2pt solid #000000;'>
+                    <div style='margin-right: 5pt; background-color: #ff0000;'>Hi</div>
+                </div>
+                <div style='flex: 0 0 50pt; height: 20pt; background-color: #0000ff;'></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var rects = result.Primitives.OfType<RectPrimitive>().ToList();
+        RectPrimitive inner = Assert.Single(rects, r => r.Fill.R > 0.9f && r.Fill.B < 0.1f);
+        RectPrimitive next = Assert.Single(rects, r => r.Fill.B > 0.9f && r.Fill.R < 0.1f);
+
+        Assert.True(inner.Width < 60f, $"Auto-width child inflated to {inner.Width}pt");
+        Assert.True(next.X < 120f, $"Sibling pushed to {next.X}pt");
+        Assert.Equal(50f, next.Width, 0.5f);
+    }
+
     #endregion
 }
