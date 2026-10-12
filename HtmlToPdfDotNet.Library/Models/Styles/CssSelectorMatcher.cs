@@ -24,7 +24,7 @@ public static class CssSelectorMatcher
     /// <returns>True if the node matches the selector, false otherwise</returns>
     public static bool Matches(HtmlNode node, CssSelector selector)
     {
-        if (!selector.Parts.Any()) return false;
+        if (selector.Parts.Count == 0) return false;
 
         // The last part must match the current node
         return MatchDescendant(node, selector.Parts, selector.Parts.Count - 1);
@@ -87,19 +87,54 @@ public static class CssSelectorMatcher
         // Check classes
         if (part.Classes.Count > 0)
         {
-            string classAttr = node.GetAttributeValue("class", "");
-            string[] nodeClasses = classAttr.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            ReadOnlySpan<char> classAttr = node.GetAttributeValue("class", "");
+            IReadOnlyList<string> classes = part.Classes;
 
-            foreach (string cls in part.Classes)
-                if (!nodeClasses.Any(nc => nc.Equals(cls, StringComparison.OrdinalIgnoreCase)))
+            for (int i = 0; i < classes.Count; i++)
+                if (!ContainsClassToken(classAttr, classes[i]))
                     return false;
         }
 
         return true;
     }
+
+    /// <summary>
+    /// Checks whether a space-separated class attribute value contains the given class token,
+    /// without allocating. Only the space character separates tokens and the comparison is
+    /// case-insensitive (ordinal).
+    /// </summary>
+    /// <param name="classAttr">Value of the class attribute</param>
+    /// <param name="cls">Class name to look for</param>
+    /// <returns>True if a token equals <paramref name="cls"/>, false otherwise</returns>
+    private static bool ContainsClassToken(ReadOnlySpan<char> classAttr, string cls)
+    {
+        if (cls.Length == 0) return false;
+
+        while (!classAttr.IsEmpty)
+        {
+            int separator = classAttr.IndexOf(' ');
+            ReadOnlySpan<char> token = separator < 0 ? classAttr : classAttr[..separator];
+
+            if (token.Equals(cls, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (separator < 0) break;
+            classAttr = classAttr[(separator + 1)..];
+        }
+
+        return false;
+    }
     #endregion
 
     #region Filtering rules
+
+    /// <summary>
+    /// A rule that matched a node, with the data needed to order it in the cascade.
+    /// </summary>
+    /// <param name="Rule">The matching rule</param>
+    /// <param name="Specificity">Specificity score of the first selector of the rule that matched</param>
+    /// <param name="Order">Source order of the rule</param>
+    internal readonly record struct MatchedRule(CssRule Rule, int Specificity, int Order);
 
     /// <summary>
     /// Returns the rules that apply to the node, ordered from lowest to highest specificity.
@@ -110,24 +145,49 @@ public static class CssSelectorMatcher
     /// <returns>Ordered list of matching rules</returns>
     public static IEnumerable<CssRule> GetMatchingRules(HtmlNode node, IEnumerable<CssRule> allRules)
     {
-        List<(CssRule Rule, int Score)> matches = new();
+        IReadOnlyList<CssRule> rules = allRules as IReadOnlyList<CssRule> ?? [.. allRules];
+        List<MatchedRule> matches = new();
+        CollectMatchingRules(node, rules, matches);
 
-        foreach (CssRule rule in allRules)
+        List<CssRule> result = new(matches.Count);
+        foreach (MatchedRule match in matches)
+            result.Add(match.Rule);
+        return result;
+    }
+
+    /// <summary>
+    /// Fills <paramref name="buffer"/> with the rules that apply to the node, ordered from lowest
+    /// to highest specificity and, for equal specificity, by source order (stable cascade order).
+    /// The buffer is cleared first so callers can reuse it across nodes without allocating.
+    /// </summary>
+    /// <param name="node">Node to match</param>
+    /// <param name="allRules">All rules to consider, in source order</param>
+    /// <param name="buffer">Buffer that receives the ordered matches</param>
+    internal static void CollectMatchingRules(HtmlNode node, IReadOnlyList<CssRule> allRules, List<MatchedRule> buffer)
+    {
+        buffer.Clear();
+
+        for (int order = 0; order < allRules.Count; order++)
         {
-            foreach (CssSelector selector in rule.Selectors)
+            CssRule rule = allRules[order];
+            IReadOnlyList<CssSelector> selectors = rule.Selectors;
+
+            for (int i = 0; i < selectors.Count; i++)
             {
                 // A rule can only apply once per node
-                if (Matches(node, selector))
+                if (Matches(node, selectors[i]))
                 {
-                    matches.Add((rule, selector.SpecificityScore));
+                    buffer.Add(new MatchedRule(rule, selectors[i].SpecificityScore, order));
                     break;
                 }
             }
         }
 
-        return matches
-            .OrderBy(m => m.Score)
-            .Select(m => m.Rule);
+        // List.Sort is unstable: the source order tiebreak keeps equal-specificity rules in cascade order.
+        if (buffer.Count > 1)
+            buffer.Sort(static (x, y) => x.Specificity != y.Specificity
+                ? x.Specificity.CompareTo(y.Specificity)
+                : x.Order.CompareTo(y.Order));
     }
     #endregion
 }

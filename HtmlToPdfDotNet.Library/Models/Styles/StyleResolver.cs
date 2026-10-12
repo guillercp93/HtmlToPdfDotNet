@@ -89,7 +89,9 @@ public sealed class StyleResolver
     {
         Dictionary<HtmlNode, ComputedStyle> result = new();
         ComputedStyle initial = new(); // initial values
-        ResolveNode(root, initial, result);
+        // One match buffer per call (not per node, not per instance) keeps Resolve thread-safe
+        List<CssSelectorMatcher.MatchedRule> matchBuffer = new();
+        ResolveNode(root, initial, result, matchBuffer);
         return result;
     }
 
@@ -100,15 +102,17 @@ public sealed class StyleResolver
     /// <param name="node">Root of the DOM (usually the &lt;html&gt; node).</param>
     /// <param name="parentStyle">Computed style of the parent node.</param>
     /// <param name="result">Dictionary to store the computed style of each node.</param>
+    /// <param name="matchBuffer">Reusable buffer for the stylesheet rules matching a node.</param>
     private void ResolveNode(HtmlNode node,
                              ComputedStyle parentStyle,
-                             Dictionary<HtmlNode, ComputedStyle> result)
+                             Dictionary<HtmlNode, ComputedStyle> result,
+                             List<CssSelectorMatcher.MatchedRule> matchBuffer)
     {
         if (node.NodeType == HtmlNodeType.Document)
         {
             // The document node has no style of its own; we only traverse children
             foreach (HtmlNode child in node.ChildNodes)
-                ResolveNode(child, parentStyle, result);
+                ResolveNode(child, parentStyle, result, matchBuffer);
             return;
         }
 
@@ -129,7 +133,7 @@ public sealed class StyleResolver
         ApplyTagDefaults(node.Name, style);
 
         // 3 Apply Stylesheet rules
-        ApplyStylesheetRules(node, style);
+        ApplyStylesheetRules(node, style, matchBuffer);
 
         // 3.1 Inline style attribute
         ApplyInlineStyle(node, style);
@@ -138,7 +142,7 @@ public sealed class StyleResolver
 
         // 4. Recursion in children
         foreach (HtmlNode child in node.ChildNodes)
-            ResolveNode(child, style, result);
+            ResolveNode(child, style, result, matchBuffer);
     }
     #endregion
 
@@ -183,15 +187,22 @@ public sealed class StyleResolver
     #endregion
 
     #region  StyleSheet rules
-    private void ApplyStylesheetRules(HtmlNode node, ComputedStyle style)
+    /// <summary>
+    /// Applies the declarations of the stylesheet rules matching the node, in cascade order.
+    /// </summary>
+    /// <param name="node">The HTML node.</param>
+    /// <param name="style">The computed style to apply the declarations to.</param>
+    /// <param name="matchBuffer">Reusable buffer for the matching rules; overwritten on each call.</param>
+    private void ApplyStylesheetRules(HtmlNode node,
+                                      ComputedStyle style,
+                                      List<CssSelectorMatcher.MatchedRule> matchBuffer)
     {
-        if (_stylesheetRules.Count != 0)
-        {
-            List<CssRule> matchingRules = CssSelectorMatcher.GetMatchingRules(node, _stylesheetRules).ToList();
-            foreach (CssRule rule in matchingRules)
-                foreach ((string prop, string value) in rule.Declarations)
-                    ApplyDeclaration(prop, value, style);
-        }
+        if (_stylesheetRules.Count == 0) return;
+
+        CssSelectorMatcher.CollectMatchingRules(node, _stylesheetRules, matchBuffer);
+        for (int i = 0; i < matchBuffer.Count; i++)
+            foreach ((string prop, string value) in matchBuffer[i].Rule.Declarations)
+                ApplyDeclaration(prop, value, style);
     }
     #endregion
 
