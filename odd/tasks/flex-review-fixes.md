@@ -37,7 +37,7 @@ A benchmark baseline must run on correct layout.
   - R3-auto-basis-measure: auto-basis measurement includes box/rect primitives;
     regression test for non-grow items.
   - R3-weak-shrink-tests: assert item X positions / widths.
-- [ ] T3 — Block layout (route: delegated, writer trigger: engine + tests)
+- [x] T3 — Block layout (route: delegated, writer trigger: engine + tests)
   - R3-multipage-box-bottom: cursor advances past bottom padding/border after a split.
   - R3-split-only-two-pages: emit one box part per spanned page.
   - R3-line-height-untested: assert line heights / baseline with CSS `line-height`.
@@ -57,9 +57,12 @@ A benchmark baseline must run on correct layout.
 
 ## Next step
 
-T3. Pending decision: T1b for T1 review follow-ups (basis-first `flex: 200px 2 3` rejected; unit allowlist rejects vw/vh/ch/pc/content). Follow-up: percent basis needs CssLength percent mode.
+All tasks done; review of T2+T3 slice. Pending decision: T1b for T1 review follow-ups (basis-first `flex: 200px 2 3` rejected; unit allowlist rejects vw/vh/ch/pc/content). Follow-up: percent basis needs CssLength percent mode.
 
 ## Evidence
 
 - T1: commit 2256531, review lineage review-2a54d7b68c43f63d approved (medium, acknowledged). RED 15 failing cases, GREEN 456/456.
 - T2: RED 9 failing (FlexLayoutTests), GREEN 465/465. Strengthened shrink tests passed on pre-fix code (old tests never overflowed). Decisions: wrapping container with explicit height occupies max(height, lines); align-content free space clamped at 0.
+- T2: commit ab26dc3 (review under_budget, pending in slice).
+- T3: RED 7 failing (BlockLayoutEngineTests), GREEN 473/473. Decisions: split box draws top border on first part, bottom on last; text-only blocks now honor CSS line-height (default line spacing becomes 1.2x font size instead of 1.0x — visible global change).
+- Follow-ups (not fixed): `line-height: 200%` and `flex: 50%` resolve to 0 (no percent mode in CssLength); InlineLayoutEngine ignores line-height smaller than natural font height.

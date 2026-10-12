@@ -621,4 +621,136 @@ public class BlockLayoutEngineTests
         // Should contain a bullet character primitive for the <li> marker
         Assert.Contains(result.Primitives, p => p is TextPrimitive t && t.Text.Contains("\u00B7"));
     }
+
+    // \u2500\u2500 Multi-page box splitting \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+    /// <summary>Page with 100pt of content height to force page breaks quickly.</summary>
+    private static PageLayout SmallPage => new(PageLayout.A4.Width, 120f, new PageMargins(10f));
+
+    private static string Lines(int count) =>
+        string.Concat(Enumerable.Range(1, count).Select(i => $"<div>Line {i}</div>"));
+
+    [Fact]
+    public void SplitBox_NextSibling_StartsAfterContinuationBottomPaddingAndBorder()
+    {
+        string html = "<div style='height:60pt'></div>"
+                    + "<div style='background-color:#ff0000; border:4pt solid #000000; padding:20pt'>"
+                    + Lines(4)
+                    + "</div>"
+                    + "<div style='background-color:#00ff00'>After</div>";
+
+        LayoutResult result = RunLayout(html, SmallPage);
+
+        RectPrimitive lastPart = result.Primitives.OfType<RectPrimitive>()
+            .Where(r => r.Fill.R > 0.9f && r.Fill.G < 0.1f)
+            .OrderBy(r => r.PageIndex).Last();
+        RectPrimitive sibling = Assert.Single(result.Primitives.OfType<RectPrimitive>(),
+            r => r.Fill.G > 0.9f && r.Fill.R < 0.1f);
+
+        Assert.True(lastPart.PageIndex > 0, "Box should be split across pages");
+        Assert.Equal(lastPart.PageIndex, sibling.PageIndex);
+        float boxBottom = lastPart.Y + lastPart.Height;
+        Assert.True(sibling.Y >= boxBottom - 0.01f,
+            $"Sibling Y ({sibling.Y}) must start at/after the split box bottom ({boxBottom})");
+    }
+
+    [Fact]
+    public void SplitBox_SpanningThreePages_EmitsClippedBackgroundOnEveryPage()
+    {
+        PageLayout page = SmallPage;
+        float contentH = page.ContentHeight;
+        string html = "<div style='background-color:#ff0000'>" + Lines(20) + "</div>";
+
+        LayoutResult result = RunLayout(html, page);
+
+        int lastTextPage = result.Primitives.OfType<TextPrimitive>().Max(t => t.PageIndex);
+        Assert.True(lastTextPage >= 2, $"Content should span \u22653 pages, last page {lastTextPage}");
+
+        List<RectPrimitive> backgrounds = result.Primitives.OfType<RectPrimitive>()
+            .Where(r => r.Fill.R > 0.9f).ToList();
+
+        for (int p = 0; p <= lastTextPage; p++)
+        {
+            Assert.Contains(backgrounds, r => r.PageIndex == p);
+        }
+        Assert.All(backgrounds, r => Assert.True(r.Y + r.Height <= contentH + 0.01f,
+            $"Background on page {r.PageIndex} (Y {r.Y}, H {r.Height}) exceeds content height {contentH}"));
+    }
+
+    [Fact]
+    public void SplitBox_SpanningThreePages_DrawsTopBorderFirstAndBottomBorderLast()
+    {
+        string html = "<div style='border:2pt solid #0000ff'>" + Lines(20) + "</div>";
+
+        LayoutResult result = RunLayout(html, SmallPage);
+
+        List<BorderLinePrimitive> horizontal = result.Primitives.OfType<BorderLinePrimitive>()
+            .Where(b => b.Color.B > 0.9f && b.Y1 == b.Y2).OrderBy(b => b.PageIndex).ToList();
+        List<BorderLinePrimitive> vertical = result.Primitives.OfType<BorderLinePrimitive>()
+            .Where(b => b.Color.B > 0.9f && b.X1 == b.X2).ToList();
+        int lastTextPage = result.Primitives.OfType<TextPrimitive>().Max(t => t.PageIndex);
+
+        Assert.Equal(2, horizontal.Count);
+        Assert.Equal(0, horizontal[0].PageIndex);
+        Assert.Equal(lastTextPage, horizontal[1].PageIndex);
+        for (int p = 0; p <= lastTextPage; p++)
+        {
+            Assert.Equal(2, vertical.Count(b => b.PageIndex == p));
+        }
+    }
+
+    // \u2500\u2500 CSS line-height \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+    private static List<TextPrimitive> LayoutWrappedText(string lineHeight)
+    {
+        // Narrow box forces one word per line
+        string html = $"<div style='width:40pt; line-height:{lineHeight}'>aaaa bbbb cccc</div>";
+        return RunLayout(html).Primitives.OfType<TextPrimitive>().OrderBy(t => t.Y).ToList();
+    }
+
+    [Theory]
+    [InlineData("2", 24f)]       // 2 \u00D7 12pt
+    [InlineData("30pt", 30f)]
+    public void LineHeight_SetsDistanceBetweenSuccessiveBaselines(string lineHeight, float expected)
+    {
+        List<TextPrimitive> texts = LayoutWrappedText(lineHeight);
+
+        Assert.Equal(3, texts.Count);
+        Assert.Equal(expected, texts[1].Y - texts[0].Y, precision: 2);
+        Assert.Equal(expected, texts[2].Y - texts[1].Y, precision: 2);
+    }
+
+    [Fact]
+    public void LineHeight_Normal_UsesDefaultMultiplier()
+    {
+        List<TextPrimitive> texts = LayoutWrappedText("normal");
+
+        Assert.Equal(3, texts.Count);
+        Assert.Equal(Constants.DefaultFontSize * 1.2f, texts[1].Y - texts[0].Y, precision: 2);
+    }
+
+    [Fact]
+    public void LineHeight_AppliesHalfLeadingToFirstBaseline()
+    {
+        List<TextPrimitive> normal = LayoutWrappedText("normal");
+        List<TextPrimitive> doubled = LayoutWrappedText("2");
+
+        float normalLineH = normal[1].Y - normal[0].Y;
+        float doubledLineH = doubled[1].Y - doubled[0].Y;
+
+        // Both boxes start at the same Y; extra leading is split equally above and below
+        Assert.Equal((doubledLineH - normalLineH) / 2f, doubled[0].Y - normal[0].Y, precision: 2);
+    }
+
+    [Fact]
+    public void LineHeight_MixedContentContainer_SetsDistanceBetweenBaselines()
+    {
+        string html = "<div style='width:40pt; line-height:2'>aaaa bbbb cccc<div>block</div></div>";
+
+        List<TextPrimitive> texts = RunLayout(html).Primitives.OfType<TextPrimitive>()
+            .Where(t => t.Text != "block").OrderBy(t => t.Y).ToList();
+
+        Assert.Equal(3, texts.Count);
+        Assert.Equal(24f, texts[1].Y - texts[0].Y, precision: 2);
+    }
 }
