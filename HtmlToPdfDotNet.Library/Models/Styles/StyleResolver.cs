@@ -376,6 +376,29 @@ public sealed class StyleResolver
                 CssLength gap = CssValueParser.ParseLength(value, style.FontSize);
                 if (gap.Points >= 0f) style.Gap = gap;
                 break;
+            case "flex-wrap":
+                style.FlexWrap = CssValueParser.ParseFlexWrap(value);
+                break;
+            case "flex-grow":
+                style.FlexGrow = CssValueParser.ParseFlexGrow(value);
+                break;
+            case "flex-shrink":
+                style.FlexShrink = CssValueParser.ParseFlexShrink(value);
+                break;
+            case "flex-basis":
+                style.FlexBasis = CssValueParser.ParseLength(value, style.FontSize);
+                break;
+            case "align-content":
+                style.AlignContent = CssValueParser.ParseAlignContent(value);
+                break;
+            case "flex":
+                {
+                    var (grow, shrink, basis) = CssValueParser.ParseFlexShorthand(value, style.FontSize);
+                    style.FlexGrow = grow;
+                    style.FlexShrink = shrink;
+                    style.FlexBasis = basis;
+                    break;
+                }
         }
     }
     #endregion

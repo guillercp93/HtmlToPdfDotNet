@@ -140,7 +140,8 @@ public sealed class BlockLayoutEngine
             // Flush pending inline runs before any block-level element
             if (inlineBuffer.Count > 0)
             {
-                LayoutTextRuns(inlineBuffer, x, availableWidth, parentTextAlign);
+                LayoutTextRuns(inlineBuffer, x, availableWidth, parentTextAlign,
+                    parentStyle?.FontSize ?? 0f, parentStyle?.LineHeight ?? 0f);
                 inlineBuffer.Clear();
             }
 
@@ -216,7 +217,8 @@ public sealed class BlockLayoutEngine
         // Flush any remaining inline content at the end of the container
         if (inlineBuffer.Count > 0)
         {
-            LayoutTextRuns(inlineBuffer, x, availableWidth, parentTextAlign);
+            LayoutTextRuns(inlineBuffer, x, availableWidth, parentTextAlign,
+                parentStyle?.FontSize ?? 0f, parentStyle?.LineHeight ?? 0f);
         }
 
         // Restore parent list counter (each list has its own CSS counter scope)
@@ -271,6 +273,7 @@ public sealed class BlockLayoutEngine
         // Capture the index before layouting children so we can insert the background/borders
         // behind them in the primitives list (Z-order).
         int boxPrimitiveIndex = _result.Primitives.Count;
+        int pageBeforeContent = _currentPage;
 
         // Layout children nodes
         float childrenHeight = LayoutBlockContent(node, style, contentX, contentWidth);
@@ -280,12 +283,20 @@ public sealed class BlockLayoutEngine
             childrenHeight);
 
         box.ContentHeight = contentHeight;
-        _cursorY = boxTop + style.BorderTop.Width.Points + style.Padding.Top.Points + contentHeight
-                          + style.Padding.Bottom.Points + style.BorderBottom.Width.Points;
 
-        // Emit box primitives (background and borders)
-        // We insert them at boxPrimitiveIndex so they are drawn BEFORE the children.
+        // When content spans pages, _cursorY is already on the correct page.
+        // Only reassign cursor when content fits on the same page.
+        if (_currentPage == pageBeforeContent)
+        {
+            _cursorY = boxTop + style.BorderTop.Width.Points + style.Padding.Top.Points + contentHeight
+                              + style.Padding.Bottom.Points + style.BorderBottom.Width.Points;
+        }
+
+        // Emit box primitives on the page where the box started
+        int savedPage = _currentPage;
+        _currentPage = pageBeforeContent;
         EmitBox(box, boxTop, parentX + style.Margin.Left.Points, boxPrimitiveIndex);
+        _currentPage = savedPage;
 
         _cursorY += style.Margin.Bottom.Points;
 
@@ -311,8 +322,14 @@ public sealed class BlockLayoutEngine
 
         // Mixed children or only blocks
         float startY = _cursorY;
+        int startPage = _currentPage;
         LayoutChildren(node, contentX, contentWidth);
-        return _cursorY - startY;
+        if (_currentPage == startPage)
+            return _cursorY - startY;
+
+        float remaining = _pageContentH - startY;
+        float fullPages = (_currentPage - startPage - 1) * _pageContentH;
+        return Math.Max(0f, remaining) + fullPages + _cursorY;
     }
 
     /// <summary>
@@ -344,7 +361,7 @@ public sealed class BlockLayoutEngine
         {
             return 0f;
         }
-        return LayoutTextRuns(runs, x, availableWidth, style.TextAlign);
+        return LayoutTextRuns(runs, x, availableWidth, style);
     }
 
     /// <summary>
@@ -354,26 +371,36 @@ public sealed class BlockLayoutEngine
     /// <param name="contentX">The horizontal start position.</param>
     /// <param name="contentWidth">The width available for text wrapping.</param>
     /// <param name="align">The text alignment.</param>
+    /// <param name="containerFontSize">Font size of the container for CSS line-height.</param>
+    /// <param name="lineHeightMultiplier">CSS line-height multiplier of the container.</param>
     /// <returns>The height of the resulting line boxes.</returns>
-    private float LayoutTextRuns(IReadOnlyList<InlineRun> runs, float contentX, float contentWidth, TextAlign align)
+    private float LayoutTextRuns(IReadOnlyList<InlineRun> runs, float contentX, float contentWidth, TextAlign align,
+        float containerFontSize = 0f, float lineHeightMultiplier = 0f)
     {
         if (runs.Count == 0) return 0f;
 
-        List<LineBox> lines = InlineLayoutEngine.Layout(runs, contentWidth, align);
+        List<LineBox> lines = InlineLayoutEngine.Layout(runs, contentWidth, align, containerFontSize, lineHeightMultiplier);
         float startY = _cursorY;
+        int startPage = _currentPage;
 
         foreach (LineBox line in lines)
         {
+            float fontMetricHeight = line.Ascent - line.Descent;
+            float actualLineHeight = line.LineHeight;
+
+            // Half-leading for vertical centering of text within the CSS line-height
+            float halfLeading = (actualLineHeight - fontMetricHeight) / 2f;
+
             // Check if the line fits on the current page
-            if (_cursorY + line.LineHeight > _pageContentH)
+            if (_cursorY + actualLineHeight > _pageContentH)
             {
                 AdvancePage();
             }
 
             // Line top Y (before advancing cursor)
             float lineTopY = _cursorY;
-            // Baseline Y (reference: inside the page, Y from top)
-            float baselineY = lineTopY + line.Ascent;
+            // Baseline Y adjusted for half-leading
+            float baselineY = lineTopY + halfLeading + line.Ascent;
 
             foreach ((InlineRun runItem, float runX) in line.Items)
             {
@@ -425,16 +452,32 @@ public sealed class BlockLayoutEngine
                         X = contentX + runX,
                         Y = lineTopY,
                         Width = runItem.Width,
-                        Height = line.LineHeight,
+                        Height = actualLineHeight,
                         Uri = runItem.LinkUri,
                     });
                 }
             }
 
-            _cursorY += line.LineHeight;
+            _cursorY += actualLineHeight;
         }
 
-        return _cursorY - startY;
+        if (_currentPage == startPage)
+            return _cursorY - startY;
+
+        float remaining = _pageContentH - startY;
+        float fullPages = (_currentPage - startPage - 1) * _pageContentH;
+        return Math.Max(0f, remaining) + fullPages + _cursorY;
+    }
+
+    private float LayoutTextRuns(IReadOnlyList<InlineRun> runs, float contentX, float contentWidth, ComputedStyle style)
+    {
+        return LayoutTextRuns(runs, contentX, contentWidth, style.TextAlign,
+            style.FontSize, style.LineHeight);
+    }
+
+    private float LayoutTextRuns(IReadOnlyList<InlineRun> runs, float contentX, float contentWidth, TextAlign align)
+    {
+        return LayoutTextRuns(runs, contentX, contentWidth, align, 0f, 0f);
     }
 
     /// <summary>
@@ -517,6 +560,25 @@ public sealed class BlockLayoutEngine
 
         int currentIdx = insertAt ?? _result.Primitives.Count;
 
+        // When the box extends past the current page, find the page break
+        // so we can split the box across pages for correct visual continuity.
+        bool spansPages = borderBoxTop + bbH > _pageContentH;
+        float part1H = spansPages ? _pageContentH - borderBoxTop : bbH;
+        float part2H = spansPages ? bbH - part1H : 0f;
+
+        int pageBreakIdx = -1;
+        if (spansPages)
+        {
+            for (int i = currentIdx; i < _result.Primitives.Count; i++)
+            {
+                if (_result.Primitives[i] is PageBreakPrimitive)
+                {
+                    pageBreakIdx = i;
+                    break;
+                }
+            }
+        }
+
         float borderRadius = box.Style.BorderRadius.Points;
         if (borderRadius > 0f)
         {
@@ -528,22 +590,56 @@ public sealed class BlockLayoutEngine
             float strokeWidth = activeBorder.IsVisible ? activeBorder.Width.Points : 0f;
             CssColor strokeColor = activeBorder.IsVisible ? activeBorder.Color : CssColor.Transparent;
 
+            // Part 1 on current page
             _result.Primitives.Insert(currentIdx++, new RectPrimitive
             {
                 PageIndex = _currentPage,
                 X = borderBoxX,
                 Y = borderBoxTop,
                 Width = bbW,
-                Height = bbH,
+                Height = part1H,
                 Fill = box.Style.BackgroundColor,
                 BorderRadius = borderRadius,
                 Stroke = strokeColor,
                 StrokeWidth = strokeWidth
             });
+
+            // Part 2 on next page (after page break)
+            if (spansPages && pageBreakIdx >= 0)
+            {
+                float sw2 = strokeWidth / 2f;
+
+                // Fill rect expanded by strokeWidth/2 so the stroke's outer half
+                // falls on the white fill instead of the body background (#f8fafc).
+                _result.Primitives.Insert(pageBreakIdx + 1, new RectPrimitive
+                {
+                    PageIndex = _currentPage + 1,
+                    X = borderBoxX - sw2,
+                    Y = -sw2,
+                    Width = bbW + strokeWidth,
+                    Height = part2H + strokeWidth,
+                    Fill = box.Style.BackgroundColor,
+                    BorderRadius = borderRadius,
+                });
+
+                // Stroke rect on original boundary — entire stroke width lands on
+                // the expanded fill, avoiding contrast loss from the gray page fill.
+                _result.Primitives.Insert(pageBreakIdx + 2, new RectPrimitive
+                {
+                    PageIndex = _currentPage + 1,
+                    X = borderBoxX,
+                    Y = 0f,
+                    Width = bbW,
+                    Height = part2H,
+                    BorderRadius = borderRadius,
+                    Stroke = strokeColor,
+                    StrokeWidth = strokeWidth,
+                });
+            }
         }
         else
         {
-            // Background
+            // Background — Part 1 (current page)
             if (box.Style.BackgroundColor.A > 0f)
             {
                 _result.Primitives.Insert(currentIdx++, new RectPrimitive
@@ -552,16 +648,47 @@ public sealed class BlockLayoutEngine
                     X = borderBoxX,
                     Y = borderBoxTop,
                     Width = bbW,
-                    Height = bbH,
+                    Height = part1H,
                     Fill = box.Style.BackgroundColor,
                 });
             }
 
-            // Bordes
+            // Borders — Part 1 (current page)
             currentIdx = EmitBorder(box.Style.BorderTop, borderBoxX, borderBoxTop, borderBoxX + bbW, borderBoxTop, currentIdx);
-            currentIdx = EmitBorder(box.Style.BorderBottom, borderBoxX, borderBoxTop + bbH, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
-            currentIdx = EmitBorder(box.Style.BorderLeft, borderBoxX, borderBoxTop, borderBoxX, borderBoxTop + bbH, currentIdx);
-            currentIdx = EmitBorder(box.Style.BorderRight, borderBoxX + bbW, borderBoxTop, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
+            if (spansPages)
+            {
+                currentIdx = EmitBorder(box.Style.BorderLeft, borderBoxX, borderBoxTop, borderBoxX, borderBoxTop + part1H, currentIdx);
+                currentIdx = EmitBorder(box.Style.BorderRight, borderBoxX + bbW, borderBoxTop, borderBoxX + bbW, borderBoxTop + part1H, currentIdx);
+            }
+            else
+            {
+                currentIdx = EmitBorder(box.Style.BorderBottom, borderBoxX, borderBoxTop + bbH, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
+                currentIdx = EmitBorder(box.Style.BorderLeft, borderBoxX, borderBoxTop, borderBoxX, borderBoxTop + bbH, currentIdx);
+                currentIdx = EmitBorder(box.Style.BorderRight, borderBoxX + bbW, borderBoxTop, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
+            }
+
+            // Part 2 on next page (after page break)
+            if (spansPages && pageBreakIdx >= 0)
+            {
+                int p2Idx = pageBreakIdx + 1;
+
+                if (box.Style.BackgroundColor.A > 0f)
+                {
+                    _result.Primitives.Insert(p2Idx++, new RectPrimitive
+                    {
+                        PageIndex = _currentPage + 1,
+                        X = borderBoxX,
+                        Y = 0f,
+                        Width = bbW,
+                        Height = part2H,
+                        Fill = box.Style.BackgroundColor,
+                    });
+                }
+
+                p2Idx = EmitBorder(box.Style.BorderBottom, borderBoxX, part2H, borderBoxX + bbW, part2H, p2Idx);
+                p2Idx = EmitBorder(box.Style.BorderLeft, borderBoxX, 0f, borderBoxX, part2H, p2Idx);
+                p2Idx = EmitBorder(box.Style.BorderRight, borderBoxX + bbW, 0f, borderBoxX + bbW, part2H, p2Idx);
+            }
         }
     }
 

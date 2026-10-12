@@ -25,8 +25,14 @@ public sealed class LineBox
     /// </summary>
     public float Descent { get; set; }
 
+    private float _cssLineHeight;
     /// <summary>
-    /// The height of the line.
+    /// The height of the line — uses CSS line-height when set, otherwise font-metric height.
     /// </summary>
-    public float LineHeight => Ascent - Descent;
+    public float LineHeight => _cssLineHeight > 0f ? _cssLineHeight : Ascent - Descent;
+
+    /// <summary>
+    /// Sets the CSS line-height for this line.
+    /// </summary>
+    public void SetLineHeight(float value) => _cssLineHeight = value;
 }

@@ -252,6 +252,311 @@ public class BlockLayoutEngineTests
 
 
     [Fact]
+    public void RoundedRectBox_SplitsAcrossPages()
+    {
+        // Use a small page to force a page break mid-content
+        var smallPage = new PageLayout(PageLayout.A4.Width, 120f, new PageMargins(10f));
+        string html = @"
+            <div style='height:80px'>Space filler</div>
+            <div style='background-color:#ffffff; border:2px solid #94a3b8; border-radius:10px; padding:10px'>
+                <p>Line 1</p>
+                <p>Line 2</p>
+                <p>Line 3</p>
+                <p>Line 4</p>
+                <p>Line 5</p>
+            </div>";
+
+        LayoutResult result = RunLayout(html, smallPage);
+
+        // Find all RectPrimitives with border-radius (the container's split parts)
+        var rects = result.Primitives.OfType<RectPrimitive>()
+            .Where(r => r.BorderRadius > 0f)
+            .OrderBy(r => r.PageIndex).ThenBy(r => r.Y).ToList();
+
+        // Should have 3 parts: Part 1, Part 2 fill, Part 2 stroke
+        Assert.True(rects.Count >= 3,
+            $"Expected at least 3 rounded-rect parts, got {rects.Count}");
+
+        var part1 = rects[0];
+
+        // Part 1 must be on the first page
+        Assert.Equal(0, part1.PageIndex);
+
+        // Part 1's top must be after the spacer (80px = 60pt)
+        Assert.True(part1.Y >= 50f,
+            $"Part 1 Y ({part1.Y}) should be ≥ 50 (after spacer)");
+
+        // Part 1 must have both stroke and fill
+        Assert.True(part1.StrokeWidth > 0f, "Part 1 should have stroke width > 0");
+        Assert.True(part1.Fill.A > 0f, "Part 1 should have fill");
+
+        // Part 2 on page 1 is split into fill rect + stroke rect
+        var page1Rounded = rects.Where(r => r.PageIndex == 1).ToList();
+        var part2Fill = page1Rounded.FirstOrDefault(r => r.Fill.A > 0f);
+        var part2Stroke = page1Rounded.FirstOrDefault(r => r.StrokeWidth > 0f);
+
+        Assert.NotNull(part2Fill);
+        Assert.NotNull(part2Stroke);
+        Assert.Equal(0f, part2Stroke.Y);
+        Assert.True(part2Fill.Fill.A > 0f, "Part 2 fill should have fill");
+        Assert.True(part2Stroke.StrokeWidth > 0f, "Part 2 stroke should have stroke");
+    }
+
+    [Fact]
+    public void RoundedRectContainer_WithNestedList_SplitsCorrectly()
+    {
+        // Replicate the real scenario with enough content before to force a page break
+        // mid-container on A4 page with default margins.
+        string html = @"
+            <div style='height:680px'>Filler</div>
+            <div style='background-color:#ffffff; border:2px solid #94a3b8; border-radius:10px'>
+                <ol style='margin:0; padding:16px 20px 16px 44px'>
+                    <li style='margin-bottom:8px; font-size:12px; line-height:1.5'>
+                        <span style='font-weight:700'>Laptop Pro 15</span>
+                        - <span style='color:#16a34a'>$179,880.00</span>
+                        (120 units)
+                        <ul style='margin-top:6px; margin-left:24px'>
+                            <li style='font-size:11px; color:#64748b'>Category margin: $524.65 per unit</li>
+                            <li style='font-size:11px; color:#64748b'>Quarter-over-quarter growth: +15%</li>
+                        </ul>
+                    </li>
+                    <li style='margin-bottom:8px; font-size:12px; line-height:1.5'>
+                        <span style='font-weight:700'>Wireless Headphones</span>
+                        - <span style='color:#16a34a'>$49,997.50</span>
+                        (250 units)
+                        <ul style='margin-top:6px; margin-left:24px'>
+                            <li style='font-size:11px; color:#64748b'>Category margin: $69.00 per unit</li>
+                            <li style='font-size:11px; color:#64748b'>Quarter-over-quarter growth: +22%</li>
+                        </ul>
+                    </li>
+                    <li style='margin-bottom:8px; font-size:12px; line-height:1.5'>
+                        <span style='font-weight:700'>Ergonomic Office Chair</span>
+                        - <span style='color:#16a34a'>$29,707.50</span>
+                        (85 units)
+                        <ul style='margin-top:6px; margin-left:24px'>
+                            <li style='font-size:11px; color:#64748b'>Category margin: $122.32 per unit</li>
+                            <li style='font-size:11px; color:#64748b'>Quarter-over-quarter growth: +8%</li>
+                        </ul>
+                    </li>
+                    <li style='margin-bottom:8px; font-size:12px; line-height:1.5'>
+                        <span style='font-weight:700'>4K UltraWide Monitor</span>
+                        - <span style='color:#16a34a'>$41,940.00</span>
+                        (60 units)
+                        <ul style='margin-top:6px; margin-left:24px'>
+                            <li style='font-size:11px; color:#64748b'>Category margin: $244.65 per unit</li>
+                            <li style='font-size:11px; color:#64748b'>Quarter-over-quarter growth: +18%</li>
+                        </ul>
+                    </li>
+                    <li style='margin-bottom:8px; font-size:12px; line-height:1.5'>
+                        <span style='font-weight:700'>Mechanical Keyboard</span>
+                        - <span style='color:#16a34a'>$52,890.00</span>
+                        (410 units)
+                        <ul style='margin-top:6px; margin-left:24px'>
+                            <li style='font-size:11px; color:#64748b'>Category margin: $45.15 per unit</li>
+                            <li style='font-size:11px; color:#64748b'>Quarter-over-quarter growth: +25%</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var roundedRects = result.Primitives.OfType<RectPrimitive>()
+            .Where(r => r.BorderRadius > 0f)
+            .OrderBy(r => r.PageIndex).ThenBy(r => r.Y).ToList();
+
+        Assert.True(result.PageCount >= 2,
+            $"Content should span at least 2 pages, got {result.PageCount}");
+
+        Assert.True(roundedRects.Count >= 3,
+            $"Expected at least 3 rounded-rect parts, got {roundedRects.Count}. " +
+            $"PageCount={result.PageCount}");
+
+        var part1 = roundedRects[0];
+
+        Assert.Equal(0, part1.PageIndex);
+        Assert.True(part1.Y > 0f, "Part 1 Y should be > 0");
+        Assert.True(part1.StrokeWidth > 0f);
+        Assert.True(part1.Fill.A > 0f);
+
+        // Part 2 on page 1 is split into fill rect + stroke rect
+        var page1Rounded = roundedRects.Where(r => r.PageIndex == 1).ToList();
+        var part2Fill = page1Rounded.FirstOrDefault(r => r.Fill.A > 0f);
+        var part2Stroke = page1Rounded.FirstOrDefault(r => r.StrokeWidth > 0f);
+
+        Assert.NotNull(part2Fill);
+        Assert.NotNull(part2Stroke);
+        Assert.Equal(0f, part2Stroke.Y);
+        Assert.True(part2Fill.Fill.A > 0f);
+        Assert.True(part2Stroke.StrokeWidth > 0f);
+    }
+
+    [Fact]
+    public void RoundedRectContainer_ExactRealTemplate_SplitsAcrossPages()
+    {
+        // Use the EXACT HTML from the real SalesReport template — the full structure
+        // that the user says shows "full border on page 0, only top border on page 1".
+        string html = @"
+            <div style='background-color:#1e40af; color:#ffffff; padding:20px 24px; margin-bottom:20px'>
+                <div style='font-size:10px; text-transform:uppercase'>ACME CORPORATION</div>
+                <h1 style='font-size:22px'>Quarterly Sales Report</h1>
+                <div style='font-size:13px'>Q1 2026 - Executive Summary</div>
+                <div style='font-size:10px; border-top:1px solid #ffffff40; padding-top:10px; margin-top:10px'>Generated: July 08, 2026</div>
+            </div>
+            <div style='display:flex; flex-direction:row; gap:10px; margin-bottom:10px'>
+                <div style='background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:14px 18px; flex:1'>
+                    <div style='font-size:10px; text-transform:uppercase; text-decoration:underline; color:#64748b; margin-bottom:6px'>Total Revenue</div>
+                    <div style='font-size:24px; font-weight:700; color:#16a34a'>$59,999.99</div>
+                </div>
+                <div style='background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:14px 18px; flex:1'>
+                    <div style='font-size:10px; text-transform:uppercase; text-decoration:underline; color:#64748b; margin-bottom:6px'>Units Sold</div>
+                    <div style='font-size:24px; font-weight:700; color:#475569'>5,000</div>
+                </div>
+                <div style='background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:14px 18px; flex:1'>
+                    <div style='font-size:10px; text-transform:uppercase; text-decoration:underline; color:#64748b; margin-bottom:6px'>Product Lines</div>
+                    <div style='font-size:24px; font-weight:700; color:#1e40af'>50</div>
+                </div>
+            </div>
+            <div style='font-size:14px; font-weight:700; margin-bottom:10px; padding-bottom:8px; border-bottom:2px solid #e2e8f0'>Layout Demo — Flexbox Enhancements</div>
+            <div style='background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:18px; margin-bottom:16px'>
+                <div style='font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:8px'>1. flex-wrap: wrap</div>
+                <div style='display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px'>
+                    <span style='display:inline-block; padding:4px 12px; font-size:10px; font-weight:600; border-radius:20px; background-color:#e0e7ff; color:#3730a3'>Electronics</span>
+                    <span style='display:inline-block; padding:4px 12px; font-size:10px; font-weight:600; border-radius:20px; background-color:#fef3c7; color:#92400e'>Accessories</span>
+                    <span style='display:inline-block; padding:4px 12px; font-size:10px; font-weight:600; border-radius:20px; background-color:#e0e7ff; color:#3730a3'>Audio</span>
+                    <span style='display:inline-block; padding:4px 12px; font-size:10px; font-weight:600; border-radius:20px; background-color:#e0e7ff; color:#3730a3'>Furniture</span>
+                    <span style='display:inline-block; padding:4px 12px; font-size:10px; font-weight:600; border-radius:20px; background-color:#fef3c7; color:#92400e'>Stationery</span>
+                    <span style='display:inline-block; padding:4px 12px; font-size:10px; font-weight:600; border-radius:20px; background-color:#e0e7ff; color:#3730a3'>Office</span>
+                </div>
+            </div>
+            <div style='background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:18px; margin-bottom:16px'>
+                <div style='font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:8px'>2. flex-grow</div>
+                <div style='display:flex; flex-direction:row; gap:4px'>
+                    <div style='height:32px; flex:1; background-color:#3b82f6; border-radius:6px; font-size:10px; font-weight:700; color:white; text-align:center; line-height:32px'>flex: 1</div>
+                    <div style='height:32px; flex:2; background-color:#8b5cf6; border-radius:6px; font-size:10px; font-weight:700; color:white; text-align:center; line-height:32px'>flex: 2</div>
+                    <div style='height:32px; flex:1; background-color:#10b981; border-radius:6px; font-size:10px; font-weight:700; color:white; text-align:center; line-height:32px'>flex: 1</div>
+                </div>
+            </div>
+            <div style='background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:18px; margin-bottom:16px'>
+                <div style='font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:8px'>3. flex-shrink</div>
+                <div style='display:flex; flex-direction:row; gap:6px; width:100%'>
+                    <div style='padding:8px 10px; border-radius:6px; font-size:10px; font-weight:600; text-align:center; color:white; flex:1 1 160px; background-color:#f59e0b'>shrink: 1</div>
+                    <div style='padding:8px 10px; border-radius:6px; font-size:10px; font-weight:600; text-align:center; color:white; flex:1 1 160px; background-color:#ef4444'>shrink: 2</div>
+                    <div style='padding:8px 10px; border-radius:6px; font-size:10px; font-weight:600; text-align:center; color:white; flex:1 1 160px; background-color:#06b6d4'>shrink: 1</div>
+                </div>
+            </div>
+            <div style='font-size:14px; font-weight:700; margin-bottom:10px; padding-bottom:8px; border-bottom:2px solid #e2e8f0'>Key Highlights</div>
+            <ul style='background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:16px 20px 16px 36px; margin-bottom:16px; page-break-inside:avoid'>
+                <li style='margin-bottom:6px; font-size:12px; line-height:1.5'>Total revenue reached <strong>$59,999.99</strong></li>
+                <li style='margin-bottom:6px; font-size:12px; line-height:1.5'>Over <strong>5,000</strong> units sold</li>
+                <li style='margin-bottom:6px; font-size:12px; line-height:1.5'>New product categories expanded</li>
+                <li style='margin-bottom:0; font-size:12px; line-height:1.5'>Operational efficiency improved</li>
+            </ul>
+            <div style='font-size:14px; font-weight:700; margin-bottom:10px; padding-bottom:8px; border-bottom:2px solid #e2e8f0'>Top 5 Best Sellers</div>
+            <div style='background-color:#ffffff; border:2px solid #94a3b8; border-radius:10px; margin-bottom:16px'>
+                <ol style='padding:16px 20px 16px 44px; margin:0'>
+                    <li style='margin-bottom:8px; font-size:12px; line-height:1.5'>
+                        <span style='font-weight:700'>Laptop Pro 15</span>
+                        - <span style='color:#16a34a'>$179,880.00</span>
+                        (120 units)
+                        <ul style='margin-top:6px; margin-left:24px'>
+                            <li style='font-size:11px; color:#64748b'>Category margin: $524.65 per unit</li>
+                            <li style='font-size:11px; color:#64748b'>Quarter-over-quarter growth: +15%</li>
+                        </ul>
+                    </li>
+                    <li style='margin-bottom:8px; font-size:12px; line-height:1.5'>
+                        <span style='font-weight:700'>Wireless Headphones</span>
+                        - <span style='color:#16a34a'>$49,997.50</span>
+                        (250 units)
+                        <ul style='margin-top:6px; margin-left:24px'>
+                            <li style='font-size:11px; color:#64748b'>Category margin: $69.00 per unit</li>
+                            <li style='font-size:11px; color:#64748b'>Quarter-over-quarter growth: +22%</li>
+                        </ul>
+                    </li>
+                    <li style='margin-bottom:8px; font-size:12px; line-height:1.5'>
+                        <span style='font-weight:700'>Ergonomic Office Chair</span>
+                        - <span style='color:#16a34a'>$29,707.50</span>
+                        (85 units)
+                        <ul style='margin-top:6px; margin-left:24px'>
+                            <li style='font-size:11px; color:#64748b'>Category margin: $122.32 per unit</li>
+                            <li style='font-size:11px; color:#64748b'>Quarter-over-quarter growth: +8%</li>
+                        </ul>
+                    </li>
+                    <li style='margin-bottom:8px; font-size:12px; line-height:1.5'>
+                        <span style='font-weight:700'>4K UltraWide Monitor</span>
+                        - <span style='color:#16a34a'>$41,940.00</span>
+                        (60 units)
+                        <ul style='margin-top:6px; margin-left:24px'>
+                            <li style='font-size:11px; color:#64748b'>Category margin: $244.65 per unit</li>
+                            <li style='font-size:11px; color:#64748b'>Quarter-over-quarter growth: +18%</li>
+                        </ul>
+                    </li>
+                    <li style='margin-bottom:8px; font-size:12px; line-height:1.5'>
+                        <span style='font-weight:700'>Mechanical Keyboard</span>
+                        - <span style='color:#16a34a'>$52,890.00</span>
+                        (410 units)
+                        <ul style='margin-top:6px; margin-left:24px'>
+                            <li style='font-size:11px; color:#64748b'>Category margin: $45.15 per unit</li>
+                            <li style='font-size:11px; color:#64748b'>Quarter-over-quarter growth: +25%</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var roundedRects = result.Primitives.OfType<RectPrimitive>()
+            .Where(r => r.BorderRadius > 0f && r.Fill.A > 0f && r.StrokeWidth > 0f)
+            .OrderBy(r => r.PageIndex).ThenBy(r => r.Y).ToList();
+
+        Assert.True(result.PageCount >= 2,
+            $"Content should span at least 2 pages, got {result.PageCount}");
+
+        // Debug: dump ALL rounded rect details and page break positions
+        var pageBreakPositions = result.Primitives
+            .Select((p, i) => (Idx: i, Prim: p))
+            .Where(x => x.Prim is PageBreakPrimitive)
+            .Select(x => x.Idx)
+            .ToList();
+
+        var rectDebug = string.Join("; ",
+            roundedRects.Select(r => $"P{r.PageIndex}[Y={r.Y:F1},H={r.Height:F1},SW={r.StrokeWidth:F2}]"));
+        var breakDebug = $"pageBreaks=[{string.Join(",", pageBreakPositions)}]";
+
+        // The container has border:2px (SW≈1.5). Find rects with the larger stroke.
+        var containerRects = result.Primitives.OfType<RectPrimitive>()
+            .Where(r => r.BorderRadius > 0f && r.Fill.A > 0f && r.StrokeWidth > 1f)
+            .OrderBy(r => r.PageIndex).ThenBy(r => r.Y).ToList();
+
+        Assert.True(containerRects.Count >= 1,
+            $"Expected at least 1 full container rect, got {containerRects.Count}");
+
+        var part1 = containerRects[0];
+
+        Assert.Equal(0, part1.PageIndex);
+        Assert.True(part1.Y > 0f, "Part 1 Y should be > 0");
+        Assert.True(part1.Height > 0f, "Part 1 height should be > 0");
+
+        Assert.True(part1.StrokeWidth > 0f, "Part 1 must have stroke");
+        Assert.True(part1.Fill.A > 0f, "Part 1 must have fill");
+
+        // Part 2 on page 1 is split into fill rect + stroke rect
+        var allRounded = result.Primitives.OfType<RectPrimitive>()
+            .Where(r => r.BorderRadius > 0f)
+            .ToList();
+
+        var part2Stroke = allRounded.FirstOrDefault(r => r.PageIndex == 1 && r.StrokeWidth > 1f);
+        var part2Fill = allRounded.FirstOrDefault(r => r.PageIndex == 1 && r.Fill.A > 0f);
+
+        Assert.NotNull(part2Stroke);
+        Assert.NotNull(part2Fill);
+        Assert.Equal(0f, part2Stroke.Y);
+        Assert.True(part2Stroke.Height > 0f, "Part 2 stroke height should be > 0");
+        Assert.True(part2Stroke.StrokeWidth > 0f, "Part 2 must have stroke");
+        Assert.True(part2Fill.Fill.A > 0f, "Part 2 must have fill");
+    }
+
+    [Fact]
     public void TextPrimitive_IsOnCorrectPage()
     {
         LayoutResult result = RunLayout("<div>Only page</div>");

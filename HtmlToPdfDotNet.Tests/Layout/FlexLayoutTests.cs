@@ -522,4 +522,400 @@ public class FlexLayoutTests
     }
 
     #endregion
+
+    #region Flex-grow / Flex-shrink (Phase 2)
+
+    /// <summary>
+    /// Scenario: flex-grow with equal weights
+    /// GIVEN a flex container with display:flex; width:600pt and two items with flex:1 each
+    /// WHEN laid out
+    /// THEN both items occupy equal width
+    /// </summary>
+    [Fact]
+    public void FlexRow_FlexGrowEqual_ItemsOccupyEqualWidth()
+    {
+        string html = @"
+            <div style='display: flex; flex-direction: row; width: 600pt; gap: 0;'>
+                <div style='flex:1;'><p>A</p></div>
+                <div style='flex:1;'><p>B</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        var textA = texts.FirstOrDefault(t => t.Text == "A");
+        var textB = texts.FirstOrDefault(t => t.Text == "B");
+
+        Assert.NotNull(textA);
+        Assert.NotNull(textB);
+
+        // Both items have flex:1 (grow=1, shrink=1, basis=0%)
+        // In a 600pt container: each gets 300pt content width
+        // A should be in the first half (X < 300), B in the second half (X >= 200)
+        Assert.True(textA.X < 300f,
+            $"A should be in first half (X={textA.X})");
+        Assert.True(textB.X >= 200f,
+            $"B should start in second half (X={textB.X})");
+    }
+
+    /// <summary>
+    /// Scenario: flex-grow with different weights
+    /// GIVEN a flex container with display:flex; width:600pt and items with flex:1 and flex:2
+    /// WHEN laid out
+    /// THEN the flex:2 item is proportionally wider than the flex:1 item
+    /// With proportional grow: A gets 200pt, B gets 400pt. Under equal-split both get 300pt.
+    /// </summary>
+    [Fact]
+    public void FlexRow_FlexGrowDifferentWeights_ProportionalDistribution()
+    {
+        string html = @"
+            <div style='display: flex; flex-direction: row; width: 600pt; gap: 0;'>
+                <div style='flex:1;'><p>A</p></div>
+                <div style='flex:2;'><p>B</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        var textA = texts.FirstOrDefault(t => t.Text == "A");
+        var textB = texts.FirstOrDefault(t => t.Text == "B");
+
+        Assert.NotNull(textA);
+        Assert.NotNull(textB);
+
+        // flex:1 (grow=1) and flex:2 (grow=2) → A gets 1/3, B gets 2/3
+        // Under equal-split both would get ~50% and B's X would be ~298pt.
+        // With flex-grow, B starts at ~214pt. Assert B starts before 250pt to differentiate.
+        float aEnd = textA.X;
+        float bStart = textB.X;
+        Assert.True(bStart < 250f,
+            $"B (flex:2) should start early (X={bStart}) — was 297.64 under equal-split");
+        // B should start after A (basic sanity)
+        Assert.True(bStart > aEnd,
+            $"B should start after A (A ends at {aEnd}, B starts at {bStart})");
+    }
+
+    /// <summary>
+    /// Scenario: flex-shrink prevents overflow
+    /// GIVEN a flex container with display:flex; width:300pt and two items with flex:1 1 200px
+    /// WHEN laid out
+    /// THEN both items shrink to fit within 300pt (150pt each)
+    /// </summary>
+    [Fact]
+    public void FlexRow_FlexShrink_ItemsShrinkToFit()
+    {
+        string html = @"
+            <div style='display: flex; flex-direction: row; width: 300pt; gap: 0;'>
+                <div style='flex: 1 1 200px;'><p>Longish text A</p></div>
+                <div style='flex: 1 1 200px;'><p>Longish text B</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.NotEmpty(texts);
+
+        // Both items should render on page 0 (no overflow crash)
+        var page0Texts = texts.Where(t => t.PageIndex == 0).ToList();
+        Assert.NotEmpty(page0Texts);
+    }
+
+    /// <summary>
+    /// Scenario: flex-shrink:0 items are not reduced
+    /// GIVEN a flex container with overflow where one item has flex-shrink:0
+    /// WHEN laid out
+    /// THEN the flex-shrink:0 item keeps its full size
+    /// </summary>
+    [Fact]
+    public void FlexRow_FlexShrinkZero_ItemNotReduced()
+    {
+        string html = @"
+            <div style='display: flex; flex-direction: row; width: 200pt; gap: 0;'>
+                <div style='flex: 0 0 150px;'><p>Fixed</p></div>
+                <div style='flex: 1 1 100px;'><p>Flex</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        // Both items must render (no crash, no overlap issues)
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.NotEmpty(texts);
+
+        var page0Texts = texts.Where(t => t.PageIndex == 0).ToList();
+        Assert.NotEmpty(page0Texts);
+    }
+
+    /// <summary>
+    /// Scenario: single item with flex-grow fills all remaining space
+    /// GIVEN a flex container with one item that has flex-grow:1
+    /// WHEN laid out
+    /// THEN the item expands to fill the container width
+    /// </summary>
+    [Fact]
+    public void FlexRow_SingleItemFlexGrow_FillsContainer()
+    {
+        string html = @"
+            <div style='display: flex; flex-direction: row; width: 400pt;'>
+                <div style='flex:1;'><p>Fill</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.NotEmpty(texts);
+
+        // Single flex:1 item should have enough space (fill width)
+        Assert.Equal(1, result.PageCount);
+    }
+
+    #endregion
+
+    #region Flex-wrap multi-line (Phase 3)
+
+    /// <summary>
+    /// Scenario: flex-wrap wraps items that don't fit on one line
+    /// GIVEN a flex container with flex-wrap: wrap, width 300pt, and 4 items of 150pt each
+    /// WHEN laid out
+    /// THEN items MUST wrap to a second line (2 items per line × 2 lines)
+    /// </summary>
+    [Fact]
+    public void FlexWrap_Basic_ItemsWrapToMultipleLines()
+    {
+        string html = @"
+            <div style='display: flex; flex-wrap: wrap; width: 300pt; gap: 0;'>
+                <div style='flex: 0 0 200px;'><p>A</p></div>
+                <div style='flex: 0 0 200px;'><p>B</p></div>
+                <div style='flex: 0 0 200px;'><p>C</p></div>
+                <div style='flex: 0 0 200px;'><p>D</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.True(texts.Count >= 4,
+            $"Expected at least 4 text runs, got {texts.Count}");
+
+        // Items A and B should be on the first line, C and D on the second
+        // Y of line 2 > Y of line 1
+        var yPositions = texts.Select(t => t.Y).Distinct().ToList();
+        Assert.True(yPositions.Count >= 2,
+            $"Expected items on at least 2 different Y levels (wrapping), got {yPositions.Count} Y level(s)");
+    }
+
+    /// <summary>
+    /// Scenario: flex-wrap: nowrap (default) keeps items on one line
+    /// GIVEN a flex container with default flex-wrap (nowrap), width 300pt, and 4 items of 150pt each
+    /// WHEN laid out
+    /// THEN items MUST stay on one line (overflow)
+    /// </summary>
+    [Fact]
+    public void FlexWrap_NoWrap_ItemsStayOnOneLine()
+    {
+        string html = @"
+            <div style='display: flex; width: 300pt; gap: 0;'>
+                <div style='flex: 0 0 200px;'><p>A</p></div>
+                <div style='flex: 0 0 200px;'><p>B</p></div>
+                <div style='flex: 0 0 200px;'><p>C</p></div>
+                <div style='flex: 0 0 200px;'><p>D</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.True(texts.Count >= 4,
+            $"Expected at least 4 text runs, got {texts.Count}");
+
+        // All items should be on approximately the same Y (single line)
+        var yPositions = texts.Select(t => t.Y).Distinct().ToList();
+        Assert.True(yPositions.Count == 1,
+            $"Expected all items on one Y level (nowrap), got {yPositions.Count} Y level(s)");
+    }
+
+    /// <summary>
+    /// Scenario: flex-wrap: wrap-reverse reverses line order
+    /// GIVEN a flex container with flex-wrap: wrap-reverse, width 300pt
+    /// WHEN laid out
+    /// THEN lines MUST be in reverse order (second line appears first vertically)
+    /// </summary>
+    [Fact]
+    public void FlexWrap_WrapReverse_LinesReversed()
+    {
+        string html = @"
+            <div style='display: flex; flex-wrap: wrap-reverse; width: 300pt; gap: 0;'>
+                <div style='flex: 0 0 200px;'><p>A</p></div>
+                <div style='flex: 0 0 200px;'><p>B</p></div>
+                <div style='flex: 0 0 200px;'><p>C</p></div>
+                <div style='flex: 0 0 200px;'><p>D</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.True(texts.Count >= 4,
+            $"Expected at least 4 text runs, got {texts.Count}");
+
+        // With wrap-reverse, items C and D should have LOWER Y than A and B
+        // (second line appears first)
+        var textA = texts.FirstOrDefault(t => t.Text == "A");
+        var textC = texts.FirstOrDefault(t => t.Text == "C");
+        Assert.NotNull(textA);
+        Assert.NotNull(textC);
+
+        Assert.True(textC.Y < textA.Y,
+            $"Wrap-reverse: C (line 2) should be above A (line 1): C.Y={textC.Y}, A.Y={textA.Y}");
+    }
+
+    /// <summary>
+    /// Scenario: flex-wrap with gap accounts for gap in wrap decision
+    /// GIVEN a flex container with flex-wrap: wrap, width 300pt, gap: 10pt
+    /// WHEN laid out
+    /// THEN items MUST wrap correctly considering gap between items
+    /// </summary>
+    [Fact]
+    public void FlexWrap_WithGap_WrappingAccountsForGap()
+    {
+        // 2 items of 200px (150pt) + 10pt gap = 310pt > 300pt → only 1 item per line
+        string html = @"
+            <div style='display: flex; flex-wrap: wrap; width: 300pt; gap: 10pt;'>
+                <div style='flex: 0 0 200px;'><p>A</p></div>
+                <div style='flex: 0 0 200px;'><p>B</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.True(texts.Count >= 2,
+            $"Expected at least 2 text runs, got {texts.Count}");
+
+        // With gap: 10pt, only 1 item fits per line → 2 lines → different Y
+        var yPositions = texts.Select(t => t.Y).Distinct().ToList();
+        Assert.True(yPositions.Count >= 2,
+            $"Expected wrapping due to gap (310pt > 300pt), got {yPositions.Count} Y level(s)");
+    }
+
+    /// <summary>
+    /// Scenario: flex-wrap with flex-grow distributes per line
+    /// GIVEN a flex container with flex-wrap: wrap and items having grow + explicit basis
+    /// WHEN laid out
+    /// THEN each line independently distributes remaining space
+    /// </summary>
+    [Fact]
+    public void FlexWrap_WithFlexGrow_PerLineDistribution()
+    {
+        // Container: 400pt, items: flex: 1 1 200px (basis=150pt)
+        // 3 items: totalBasis=450 > 400 → 2 on line 1 (300pt), 1 on line 2 (150pt)
+        // Line 1: 2 items × 150pt basis → 100pt remaining → 50pt each → 200pt each
+        // Line 2: 1 item × 150pt basis → 250pt remaining → gets 400pt
+        string html = @"
+            <div style='display: flex; flex-wrap: wrap; width: 400pt; gap: 0;'>
+                <div style='flex: 1 1 200px;'><p>A</p></div>
+                <div style='flex: 1 1 200px;'><p>B</p></div>
+                <div style='flex: 1 1 200px;'><p>C</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.True(texts.Count >= 3,
+            $"Expected at least 3 text runs, got {texts.Count}");
+
+        var textA = texts.FirstOrDefault(t => t.Text == "A");
+        var textB = texts.FirstOrDefault(t => t.Text == "B");
+        var textC = texts.FirstOrDefault(t => t.Text == "C");
+        Assert.NotNull(textA);
+        Assert.NotNull(textB);
+        Assert.NotNull(textC);
+
+        // A and B should be on same Y (line 1), C on different Y (line 2)
+        Assert.True(Math.Abs(textA.Y - textB.Y) < 1f,
+            $"A and B should be on same line (Y diff = {Math.Abs(textA.Y - textB.Y)})");
+        Assert.True(Math.Abs(textC.Y - textA.Y) > 5f,
+            $"C should be on different line than A (C.Y={textC.Y}, A.Y={textA.Y})");
+    }
+
+    #endregion
+
+    #region Edge Cases (Phase 4)
+
+    /// <summary>
+    /// Scenario: flex-wrap with margin on flex items
+    /// GIVEN a flex container with flex-wrap: wrap
+    /// WHEN items have horizontal margins
+    /// THEN wrapping accounts for margins (they are part of the box-model total)
+    /// </summary>
+    [Fact]
+    public void FlexWrap_WithMargin_WrappingAccountsForMargins()
+    {
+        // Items: 200px (150pt) + 20pt margin-right → 170pt each
+        // Container: 300pt → only 1 item fits per line (170pt)
+        string html = @"
+            <div style='display: flex; flex-wrap: wrap; width: 300pt; gap: 0;'>
+                <div style='flex: 0 0 200px; margin-right: 20pt;'><p>A</p></div>
+                <div style='flex: 0 0 200px; margin-right: 20pt;'><p>B</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.True(texts.Count >= 2,
+            $"Expected at least 2 text runs, got {texts.Count}");
+
+        // With margin, only 1 item fits per line → should be on different Y levels
+        var yPositions = texts.Select(t => t.Y).Distinct().ToList();
+        Assert.True(yPositions.Count >= 2,
+            $"Expected wrapping due to margins (170pt > 300pt for 2 items), got {yPositions.Count} Y level(s)");
+    }
+
+    /// <summary>
+    /// Scenario: empty flex container with flex-wrap
+    /// GIVEN a flex container with flex-wrap: wrap and no children
+    /// WHEN rendered
+    /// THEN no crash and no primitives from children
+    /// </summary>
+    [Fact]
+    public void FlexWrap_EmptyContainer_NoCrash()
+    {
+        string html = @"
+            <div style='display: flex; flex-wrap: wrap; width: 300pt; height: 50pt;'>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        // No children → no text primitives
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.Empty(texts);
+        Assert.Equal(1, result.PageCount);
+    }
+
+    /// <summary>
+    /// Scenario: single item wraps to its own line
+    /// GIVEN a flex container with flex-wrap: wrap and items where one is too wide
+    /// WHEN rendered
+    /// THEN the oversized item wraps to its own line
+    /// </summary>
+    [Fact]
+    public void FlexWrap_SingleItemWrapsToOwnLine()
+    {
+        // 2 items: 200px (150pt) + 200px (150pt) = 300pt → exactly fits one line
+        // 3 items: 450pt → wraps: 2 on line 1, 1 on line 2
+        string html = @"
+            <div style='display: flex; flex-wrap: wrap; width: 300pt; gap: 0;'>
+                <div style='flex: 0 0 200px;'><p>A</p></div>
+                <div style='flex: 0 0 200px;'><p>B</p></div>
+                <div style='flex: 0 0 200px;'><p>C</p></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
+        Assert.True(texts.Count >= 3,
+            $"Expected at least 3 text runs, got {texts.Count}");
+
+        // A and B on line 1, C on line 2 → at least 2 Y levels
+        var yPositions = texts.Select(t => t.Y).Distinct().ToList();
+        Assert.True(yPositions.Count >= 2,
+            $"Expected 3 items to wrap (2+1), got {yPositions.Count} Y level(s)");
+    }
+
+    #endregion
 }

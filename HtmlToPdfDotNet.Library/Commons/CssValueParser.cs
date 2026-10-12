@@ -390,6 +390,109 @@ public static class CssValueParser
     };
     #endregion
 
+    #region Flexbox
+
+    /// <summary>
+    /// Parses a CSS flex-wrap value.
+    /// </summary>
+    public static FlexWrap ParseFlexWrap(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "wrap" => FlexWrap.Wrap,
+        "wrap-reverse" => FlexWrap.WrapReverse,
+        _ => FlexWrap.Nowrap,
+    };
+
+    /// <summary>
+    /// Parses a CSS align-content value.
+    /// </summary>
+    public static AlignContent ParseAlignContent(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "flex-start" => AlignContent.FlexStart,
+        "flex-end" => AlignContent.FlexEnd,
+        "center" => AlignContent.Center,
+        "space-between" => AlignContent.SpaceBetween,
+        "space-around" => AlignContent.SpaceAround,
+        _ => AlignContent.Stretch,
+    };
+
+    /// <summary>
+    /// Parses a CSS flex-grow value (float, default 0).
+    /// </summary>
+    public static float ParseFlexGrow(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0f;
+        return TryParseFloat(value.Trim(), out float result) ? result : 0f;
+    }
+
+    /// <summary>
+    /// Parses a CSS flex-shrink value (float, default 1).
+    /// </summary>
+    public static float ParseFlexShrink(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 1f;
+        return TryParseFloat(value.Trim(), out float result) ? result : 1f;
+    }
+
+    /// <summary>
+    /// Parses the CSS flex shorthand.
+    /// Supported forms:
+    ///   "none" → (0, 0, auto)
+    ///   "N" → grow=N, shrink=1, basis=0%
+    ///   "N M" → grow=N, shrink=M, basis=0%
+    ///   "N L" → grow=N, shrink=1, basis=L
+    ///   "N M L" → grow=N, shrink=M, basis=L
+    /// </summary>
+    /// <returns>A tuple (flexGrow, flexShrink, flexBasis).</returns>
+    public static (float grow, float shrink, CssLength basis) ParseFlexShorthand(string? value, float parentFontSize)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return (0f, 1f, CssLength.Auto);
+
+        string v = value.Trim();
+
+        if (v.Equals("none", StringComparison.OrdinalIgnoreCase))
+            return (0f, 0f, CssLength.Auto);
+
+        string[] parts = v.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return (0f, 1f, CssLength.Auto);
+
+        float grow = TryParseFloat(parts[0], out float g) ? g : 0f;
+        float shrink = 1f;
+        CssLength basis = CssLength.Zero;  // default basis for explicit flex values
+
+        if (parts.Length == 1)
+        {
+            // Single number: grow=X, shrink=1, basis=0%
+            basis = new CssLength(0f);
+        }
+        else if (parts.Length == 2)
+        {
+            // Two values: could be (grow, shrink) or (grow, basis)
+            if (TryParseFloat(parts[1], out float s))
+            {
+                // Second value is a number → (grow, shrink), basis=0%
+                shrink = s;
+                basis = new CssLength(0f);
+            }
+            else
+            {
+                // Second value is a length → (grow, basis), shrink=1
+                basis = ParseLength(parts[1], parentFontSize);
+            }
+        }
+        else if (parts.Length >= 3)
+        {
+            // Three values: (grow, shrink, basis)
+            shrink = TryParseFloat(parts[1], out float sh) ? sh : 1f;
+            basis = ParseLength(parts[2], parentFontSize);
+        }
+
+        return (grow, shrink, basis);
+    }
+
+    #endregion
+
     #region Helpers
     /// <summary>
     /// Tries to parse a float from a string.

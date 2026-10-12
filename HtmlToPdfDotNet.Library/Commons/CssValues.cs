@@ -273,6 +273,39 @@ public enum AlignItems
 }
 
 /// <summary>
+/// Value of flex-wrap CSS property.
+/// </summary>
+public enum FlexWrap
+{
+    /// <summary>Items are laid out in a single line (default).</summary>
+    Nowrap,
+    /// <summary>Items wrap onto multiple lines when they overflow.</summary>
+    Wrap,
+    /// <summary>Items wrap onto multiple lines in reverse order.</summary>
+    WrapReverse
+}
+
+/// <summary>
+/// Value of align-content CSS property.
+/// Controls distribution of lines in the cross-axis of a wrapped flex container.
+/// </summary>
+public enum AlignContent
+{
+    /// <summary>Lines are packed toward the start of the cross axis.</summary>
+    FlexStart,
+    /// <summary>Lines are packed toward the end of the cross axis.</summary>
+    FlexEnd,
+    /// <summary>Lines are centered along the cross axis.</summary>
+    Center,
+    /// <summary>Lines are evenly distributed with equal space between them.</summary>
+    SpaceBetween,
+    /// <summary>Lines are evenly distributed with equal space around them.</summary>
+    SpaceAround,
+    /// <summary>Lines stretch to fill the remaining space (default).</summary>
+    Stretch
+}
+
+/// <summary>
 /// Represents a CSS border style.
 /// </summary>
 public enum BorderStyle
