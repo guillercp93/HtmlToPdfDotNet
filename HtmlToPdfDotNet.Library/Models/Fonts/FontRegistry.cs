@@ -19,7 +19,9 @@ namespace HtmlToPdfDotNet.Library.Models.Fonts;
 public sealed class FontRegistry
 {
     #region Internal records
-    private record FaceKey(string Family, bool Bold, bool Italic);
+    // Value type: lookups build up to four keys per family alias without heap allocations.
+    // Equality stays member-wise (ordinal Family, Bold, Italic), as with the former record class.
+    private readonly record struct FaceKey(string Family, bool Bold, bool Italic);
 
     private readonly Dictionary<FaceKey, EmbeddedFontInfo> _cache = new();
     private readonly object _sync = new();

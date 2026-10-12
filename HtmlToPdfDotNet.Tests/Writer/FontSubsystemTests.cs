@@ -378,6 +378,76 @@ public class FontRegistryTests
         Assert.Null(ex);
     }
 
+    [Theory]
+    [InlineData("DejaVu Sans")]
+    [InlineData("dejavu sans")]
+    [InlineData("DEJAVU SANS")]
+    [InlineData("  DejaVu Sans\t")]
+    public void Resolve_CaseAndWhitespaceVariants_ReturnSameFace(string lookup)
+    {
+        if (!Fonts.Available) return;
+        FontRegistry reg = new();
+        reg.RegisterFont(Fonts.Regular, "DejaVu Sans");
+        Assert.True(reg.TryResolve("DejaVu Sans", false, false, out EmbeddedFontInfo? expected));
+
+        Assert.True(reg.TryResolve(lookup, false, false, out EmbeddedFontInfo? info));
+        Assert.Same(expected, info);
+    }
+
+    [Fact]
+    public void Resolve_InnerWhitespaceDiffers_ReturnsFalse()
+    {
+        if (!Fonts.Available) return;
+        FontRegistry reg = new();
+        reg.RegisterFont(Fonts.Regular, "DejaVu Sans");
+
+        Assert.False(reg.TryResolve("DejaVu  Sans", false, false, out _));
+    }
+
+    [Fact]
+    public void Resolve_ExactStyleWinsOverFallback()
+    {
+        if (!Fonts.Available || !File.Exists(Fonts.Bold)) return;
+        FontRegistry reg = new();
+        reg.RegisterFont(Fonts.Regular, "DejaVu Sans", bold: false, italic: false);
+        reg.RegisterFont(Fonts.Bold, "DejaVu Sans", bold: true, italic: false);
+
+        Assert.True(reg.TryResolve("dejavu sans", bold: true, italic: false, out EmbeddedFontInfo? bold));
+        Assert.True(reg.TryResolve("dejavu sans", bold: false, italic: true, out EmbeddedFontInfo? italic));
+        Assert.True(reg.TryResolve("dejavu sans", bold: true, italic: true, out EmbeddedFontInfo? boldItalic));
+
+        Assert.True(bold!.IsBold);
+        Assert.False(italic!.IsBold);   // italic falls back to regular
+        Assert.True(boldItalic!.IsBold); // bold-italic falls back to bold, not regular
+    }
+
+    [Fact]
+    public void Resolve_GenericAlias_ResolvesRegisteredConcreteFamily()
+    {
+        if (!Fonts.Available) return;
+        FontRegistry reg = new();
+        reg.RegisterFont(Fonts.Regular, "Arial");
+        Assert.True(reg.TryResolve("Arial", false, false, out EmbeddedFontInfo? expected));
+
+        Assert.True(reg.TryResolve("Sans-Serif", false, false, out EmbeddedFontInfo? viaGeneric));
+        Assert.True(reg.TryResolve("Helvetica", false, false, out EmbeddedFontInfo? viaAlias));
+        Assert.Same(expected, viaGeneric);
+        Assert.Same(expected, viaAlias);
+    }
+
+    [Fact]
+    public void RegisterFont_SameKeyDifferentCase_KeepsFirstFace()
+    {
+        if (!Fonts.Available || !File.Exists(Fonts.Bold)) return;
+        FontRegistry reg = new();
+        reg.RegisterFont(Fonts.Regular, "DejaVu Sans");
+        reg.RegisterFont(Fonts.Bold, " DEJAVU SANS ");
+
+        Assert.True(reg.TryResolve("DejaVu Sans", false, false, out EmbeddedFontInfo? info));
+        Assert.False(info!.IsBold);
+        Assert.Single(reg.AllFonts);
+    }
+
     [Fact]
     public void HasFamily_ReturnsTrueWhenRegistered()
     {
