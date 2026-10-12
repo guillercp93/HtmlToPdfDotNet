@@ -36,7 +36,7 @@ Out of scope: `Dictionary<HtmlNode, ComputedStyle>` hashing, `FontRegistry` lock
     classes, extra whitespace in `class`, descendant selectors, case handling.
   - Replace `Split` + LINQ `Any` with span-based class token scan.
   - Replace per-element `List` + `OrderBy` + `ToList` with a reused buffer and a stable sort.
-- [ ] T2 — Rule index by id / class / tag (route: delegated, writer trigger: resolver + index + tests)
+- [~] T2 — Rule index by id / class / tag — DROPPED (no measured gain) (route: delegated, writer trigger: resolver + index + tests)
   - Bucket rules by the key of the selector's last part; per element test only candidate buckets
     plus universal rules; merge preserving cascade order.
 
@@ -78,10 +78,25 @@ Evidence:
   recursion (not an instance field), since `StyleResolver` is a public type that callers could share.
 - Not committed by the writer.
 
+## Results — T2 (dropped)
+
+Same-session `--filter '*RunLayout*' --job short`, T1 code vs T1 + rule index:
+
+| Input        | Mean T1      | Mean T2      | Allocated T1 | Allocated T2 |
+|------------- |-------------:|-------------:|-------------:|-------------:|
+| table-report | 24,219.18 us | 23,466.83 us | 15,196.30 KB | 15,202.15 KB |
+| flex-layout  |  7,843.58 us |  8,233.58 us |  4,553.02 KB |  4,558.86 KB |
+| small        |     47.64 us |     46.93 us |     76.92 KB |     78.77 KB |
+
+Differences are within noise. With ~24 rules, brute-force matching is cheap after T1.
+Decision (user): keep only T1. The index (513 tests green) is kept in
+`git stash` as "T2 rule index by id/class/tag (no measured gain on benchmarks)";
+revisit only if a large-stylesheet benchmark shows selector matching as a hot spot.
+
 ## Progress
 
 - Engram mirror `odd/selector-matching-perf/tasks`: pending (Engram tools unavailable this session).
 
 ## Next step
 
-T2.
+Run the full benchmark suite and choose the next target.
