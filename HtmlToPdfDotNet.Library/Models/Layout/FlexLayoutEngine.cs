@@ -184,6 +184,15 @@ public static class FlexLayoutEngine
 
     #region Measurement
 
+    /// <summary>Width of the virtual page used to measure the natural width of auto-basis items.</summary>
+    private const float MeasureWidth = 10000f;
+
+    /// <summary>
+    /// Returns <c>true</c> when a primitive's right edge reaches the measurement width,
+    /// i.e. it belongs to an auto-width box stretched to the measurement page.
+    /// </summary>
+    private static bool SpansMeasureWidth(float rightEdge) => rightEdge >= MeasureWidth - 1f;
+
     /// <summary>
     /// Roughly estimates the container height before layout, for page-break-inside decisions.
     /// </summary>
@@ -237,8 +246,8 @@ public static class FlexLayoutEngine
                 {
                     // Flex-basis: auto, no explicit width → measure natural content width
                     // by doing a test layout at a very large width, then reading the
-                    // rightmost text/image extent (RectPrimitives span the full container).
-                    PageLayout measurePage = new(10000f, pageContentH, new PageMargins(0f));
+                    // rightmost extent of text, images, and sized boxes.
+                    PageLayout measurePage = new(MeasureWidth, pageContentH, new PageMargins(0f));
                     BlockLayoutEngine measureEngine = new(measurePage, styles, registry, basePath);
                     LayoutResult measureResult = measureEngine.Layout(item.Node);
 
@@ -269,6 +278,14 @@ public static class FlexLayoutEngine
                             }
                             case ImagePrimitive ip:
                                 maxExtent = Math.Max(maxExtent, ip.X + ip.Width);
+                                break;
+                            // Boxes with an explicit width contribute their extent; auto-width
+                            // boxes stretch to the measurement width and are ignored.
+                            case RectPrimitive rp when !SpansMeasureWidth(rp.X + rp.Width):
+                                maxExtent = Math.Max(maxExtent, rp.X + rp.Width);
+                                break;
+                            case BorderLinePrimitive blp when !SpansMeasureWidth(Math.Max(blp.X1, blp.X2)):
+                                maxExtent = Math.Max(maxExtent, Math.Max(blp.X1, blp.X2));
                                 break;
                         }
                     }
@@ -341,7 +358,7 @@ public static class FlexLayoutEngine
         if (containerStyle.FlexWrap == FlexWrap.Nowrap)
         {
             LayoutRowSegment(items, contentX, contentWidth, result,
-                ref newPage, ref newCursorY, pageContentH, containerStyle, 0f,
+                ref newPage, ref newCursorY, pageContentH, containerStyle,
                 styles, registry, basePath);
         }
         else
@@ -354,9 +371,9 @@ public static class FlexLayoutEngine
 
     /// <summary>
     /// Lays out a single row (segment) of flex items with grow/shrink distribution.
-    /// Used by both single-line and multi-line layouts.
+    /// Used by both single-line and multi-line layouts. The line starts at
+    /// <paramref name="newCursorY"/>, which is advanced past the line on return.
     /// </summary>
-    /// <param name="lineStartY">Starting Y offset for this line (0 for single-line).</param>
     private static void LayoutRowSegment(
         List<FlexItemLayout> items,
         float contentX,
@@ -366,7 +383,6 @@ public static class FlexLayoutEngine
         ref float newCursorY,
         float pageContentH,
         ComputedStyle containerStyle,
-        float lineStartY,
         Dictionary<HtmlNode, ComputedStyle> styles,
         FontRegistry? registry,
         string? basePath)
@@ -527,7 +543,7 @@ public static class FlexLayoutEngine
             float itemMarginLeft = item.Style.Margin.Left.Points;
             float itemMarginTop = item.Style.Margin.Top.Points;
             float itemX = contentX + xPositions[i] + itemMarginLeft;
-            float itemY = newCursorY + lineStartY + yOffset + itemMarginTop;
+            float itemY = newCursorY + yOffset + itemMarginTop;
 
             float bbW = allocatedWidths[i]
                         + item.Style.BorderLeft.Width.Points + item.Style.BorderRight.Width.Points
@@ -662,46 +678,41 @@ public static class FlexLayoutEngine
             totalLinesHeight += lineHeights[l] + (l < lines.Count - 1 ? gap : 0f);
 
         // ── Step 3: Compute Y offsets per line using align-content ──
-        // For multi-line, we need total cross-axis space. For row flex, this is
-        // driven by container height. Since we don't have explicit container height
-        // constraints at this level, align-content defaults to FlexStart.
-        float[] lineYOffsets = new float[lines.Count];
+        // The cross size is the container's definite (content-box) height when set;
+        // otherwise it equals the lines' total height and there is no free space.
+        // Free space is clamped at 0 so lines never start above the container.
+        float crossSize = totalLinesHeight;
+        if (!containerStyle.Height.IsAuto && containerStyle.Height.Points > totalLinesHeight)
+            crossSize = containerStyle.Height.Points;
 
-        float crossAxisTotal = containerStyle.AlignContent switch
-        {
-            AlignContent.FlexEnd => Math.Max(0f, totalLinesHeight),
-            AlignContent.Center => Math.Max(0f, totalLinesHeight),
-            AlignContent.SpaceBetween => totalLinesHeight,
-            AlignContent.SpaceAround => totalLinesHeight,
-            _ => totalLinesHeight, // FlexStart, Stretch
-        };
+        float freeSpace = crossSize - totalLinesHeight;
+        float[] lineYOffsets = new float[lines.Count];
 
         switch (containerStyle.AlignContent)
         {
             case AlignContent.FlexEnd:
             {
-                // Pack toward end (no-op without explicit container height; uses crossAxisTotal)
-                float currentY = crossAxisTotal - totalLinesHeight;
+                float currentY = freeSpace;
                 for (int l = 0; l < lines.Count; l++)
                 {
                     lineYOffsets[l] = currentY;
-                    currentY += lineHeights[l] + (l < lines.Count - 1 ? gap : 0f);
+                    currentY += lineHeights[l] + gap;
                 }
                 break;
             }
             case AlignContent.Center:
             {
-                float currentY = (crossAxisTotal - totalLinesHeight) / 2f;
+                float currentY = freeSpace / 2f;
                 for (int l = 0; l < lines.Count; l++)
                 {
                     lineYOffsets[l] = currentY;
-                    currentY += lineHeights[l] + (l < lines.Count - 1 ? gap : 0f);
+                    currentY += lineHeights[l] + gap;
                 }
                 break;
             }
             case AlignContent.SpaceBetween when lines.Count > 1:
             {
-                float spacing = (crossAxisTotal - totalLinesHeight) / (lines.Count - 1);
+                float spacing = freeSpace / (lines.Count - 1);
                 float currentY = 0f;
                 for (int l = 0; l < lines.Count; l++)
                 {
@@ -712,9 +723,8 @@ public static class FlexLayoutEngine
             }
             case AlignContent.SpaceAround when lines.Count > 1:
             {
-                float spacing = (crossAxisTotal - totalLinesHeight) / lines.Count;
-                float halfSpacing = spacing / 2f;
-                float currentY = halfSpacing;
+                float spacing = freeSpace / lines.Count;
+                float currentY = spacing / 2f;
                 for (int l = 0; l < lines.Count; l++)
                 {
                     lineYOffsets[l] = currentY;
@@ -722,28 +732,33 @@ public static class FlexLayoutEngine
                 }
                 break;
             }
-            default: // FlexStart
+            default: // FlexStart, Stretch
             {
                 float currentY = 0f;
                 for (int l = 0; l < lines.Count; l++)
                 {
                     lineYOffsets[l] = currentY;
-                    currentY += lineHeights[l] + (l < lines.Count - 1 ? gap : 0f);
+                    currentY += lineHeights[l] + gap;
                 }
                 break;
             }
         }
 
         // ── Step 4: Layout each line ──
-        float cursorAdvance = 0f;
+        // Advance the cursor to each line's start before laying it out, so the
+        // segment's page-break check sees the real line position (gap included).
+        float previousLineEnd = 0f;
         for (int l = 0; l < lines.Count; l++)
         {
-            float relativeY = lineYOffsets[l] - cursorAdvance;
+            newCursorY += lineYOffsets[l] - previousLineEnd;
             LayoutRowSegment(lines[l], contentX, contentWidth, result,
-                ref newPage, ref newCursorY, pageContentH, containerStyle, relativeY,
+                ref newPage, ref newCursorY, pageContentH, containerStyle,
                 styles, registry, basePath);
-            cursorAdvance += lineHeights[l];
+            previousLineEnd = lineYOffsets[l] + lineHeights[l];
         }
+
+        // Advance past any remaining cross space after the last line.
+        newCursorY += crossSize - previousLineEnd;
     }
 
     #endregion

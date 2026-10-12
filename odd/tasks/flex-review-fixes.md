@@ -30,7 +30,7 @@ A benchmark baseline must run on correct layout.
   - R3-flex-auto-collapse: `flex: auto` → 1 1 auto, `initial` → 0 1 auto,
     `none` → 0 0 auto, single length (`flex: 200px`) → 1 1 200px.
   - R3-negative-grow: negative `flex-grow` / `flex-shrink` fall back to defaults.
-- [ ] T2 — Flex layout (route: delegated, writer trigger: engine + tests)
+- [x] T2 — Flex layout (route: delegated, writer trigger: engine + tests)
   - R3-wrap-trailing-gap: container end includes `(lines-1)*gap`; page-break
     checks account for line start Y.
   - R3-align-content-noop: free cross space uses the container's definite height.
@@ -57,4 +57,9 @@ A benchmark baseline must run on correct layout.
 
 ## Next step
 
-T2. T1 done in commit 2256531 (456/456 tests green; RED observed: 15 new cases failed before fix). Known limit: `flex: 50%` basis resolves to 0 because CssLength has no percent mode.
+T3. Pending decision: T1b for T1 review follow-ups (basis-first `flex: 200px 2 3` rejected; unit allowlist rejects vw/vh/ch/pc/content). Follow-up: percent basis needs CssLength percent mode.
+
+## Evidence
+
+- T1: commit 2256531, review lineage review-2a54d7b68c43f63d approved (medium, acknowledged). RED 15 failing cases, GREEN 456/456.
+- T2: RED 9 failing (FlexLayoutTests), GREEN 465/465. Strengthened shrink tests passed on pre-fix code (old tests never overflowed). Decisions: wrapping container with explicit height occupies max(height, lines); align-content free space clamped at 0.

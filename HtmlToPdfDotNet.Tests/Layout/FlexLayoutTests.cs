@@ -527,15 +527,16 @@ public class FlexLayoutTests
 
     /// <summary>
     /// Scenario: flex-grow with equal weights
-    /// GIVEN a flex container with display:flex; width:600pt and two items with flex:1 each
+    /// GIVEN a flex container with display:flex; width:400pt and two items with flex:1 each
     /// WHEN laid out
     /// THEN both items occupy equal width
     /// </summary>
     [Fact]
     public void FlexRow_FlexGrowEqual_ItemsOccupyEqualWidth()
     {
+        // 400pt keeps the container inside the A4 content area (600pt would be clamped).
         string html = @"
-            <div style='display: flex; flex-direction: row; width: 600pt; gap: 0;'>
+            <div style='display: flex; flex-direction: row; width: 400pt; gap: 0;'>
                 <div style='flex:1;'><p>A</p></div>
                 <div style='flex:1;'><p>B</p></div>
             </div>";
@@ -549,13 +550,9 @@ public class FlexLayoutTests
         Assert.NotNull(textA);
         Assert.NotNull(textB);
 
-        // Both items have flex:1 (grow=1, shrink=1, basis=0%)
-        // In a 600pt container: each gets 300pt content width
-        // A should be in the first half (X < 300), B in the second half (X >= 200)
-        Assert.True(textA.X < 300f,
-            $"A should be in first half (X={textA.X})");
-        Assert.True(textB.X >= 200f,
-            $"B should start in second half (X={textB.X})");
+        // Both items have flex:1 (grow=1, shrink=1, basis=0)
+        // In a 400pt container each gets exactly 200pt, so B starts 200pt after A.
+        Assert.Equal(200f, textB.X - textA.X, 0.5f);
     }
 
     /// <summary>
@@ -597,27 +594,29 @@ public class FlexLayoutTests
 
     /// <summary>
     /// Scenario: flex-shrink prevents overflow
-    /// GIVEN a flex container with display:flex; width:300pt and two items with flex:1 1 200px
+    /// GIVEN a flex container with display:flex; width:300pt and items with flex:1 1 300pt and flex:1 1 100pt
     /// WHEN laid out
-    /// THEN both items shrink to fit within 300pt (150pt each)
+    /// THEN the 100pt overflow is removed proportionally to shrink × basis (225pt / 75pt)
+    /// Under an equal-split implementation both items would get 150pt.
     /// </summary>
     [Fact]
     public void FlexRow_FlexShrink_ItemsShrinkToFit()
     {
         string html = @"
             <div style='display: flex; flex-direction: row; width: 300pt; gap: 0;'>
-                <div style='flex: 1 1 200px;'><p>Longish text A</p></div>
-                <div style='flex: 1 1 200px;'><p>Longish text B</p></div>
+                <div style='flex: 1 1 300pt; height: 10pt; background-color: #ff0000;'></div>
+                <div style='flex: 1 1 100pt; height: 10pt; background-color: #0000ff;'></div>
             </div>";
 
         LayoutResult result = RunLayout(html);
 
-        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
-        Assert.NotEmpty(texts);
+        var rects = result.Primitives.OfType<RectPrimitive>().ToList();
+        RectPrimitive red = Assert.Single(rects, r => r.Fill.R > 0.9f && r.Fill.B < 0.1f);
+        RectPrimitive blue = Assert.Single(rects, r => r.Fill.B > 0.9f && r.Fill.R < 0.1f);
 
-        // Both items should render on page 0 (no overflow crash)
-        var page0Texts = texts.Where(t => t.PageIndex == 0).ToList();
-        Assert.NotEmpty(page0Texts);
+        Assert.Equal(225f, red.Width, 0.5f);
+        Assert.Equal(75f, blue.Width, 0.5f);
+        Assert.Equal(red.X + 225f, blue.X, 0.5f);
     }
 
     /// <summary>
@@ -629,20 +628,23 @@ public class FlexLayoutTests
     [Fact]
     public void FlexRow_FlexShrinkZero_ItemNotReduced()
     {
+        // 150pt + 100pt = 250pt in a 200pt container → 50pt overflow,
+        // absorbed entirely by the shrinkable item (fixed 150pt, flex 50pt).
         string html = @"
             <div style='display: flex; flex-direction: row; width: 200pt; gap: 0;'>
-                <div style='flex: 0 0 150px;'><p>Fixed</p></div>
-                <div style='flex: 1 1 100px;'><p>Flex</p></div>
+                <div style='flex: 0 0 150pt; height: 10pt; background-color: #ff0000;'></div>
+                <div style='flex: 1 1 100pt; height: 10pt; background-color: #0000ff;'></div>
             </div>";
 
         LayoutResult result = RunLayout(html);
 
-        // Both items must render (no crash, no overlap issues)
-        var texts = result.Primitives.OfType<TextPrimitive>().ToList();
-        Assert.NotEmpty(texts);
+        var rects = result.Primitives.OfType<RectPrimitive>().ToList();
+        RectPrimitive fixedItem = Assert.Single(rects, r => r.Fill.R > 0.9f && r.Fill.B < 0.1f);
+        RectPrimitive flexItem = Assert.Single(rects, r => r.Fill.B > 0.9f && r.Fill.R < 0.1f);
 
-        var page0Texts = texts.Where(t => t.PageIndex == 0).ToList();
-        Assert.NotEmpty(page0Texts);
+        Assert.Equal(150f, fixedItem.Width, 0.5f);
+        Assert.Equal(50f, flexItem.Width, 0.5f);
+        Assert.Equal(fixedItem.X + 150f, flexItem.X, 0.5f);
     }
 
     /// <summary>
@@ -915,6 +917,151 @@ public class FlexLayoutTests
         var yPositions = texts.Select(t => t.Y).Distinct().ToList();
         Assert.True(yPositions.Count >= 2,
             $"Expected 3 items to wrap (2+1), got {yPositions.Count} Y level(s)");
+    }
+
+    #endregion
+
+    #region Review fixes (wrap gap, align-content, auto basis)
+
+    /// <summary>
+    /// Scenario: content after a wrapped flex container with a gap
+    /// GIVEN a wrapped flex container with gap:10pt and two 20pt-high lines
+    /// WHEN followed by another block
+    /// THEN the block starts at or after the bottom of the last line (gap included)
+    /// </summary>
+    [Fact]
+    public void FlexWrap_WithGap_FollowingContentStartsAfterLastLine()
+    {
+        string html = @"
+            <div style='display: flex; flex-wrap: wrap; width: 300pt; gap: 10pt;'>
+                <div style='flex: 0 0 200pt; height: 20pt; background-color: #ff0000;'></div>
+                <div style='flex: 0 0 200pt; height: 20pt; background-color: #ff0000;'></div>
+            </div>
+            <div style='height: 7pt; background-color: #0000ff;'></div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var rects = result.Primitives.OfType<RectPrimitive>().ToList();
+        RectPrimitive lastLine = rects
+            .Where(r => r.Fill.R > 0.9f && r.Fill.B < 0.1f)
+            .OrderBy(r => r.Y)
+            .Last();
+        RectPrimitive after = Assert.Single(rects, r => r.Fill.B > 0.9f && r.Fill.R < 0.1f);
+
+        Assert.True(after.Y >= lastLine.Y + lastLine.Height - 0.01f,
+            $"Following block (Y={after.Y}) overlaps last wrapped line (bottom={lastLine.Y + lastLine.Height})");
+    }
+
+    /// <summary>
+    /// Scenario: a wrapped line that would cross the page bottom
+    /// GIVEN a wrapped flex container whose second line (start Y + gap) exceeds the page
+    /// WHEN laid out
+    /// THEN the second line moves to the next page
+    /// </summary>
+    [Fact]
+    public void FlexWrap_LineExceedingPage_MovesToNextPage()
+    {
+        // Page content height 200pt. Spacer 140pt → line 1 at 140..170,
+        // line 2 at 180..210 (after 10pt gap) → must move to page 1.
+        PageLayout page = new(400f, 200f, new PageMargins(0f));
+        string html = @"
+            <div style='height: 140pt;'></div>
+            <div style='display: flex; flex-wrap: wrap; width: 300pt; gap: 10pt;'>
+                <div style='flex: 0 0 200pt; height: 30pt; background-color: #ff0000;'></div>
+                <div style='flex: 0 0 200pt; height: 30pt; background-color: #0000ff;'></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html, page);
+
+        var rects = result.Primitives.OfType<RectPrimitive>().ToList();
+        RectPrimitive line1 = Assert.Single(rects, r => r.Fill.R > 0.9f && r.Fill.B < 0.1f);
+        RectPrimitive line2 = Assert.Single(rects, r => r.Fill.B > 0.9f && r.Fill.R < 0.1f);
+
+        Assert.Equal(0, line1.PageIndex);
+        Assert.Equal(1, line2.PageIndex);
+        Assert.True(line2.Y + line2.Height <= 200f,
+            $"Second line must fit on its page (bottom={line2.Y + line2.Height})");
+    }
+
+    /// <summary>
+    /// Scenario: align-content with a definite container height
+    /// GIVEN a wrapped flex container with height:200pt and two 20pt-high lines
+    /// WHEN align-content is set
+    /// THEN lines are positioned within the 160pt of free cross space
+    /// </summary>
+    [Theory]
+    [InlineData("flex-start", 0f, 20f)]
+    [InlineData("flex-end", 160f, 180f)]
+    [InlineData("center", 80f, 100f)]
+    [InlineData("space-between", 0f, 180f)]
+    [InlineData("space-around", 40f, 140f)]
+    public void FlexWrap_AlignContent_WithDefiniteHeight_PositionsLines(
+        string alignContent, float expectedLine1Y, float expectedLine2Y)
+    {
+        string html = $@"
+            <div style='display: flex; flex-wrap: wrap; width: 300pt; height: 200pt; gap: 0; align-content: {alignContent};'>
+                <div style='flex: 0 0 200pt; height: 20pt; background-color: #ff0000;'></div>
+                <div style='flex: 0 0 200pt; height: 20pt; background-color: #0000ff;'></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var rects = result.Primitives.OfType<RectPrimitive>().ToList();
+        RectPrimitive line1 = Assert.Single(rects, r => r.Fill.R > 0.9f && r.Fill.B < 0.1f);
+        RectPrimitive line2 = Assert.Single(rects, r => r.Fill.B > 0.9f && r.Fill.R < 0.1f);
+
+        Assert.Equal(expectedLine1Y, line1.Y, 0.5f);
+        Assert.Equal(expectedLine2Y, line2.Y, 0.5f);
+    }
+
+    /// <summary>
+    /// Scenario: content after a wrapped container with a definite height
+    /// GIVEN a wrapped flex container with height:200pt whose lines only take 40pt
+    /// WHEN followed by another block
+    /// THEN the block starts after the container's definite height
+    /// </summary>
+    [Fact]
+    public void FlexWrap_DefiniteHeight_FollowingContentStartsAfterContainer()
+    {
+        string html = @"
+            <div style='display: flex; flex-wrap: wrap; width: 300pt; height: 200pt; gap: 0;'>
+                <div style='flex: 0 0 200pt; height: 20pt;'></div>
+                <div style='flex: 0 0 200pt; height: 20pt;'></div>
+            </div>
+            <div style='height: 7pt; background-color: #0000ff;'></div>";
+
+        LayoutResult result = RunLayout(html);
+
+        RectPrimitive after = Assert.Single(result.Primitives.OfType<RectPrimitive>(),
+            r => r.Fill.B > 0.9f && r.Fill.R < 0.1f);
+        Assert.Equal(200f, after.Y, 0.5f);
+    }
+
+    /// <summary>
+    /// Scenario: flex-basis:auto item made of a fixed-width block
+    /// GIVEN a non-growing item without width whose only child is a 120pt-wide block
+    /// WHEN laid out
+    /// THEN the item keeps the child's 120pt width and the next item starts after it
+    /// </summary>
+    [Fact]
+    public void FlexRow_AutoBasis_BlockChild_KeepsChildWidth()
+    {
+        string html = @"
+            <div style='display: flex; width: 400pt;'>
+                <div style='flex: 0 1 auto;'>
+                    <div style='width: 120pt; height: 20pt; background-color: #ff0000;'></div>
+                </div>
+                <div style='flex: 0 0 50pt; height: 20pt; background-color: #0000ff;'></div>
+            </div>";
+
+        LayoutResult result = RunLayout(html);
+
+        var rects = result.Primitives.OfType<RectPrimitive>().ToList();
+        RectPrimitive inner = Assert.Single(rects, r => r.Fill.R > 0.9f && r.Fill.B < 0.1f);
+        RectPrimitive next = Assert.Single(rects, r => r.Fill.B > 0.9f && r.Fill.R < 0.1f);
+
+        Assert.Equal(120f, inner.Width, 0.5f);
+        Assert.Equal(inner.X + 120f, next.X, 0.5f);
     }
 
     #endregion
