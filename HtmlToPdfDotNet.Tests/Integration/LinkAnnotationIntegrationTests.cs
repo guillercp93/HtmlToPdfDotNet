@@ -199,4 +199,51 @@ public class LinkAnnotationIntegrationTests
         Assert.Contains("/Subtype /Link", pdfStr);
         Assert.Contains("/URI", pdfStr);
     }
+
+    [Fact]
+    public void LinkAnnotation_InsideTableCell_IsPositionedWithinCell()
+    {
+        const string html = "<table><tr><td>Left</td>"
+                          + "<td style=\"background-color: #00ff00;\"><a href=\"https://example.com\">x</a></td></tr></table>";
+
+        LayoutResult layout = RunLayout(html);
+
+        LinkAnnotationPrimitive annot = Assert.Single(layout.Annotations);
+        Assert.Equal("https://example.com", annot.Uri);
+        RectPrimitive cell = layout.Primitives.OfType<RectPrimitive>().Single(r => r.Fill.G == 1f && r.Fill.R == 0f);
+        Assert.Equal(cell.PageIndex, annot.PageIndex);
+        Assert.InRange(annot.X, cell.X, cell.X + cell.Width);
+        Assert.InRange(annot.X + annot.Width, cell.X, cell.X + cell.Width);
+        Assert.InRange(annot.Y, cell.Y, cell.Y + cell.Height);
+        Assert.InRange(annot.Y + annot.Height, cell.Y, cell.Y + cell.Height + 0.01f);
+    }
+
+    [Fact]
+    public void LinkAnnotation_InsideTableCellOnLaterPage_UsesTheRowPage()
+    {
+        string rows = string.Concat(Enumerable.Range(0, 120).Select(i => $"<tr><td>Row {i}</td></tr>"));
+        string html = $"<table>{rows}<tr><td><a href=\"https://example.com/last\">last</a></td></tr></table>";
+
+        LayoutResult layout = RunLayout(html);
+
+        LinkAnnotationPrimitive annot = Assert.Single(layout.Annotations);
+        TextPrimitive text = layout.Primitives.OfType<TextPrimitive>().Single(t => t.Text.Trim() == "last");
+        Assert.True(annot.PageIndex > 0, "Last row must land on a later page");
+        Assert.Equal(text.PageIndex, annot.PageIndex);
+        Assert.InRange(text.X, annot.X, annot.X + annot.Width);
+        Assert.InRange(text.Y, annot.Y, annot.Y + annot.Height);
+    }
+
+    [Fact]
+    public void LinkAnnotation_InRepeatedTableHeader_IsEmittedOnEveryPage()
+    {
+        string rows = string.Concat(Enumerable.Range(0, 120).Select(i => $"<tr><td>Row {i}</td></tr>"));
+        string html = $"<table><thead><tr><th><a href=\"https://example.com/h\">Head</a></th></tr></thead><tbody>{rows}</tbody></table>";
+
+        LayoutResult layout = RunLayout(html);
+
+        Assert.True(layout.PageCount > 1, "Table must span several pages");
+        Assert.Equal(Enumerable.Range(0, layout.PageCount), layout.Annotations.Select(a => a.PageIndex).Order());
+        Assert.All(layout.Annotations, a => Assert.Equal("https://example.com/h", a.Uri));
+    }
 }
