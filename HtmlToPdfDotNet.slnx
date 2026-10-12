@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="HtmlToPdfDotNet.Library/HtmlToPdfDotNet.Library.csproj" />
   <Project Path="HtmlToPdfDotNet.Tests/HtmlToPdfDotNet.Tests.csproj" />
+  <Project Path="HtmlToPdfDotNet.Benchmarks/HtmlToPdfDotNet.Benchmarks.csproj" />
   <Project Path="HtmlToPdfDotNet.Example/HtmlToPdfDotNet.Example.csproj" />
 </Solution>

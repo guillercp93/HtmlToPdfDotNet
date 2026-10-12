@@ -61,3 +61,6 @@ nunit-*.xml
 
 # Test Output
 *.pdf
+
+# BenchmarkDotNet
+BenchmarkDotNet.Artifacts/
