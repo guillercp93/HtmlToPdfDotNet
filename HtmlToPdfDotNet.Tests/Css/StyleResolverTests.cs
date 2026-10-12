@@ -403,4 +403,59 @@ public class StyleResolverTests
 
         Assert.Equal(0f, div.Gap.Points);
     }
+
+    // ── Stylesheet declarations ───────────────────────────────────────────────
+
+    private static ComputedStyle ResolveDivWithRules(IEnumerable<CssRule> rules)
+    {
+        HtmlDocument doc = new();
+        doc.LoadHtml("<div>content</div>");
+        Dictionary<HtmlNode, ComputedStyle> styles = new StyleResolver(rules).Resolve(doc.DocumentNode);
+        return StyleOf(styles, "div");
+    }
+
+    /// <summary>
+    /// GIVEN a rule whose declarations set a shorthand and then a longhand
+    /// WHEN resolved
+    /// THEN declarations MUST apply in source order (the later one wins)
+    /// </summary>
+    [Theory]
+    [InlineData("div { margin: 1pt; margin-top: 5pt; }", 5f, 1f)]
+    [InlineData("div { margin-top: 5pt; margin: 1pt; }", 1f, 1f)]
+    public void StylesheetDeclarations_ApplyInSourceOrder(string css, float expectedTop, float expectedLeft)
+    {
+        ComputedStyle div = ResolveDivWithRules(CssStyleSheetParser.Parse(css));
+
+        Assert.Equal(expectedTop, div.Margin.Top.Points);
+        Assert.Equal(expectedLeft, div.Margin.Left.Points);
+    }
+
+    /// <summary>
+    /// GIVEN a rule whose declarations are a non-Dictionary IReadOnlyDictionary implementation
+    /// WHEN resolved
+    /// THEN the result MUST match the one produced by the parser's own dictionary
+    /// </summary>
+    [Fact]
+    public void StylesheetDeclarations_CustomReadOnlyDictionary_AppliesSameAsParsed()
+    {
+        const string css = "div { padding: 2pt 4pt; padding-left: 9pt; color: #ff0000; }";
+        List<CssRule> parsed = CssStyleSheetParser.Parse(css).ToList();
+        List<CssRule> wrapped = parsed
+            .Select(r => new CssRule
+            {
+                Selectors = r.Selectors,
+                Declarations = new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(
+                    r.Declarations.ToDictionary(kv => kv.Key, kv => kv.Value))
+            })
+            .ToList();
+
+        ComputedStyle fromParsed = ResolveDivWithRules(parsed);
+        ComputedStyle fromWrapped = ResolveDivWithRules(wrapped);
+
+        Assert.Equal(9f, fromWrapped.Padding.Left.Points);
+        Assert.Equal(fromParsed.Padding.Top.Points, fromWrapped.Padding.Top.Points);
+        Assert.Equal(fromParsed.Padding.Right.Points, fromWrapped.Padding.Right.Points);
+        Assert.Equal(fromParsed.Padding.Left.Points, fromWrapped.Padding.Left.Points);
+        Assert.Equal(fromParsed.Color.R, fromWrapped.Color.R);
+    }
 }

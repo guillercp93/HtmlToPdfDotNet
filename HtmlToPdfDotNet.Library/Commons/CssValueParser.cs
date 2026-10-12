@@ -67,15 +67,45 @@ public static class CssValueParser
     {
         if (string.IsNullOrWhiteSpace(value)) return CssEdges.Zero;
 
-        string[] parts = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        CssLength[] lengths = Array.ConvertAll(parts, p => ParseLength(p, parentFontSize));
-
-        return lengths.Length switch
+        // Same tokenization as Trim() + Split(' ', RemoveEmptyEntries), without the intermediate
+        // arrays. Only the first four tokens are used; the rest are ignored.
+        ReadOnlySpan<char> trimmed = value.AsSpan().Trim();
+        int offset = value.Length - value.AsSpan().TrimStart().Length;
+        CssLength l0 = default, l1 = default, l2 = default, l3 = default;
+        int count = 0;
+        int i = 0;
+        while (i < trimmed.Length && count < 4)
         {
-            1 => new CssEdges(lengths[0]),
-            2 => new CssEdges(lengths[0], lengths[1]),
-            3 => new CssEdges(lengths[0], lengths[1], lengths[2], lengths[1]),
-            _ => new CssEdges(lengths[0], lengths[1], lengths[2], lengths[3]),
+            if (trimmed[i] == ' ')
+            {
+                i++;
+                continue;
+            }
+
+            int start = i;
+            while (i < trimmed.Length && trimmed[i] != ' ') i++;
+
+            // A single token spanning the whole value can be parsed without a substring.
+            string token = start == 0 && i == trimmed.Length && trimmed.Length == value.Length
+                ? value
+                : value.Substring(offset + start, i - start);
+            CssLength length = ParseLength(token, parentFontSize);
+            switch (count)
+            {
+                case 0: l0 = length; break;
+                case 1: l1 = length; break;
+                case 2: l2 = length; break;
+                default: l3 = length; break;
+            }
+            count++;
+        }
+
+        return count switch
+        {
+            1 => new CssEdges(l0),
+            2 => new CssEdges(l0, l1),
+            3 => new CssEdges(l0, l1, l2, l1),
+            _ => new CssEdges(l0, l1, l2, l3),
         };
     }
     #endregion

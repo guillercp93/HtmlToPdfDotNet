@@ -103,6 +103,49 @@ namespace HtmlToPdfDotNet.Tests.Css
             Assert.Equal(4f, e.Left.Points);
         }
 
+        [Theory]
+        [InlineData("1pt 2pt 3pt", 1f, 2f, 3f, 2f)]                 // three values: left mirrors right
+        [InlineData("1pt 2pt 3pt 4pt 5pt", 1f, 2f, 3f, 4f)]         // extra values are ignored
+        [InlineData("   1pt    2pt   ", 1f, 2f, 1f, 2f)]            // repeated and surrounding spaces
+        [InlineData("1pt\t2pt", 0f, 0f, 0f, 0f)]                    // tab is not a separator: one invalid token
+        [InlineData("\t3pt\n", 3f, 3f, 3f, 3f)]                     // surrounding whitespace is trimmed
+        [InlineData("abc 2pt", 0f, 2f, 0f, 2f)]                     // invalid token parses as zero
+        [InlineData("8px 1in", 6f, Constants.PointsPerInch, 6f, Constants.PointsPerInch)]
+        [InlineData("2EM 0", 20f, 0f, 20f, 0f)]                     // case-insensitive units, parent font size 10
+        [InlineData("4 none", 3f, 0f, 3f, 0f)]                      // unitless is px
+        public void ParseEdges_VariousInputs_MatchesCurrentBehavior(string input, float top, float right, float bottom, float left)
+        {
+            CssEdges e = CssValueParser.ParseEdges(input, parentFontSize: 10f);
+            Assert.Equal(top, e.Top.Points);
+            Assert.Equal(right, e.Right.Points);
+            Assert.Equal(bottom, e.Bottom.Points);
+            Assert.Equal(left, e.Left.Points);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void ParseEdges_NullOrWhitespace_ReturnsZero(string? input)
+        {
+            CssEdges e = CssValueParser.ParseEdges(input);
+            Assert.True(e.Top.IsZero);
+            Assert.True(e.Right.IsZero);
+            Assert.True(e.Bottom.IsZero);
+            Assert.True(e.Left.IsZero);
+        }
+
+        [Fact]
+        public void ParseEdges_AutoToken_KeepsAutoFlag()
+        {
+            CssEdges e = CssValueParser.ParseEdges("auto 10pt");
+            Assert.True(e.Top.IsAuto);
+            Assert.False(e.Right.IsAuto);
+            Assert.Equal(10f, e.Right.Points);
+            Assert.True(e.Bottom.IsAuto);
+            Assert.False(e.Left.IsAuto);
+        }
+
         // ── ParseFontSize ─────────────────────────────────────────────────────────
 
         [Theory]

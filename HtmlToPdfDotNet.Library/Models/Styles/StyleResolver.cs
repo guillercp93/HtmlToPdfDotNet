@@ -204,8 +204,22 @@ public sealed class StyleResolver
         _ruleIndex.CollectMatchingRules(node, matchBuffer);
         List<CssSelectorMatcher.MatchedRule> matches = matchBuffer.Matches;
         for (int i = 0; i < matches.Count; i++)
-            foreach ((string prop, string value) in matches[i].Rule.Declarations)
-                ApplyDeclaration(prop, value, style);
+        {
+            IReadOnlyDictionary<string, string> declarations = matches[i].Rule.Declarations;
+
+            // The parser stores a Dictionary; enumerate it through its struct enumerator to avoid
+            // boxing one interface enumerator per matched rule. Enumeration order is identical.
+            if (declarations is Dictionary<string, string> dictionary)
+            {
+                foreach ((string prop, string value) in dictionary)
+                    ApplyDeclaration(prop, value, style);
+            }
+            else
+            {
+                foreach ((string prop, string value) in declarations)
+                    ApplyDeclaration(prop, value, style);
+            }
+        }
     }
     #endregion
 
