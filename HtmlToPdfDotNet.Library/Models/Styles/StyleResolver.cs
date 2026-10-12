@@ -14,6 +14,7 @@ namespace HtmlToPdfDotNet.Library.Models.Styles;
 public sealed class StyleResolver
 {
     private readonly List<CssRule> _stylesheetRules;
+    private readonly CssRuleIndex _ruleIndex;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StyleResolver"/> class.
@@ -24,6 +25,7 @@ public sealed class StyleResolver
         _stylesheetRules = stylesheetRules is null ?
             [] :
             [.. stylesheetRules];
+        _ruleIndex = new CssRuleIndex(_stylesheetRules);
     }
 
     #region Tag Defaults
@@ -90,7 +92,7 @@ public sealed class StyleResolver
         Dictionary<HtmlNode, ComputedStyle> result = new();
         ComputedStyle initial = new(); // initial values
         // One match buffer per call (not per node, not per instance) keeps Resolve thread-safe
-        List<CssSelectorMatcher.MatchedRule> matchBuffer = new();
+        CssRuleMatchBuffer matchBuffer = new();
         ResolveNode(root, initial, result, matchBuffer);
         return result;
     }
@@ -106,7 +108,7 @@ public sealed class StyleResolver
     private void ResolveNode(HtmlNode node,
                              ComputedStyle parentStyle,
                              Dictionary<HtmlNode, ComputedStyle> result,
-                             List<CssSelectorMatcher.MatchedRule> matchBuffer)
+                             CssRuleMatchBuffer matchBuffer)
     {
         if (node.NodeType == HtmlNodeType.Document)
         {
@@ -195,13 +197,14 @@ public sealed class StyleResolver
     /// <param name="matchBuffer">Reusable buffer for the matching rules; overwritten on each call.</param>
     private void ApplyStylesheetRules(HtmlNode node,
                                       ComputedStyle style,
-                                      List<CssSelectorMatcher.MatchedRule> matchBuffer)
+                                      CssRuleMatchBuffer matchBuffer)
     {
         if (_stylesheetRules.Count == 0) return;
 
-        CssSelectorMatcher.CollectMatchingRules(node, _stylesheetRules, matchBuffer);
-        for (int i = 0; i < matchBuffer.Count; i++)
-            foreach ((string prop, string value) in matchBuffer[i].Rule.Declarations)
+        _ruleIndex.CollectMatchingRules(node, matchBuffer);
+        List<CssSelectorMatcher.MatchedRule> matches = matchBuffer.Matches;
+        for (int i = 0; i < matches.Count; i++)
+            foreach ((string prop, string value) in matches[i].Rule.Declarations)
                 ApplyDeclaration(prop, value, style);
     }
     #endregion

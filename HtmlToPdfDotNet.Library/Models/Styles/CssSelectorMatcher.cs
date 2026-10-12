@@ -170,19 +170,44 @@ public static class CssSelectorMatcher
         for (int order = 0; order < allRules.Count; order++)
         {
             CssRule rule = allRules[order];
-            IReadOnlyList<CssSelector> selectors = rule.Selectors;
+            if (TryMatchRule(node, rule, out int specificity))
+                buffer.Add(new MatchedRule(rule, specificity, order));
+        }
 
-            for (int i = 0; i < selectors.Count; i++)
+        SortCascade(buffer);
+    }
+
+    /// <summary>
+    /// Checks whether any selector of the rule matches the node. A rule applies at most once per
+    /// node and takes the specificity of the first of its selectors (in rule order) that matches.
+    /// </summary>
+    /// <param name="node">Node to match</param>
+    /// <param name="rule">Rule whose selectors are tested</param>
+    /// <param name="specificity">Specificity score of the first matching selector, or 0</param>
+    /// <returns>True if any selector of the rule matches the node, false otherwise</returns>
+    internal static bool TryMatchRule(HtmlNode node, CssRule rule, out int specificity)
+    {
+        IReadOnlyList<CssSelector> selectors = rule.Selectors;
+
+        for (int i = 0; i < selectors.Count; i++)
+        {
+            if (Matches(node, selectors[i]))
             {
-                // A rule can only apply once per node
-                if (Matches(node, selectors[i]))
-                {
-                    buffer.Add(new MatchedRule(rule, selectors[i].SpecificityScore, order));
-                    break;
-                }
+                specificity = selectors[i].SpecificityScore;
+                return true;
             }
         }
 
+        specificity = 0;
+        return false;
+    }
+
+    /// <summary>
+    /// Sorts matches into cascade order: specificity ascending, then source order.
+    /// </summary>
+    /// <param name="buffer">Matches to sort in place</param>
+    internal static void SortCascade(List<MatchedRule> buffer)
+    {
         // List.Sort is unstable: the source order tiebreak keeps equal-specificity rules in cascade order.
         if (buffer.Count > 1)
             buffer.Sort(static (x, y) => x.Specificity != y.Specificity

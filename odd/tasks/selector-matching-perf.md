@@ -36,7 +36,7 @@ Out of scope: `Dictionary<HtmlNode, ComputedStyle>` hashing, `FontRegistry` lock
     classes, extra whitespace in `class`, descendant selectors, case handling.
   - Replace `Split` + LINQ `Any` with span-based class token scan.
   - Replace per-element `List` + `OrderBy` + `ToList` with a reused buffer and a stable sort.
-- [~] T2 — Rule index by id / class / tag — DROPPED (no measured gain) (route: delegated, writer trigger: resolver + index + tests)
+- [x] T2 — Rule index by id / class / tag — applied by user decision (no measured gain on current benchmarks) (route: delegated, writer trigger: resolver + index + tests)
   - Bucket rules by the key of the selector's last part; per element test only candidate buckets
     plus universal rules; merge preserving cascade order.
 
@@ -78,7 +78,7 @@ Evidence:
   recursion (not an instance field), since `StyleResolver` is a public type that callers could share.
 - Not committed by the writer.
 
-## Results — T2 (dropped)
+## Results — T2
 
 Same-session `--filter '*RunLayout*' --job short`, T1 code vs T1 + rule index:
 
@@ -89,9 +89,8 @@ Same-session `--filter '*RunLayout*' --job short`, T1 code vs T1 + rule index:
 | small        |     47.64 us |     46.93 us |     76.92 KB |     78.77 KB |
 
 Differences are within noise. With ~24 rules, brute-force matching is cheap after T1.
-Decision (user): keep only T1. The index (513 tests green) is kept in
-`git stash` as "T2 rule index by id/class/tag (no measured gain on benchmarks)";
-revisit only if a large-stylesheet benchmark shows selector matching as a hot spot.
+Decision (user): first kept only T1 and stashed the index, then applied it.
+513 tests green. Expected benefit is limited to large stylesheets (not covered by current benchmarks).
 
 ## Progress
 
