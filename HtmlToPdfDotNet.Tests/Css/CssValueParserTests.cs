@@ -350,5 +350,89 @@ namespace HtmlToPdfDotNet.Tests.Css
         {
             Assert.Equal(expected, CssValueParser.ParseFlexShrink(input));
         }
+
+        [Theory]
+        [InlineData("-1")]
+        [InlineData("-0.5")]
+        public void ParseFlexGrow_Negative_FallsBackToZero(string input)
+        {
+            Assert.Equal(0f, CssValueParser.ParseFlexGrow(input));
+        }
+
+        [Theory]
+        [InlineData("-1")]
+        [InlineData("-0.5")]
+        public void ParseFlexShrink_Negative_FallsBackToOne(string input)
+        {
+            Assert.Equal(1f, CssValueParser.ParseFlexShrink(input));
+        }
+
+        // ── ParseFlexShorthand: keywords, single basis, invalid input ─────────────────
+
+        [Theory]
+        [InlineData("auto", 1f, 1f)]
+        [InlineData("AUTO", 1f, 1f)]
+        [InlineData("initial", 0f, 1f)]
+        [InlineData("none", 0f, 0f)]
+        public void ParseFlexShorthand_Keyword_ReturnsSpecValuesWithAutoBasis(string input, float expectedGrow, float expectedShrink)
+        {
+            var (grow, shrink, basis) = CssValueParser.ParseFlexShorthand(input, 12f);
+            Assert.Equal(expectedGrow, grow);
+            Assert.Equal(expectedShrink, shrink);
+            Assert.True(basis.IsAuto);
+        }
+
+        [Fact]
+        public void ParseFlexShorthand_SingleLength_SetsGrow1Shrink1AndBasis()
+        {
+            var (grow, shrink, basis) = CssValueParser.ParseFlexShorthand("200px", 12f);
+            Assert.Equal(1f, grow);
+            Assert.Equal(1f, shrink);
+            Assert.False(basis.IsAuto);
+            Assert.Equal(200f * Constants.PointsPerPx, basis.Points);
+        }
+
+        [Fact]
+        public void ParseFlexShorthand_SinglePercentage_SetsGrow1Shrink1NonAutoBasis()
+        {
+            var (grow, shrink, basis) = CssValueParser.ParseFlexShorthand("50%", 12f);
+            Assert.Equal(1f, grow);
+            Assert.Equal(1f, shrink);
+            Assert.False(basis.IsAuto);
+        }
+
+        [Fact]
+        public void ParseFlexShorthand_NumberAndAuto_SetsGrowShrink1AutoBasis()
+        {
+            var (grow, shrink, basis) = CssValueParser.ParseFlexShorthand("2 auto", 12f);
+            Assert.Equal(2f, grow);
+            Assert.Equal(1f, shrink);
+            Assert.True(basis.IsAuto);
+        }
+
+        [Fact]
+        public void ParseFlexShorthand_ThreeValuesWithUnitlessZeroBasis_SetsZeroBasis()
+        {
+            var (grow, shrink, basis) = CssValueParser.ParseFlexShorthand("1 1 0", 12f);
+            Assert.Equal(1f, grow);
+            Assert.Equal(1f, shrink);
+            Assert.False(basis.IsAuto);
+            Assert.Equal(0f, basis.Points);
+        }
+
+        [Theory]
+        [InlineData("garbage")]
+        [InlineData("1 garbage")]
+        [InlineData("1 2 3 4")]
+        [InlineData("-1")]
+        [InlineData("1 -2")]
+        [InlineData("-1 1 100px")]
+        public void ParseFlexShorthand_InvalidOrNegative_ReturnsInitialValue(string input)
+        {
+            var (grow, shrink, basis) = CssValueParser.ParseFlexShorthand(input, 12f);
+            Assert.Equal(0f, grow);
+            Assert.Equal(1f, shrink);
+            Assert.True(basis.IsAuto);
+        }
     }
 }

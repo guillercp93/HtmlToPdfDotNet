@@ -416,79 +416,109 @@ public static class CssValueParser
     };
 
     /// <summary>
-    /// Parses a CSS flex-grow value (float, default 0).
+    /// Parses a CSS flex-grow value (non-negative float, default 0).
     /// </summary>
     public static float ParseFlexGrow(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return 0f;
-        return TryParseFloat(value.Trim(), out float result) ? result : 0f;
-    }
+        => TryParseFlexFactor(value, out float result) ? result : 0f;
 
     /// <summary>
-    /// Parses a CSS flex-shrink value (float, default 1).
+    /// Parses a CSS flex-shrink value (non-negative float, default 1).
     /// </summary>
     public static float ParseFlexShrink(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return 1f;
-        return TryParseFloat(value.Trim(), out float result) ? result : 1f;
-    }
+        => TryParseFlexFactor(value, out float result) ? result : 1f;
 
     /// <summary>
-    /// Parses the CSS flex shorthand.
+    /// Parses the CSS flex shorthand following the CSS Flexbox spec.
     /// Supported forms:
     ///   "none" → (0, 0, auto)
-    ///   "N" → grow=N, shrink=1, basis=0%
-    ///   "N M" → grow=N, shrink=M, basis=0%
+    ///   "auto" → (1, 1, auto)
+    ///   "initial" → (0, 1, auto)
+    ///   "L" → grow=1, shrink=1, basis=L
+    ///   "N" → grow=N, shrink=1, basis=0
+    ///   "N M" → grow=N, shrink=M, basis=0
     ///   "N L" → grow=N, shrink=1, basis=L
     ///   "N M L" → grow=N, shrink=M, basis=L
+    /// Invalid input (unknown tokens, negative factors, too many values) yields
+    /// the initial value (0, 1, auto).
     /// </summary>
     /// <returns>A tuple (flexGrow, flexShrink, flexBasis).</returns>
     public static (float grow, float shrink, CssLength basis) ParseFlexShorthand(string? value, float parentFontSize)
     {
+        (float, float, CssLength) initial = (0f, 1f, CssLength.Auto);
+
         if (string.IsNullOrWhiteSpace(value))
-            return (0f, 1f, CssLength.Auto);
+            return initial;
 
-        string v = value.Trim();
+        string v = value.Trim().ToLowerInvariant();
 
-        if (v.Equals("none", StringComparison.OrdinalIgnoreCase))
-            return (0f, 0f, CssLength.Auto);
+        switch (v)
+        {
+            case "none": return (0f, 0f, CssLength.Auto);
+            case "auto": return (1f, 1f, CssLength.Auto);
+            case "initial": return initial;
+        }
 
         string[] parts = v.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0)
-            return (0f, 1f, CssLength.Auto);
+        if (parts.Length > 3)
+            return initial;
 
-        float grow = TryParseFloat(parts[0], out float g) ? g : 0f;
-        float shrink = 1f;
-        CssLength basis = CssLength.Zero;  // default basis for explicit flex values
+        var factors = new List<float>(2);
+        CssLength? basis = null;
 
-        if (parts.Length == 1)
+        foreach (string part in parts)
         {
-            // Single number: grow=X, shrink=1, basis=0%
-            basis = new CssLength(0f);
-        }
-        else if (parts.Length == 2)
-        {
-            // Two values: could be (grow, shrink) or (grow, basis)
-            if (TryParseFloat(parts[1], out float s))
+            // A unitless zero is a flex factor unless two factors were already given.
+            bool isFactor = TryParseFloat(part, out float number) && !(number == 0f && factors.Count == 2);
+
+            if (isFactor)
             {
-                // Second value is a number → (grow, shrink), basis=0%
-                shrink = s;
-                basis = new CssLength(0f);
+                // Factors must be non-negative and contiguous (basis may only lead or trail).
+                if (number < 0f || factors.Count == 2 || (basis is not null && factors.Count > 0))
+                    return initial;
+                factors.Add(number);
             }
             else
             {
-                // Second value is a length → (grow, basis), shrink=1
-                basis = ParseLength(parts[1], parentFontSize);
+                if (basis is not null || !IsFlexBasisToken(part))
+                    return initial;
+                basis = ParseLength(part, parentFontSize);
             }
         }
-        else if (parts.Length >= 3)
+
+        if (factors.Count == 0)
+            return (1f, 1f, basis ?? CssLength.Auto);
+
+        float grow = factors[0];
+        float shrink = factors.Count == 2 ? factors[1] : 1f;
+        return (grow, shrink, basis ?? CssLength.Zero);
+    }
+
+    /// <summary>
+    /// Tries to parse a non-negative flex factor (flex-grow / flex-shrink).
+    /// </summary>
+    private static bool TryParseFlexFactor(string? value, out float result)
+    {
+        result = 0f;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        return TryParseFloat(value.Trim(), out result) && result >= 0f;
+    }
+
+    /// <summary>
+    /// Returns true when the token is a valid flex-basis: "auto", "0", or a
+    /// non-negative number followed by a supported unit or "%".
+    /// </summary>
+    private static bool IsFlexBasisToken(string token)
+    {
+        if (token is "auto" or "0") return true;
+
+        string[] suffixes = ["px", "pt", "rem", "em", "cm", "mm", "in", "%"];
+        foreach (string suffix in suffixes)
         {
-            // Three values: (grow, shrink, basis)
-            shrink = TryParseFloat(parts[1], out float sh) ? sh : 1f;
-            basis = ParseLength(parts[2], parentFontSize);
+            if (token.EndsWith(suffix, StringComparison.Ordinal))
+                return TryParseFloat(token[..^suffix.Length], out float n) && n >= 0f;
         }
 
-        return (grow, shrink, basis);
+        return false;
     }
 
     #endregion
