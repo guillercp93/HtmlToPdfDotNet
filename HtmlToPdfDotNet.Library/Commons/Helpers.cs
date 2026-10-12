@@ -198,11 +198,37 @@ public static class Helpers
         if (string.IsNullOrEmpty(html)) return string.Empty;
 
         // Remove NULL characters, BOM, and other non-printable ASCII control characters
-        string satinizeString = new(html.Where(c => c >= ' ' && c != '\0').ToArray());
+        string satinizeString = RemoveControlChars(html);
 
         // Decode HTML entities (like &#x2B;)
         satinizeString = System.Net.WebUtility.HtmlDecode(satinizeString);
         return satinizeString.Trim('\uFEFF', '\u200B'); // Trim Byte Order Mark and Zero Width Space
+    }
+
+    /// <summary>
+    /// Removes every character below U+0020 (NULL and the other ASCII control characters).
+    /// Returns the same instance when there is nothing to remove.
+    /// </summary>
+    /// <param name="text">The text to filter.</param>
+    /// <returns>The filtered text.</returns>
+    private static string RemoveControlChars(string text)
+    {
+        int first = 0;
+        while (first < text.Length && text[first] >= ' ') first++;
+        if (first == text.Length) return text;
+
+        int kept = first;
+        for (int i = first + 1; i < text.Length; i++)
+            if (text[i] >= ' ') kept++;
+
+        return string.Create(kept, (text, first), static (span, state) =>
+        {
+            (string source, int start) = state;
+            source.AsSpan(0, start).CopyTo(span);
+            int pos = start;
+            for (int i = start + 1; i < source.Length; i++)
+                if (source[i] >= ' ') span[pos++] = source[i];
+        });
     }
 
     /// <summary>
@@ -213,9 +239,12 @@ public static class Helpers
     public static void ShiftAll(LineBox line, float offset)
     {
         if (offset <= 0f) return;
-        List<(InlineRun Run, float)> updated = line.Items.Select(i => (i.Run, i.X + offset)).ToList();
-        line.Items.Clear();
-        line.Items.AddRange(updated);
+        List<(InlineRun Run, float X)> items = line.Items;
+        for (int i = 0; i < items.Count; i++)
+        {
+            (InlineRun run, float x) = items[i];
+            items[i] = (run, x + offset);
+        }
     }
 
     /// <summary>
