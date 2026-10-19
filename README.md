@@ -1,21 +1,26 @@
 # HtmlToPdfDotNet
 
-HtmlToPdfDotNet is a fast, lightweight, and completely native .NET library designed to convert HTML and CSS into high-quality PDF documents. It does not rely on headless browsers (like Chromium) or external system dependencies (like wkhtmltopdf). Instead, it implements a custom HTML parser, CSS styling engine, and PDF writer directly in C# to provide maximum performance and lower memory usage.
+HtmlToPdfDotNet is a lightweight, fully managed .NET library that converts HTML and CSS into PDF documents. It does not rely on headless browsers (like Chromium) or external system tools (like wkhtmltopdf). Instead, it implements its own CSS styling engine, layout engines, and PDF writer in C#, using HtmlAgilityPack to parse HTML.
 
 ---
 
 ## Library Overview
 
 ### Purpose
-The primary goal of HtmlToPdfDotNet is to provide a fully managed, dependency-free solution for generating PDFs from HTML templates within .NET applications. It is ideal for generating invoices, reports, receipts, and other structured documents.
+The primary goal of HtmlToPdfDotNet is to provide a fully managed solution for generating PDFs from HTML templates within .NET applications, with no native dependencies. It is well suited to invoices, reports, receipts, and other structured documents.
 
 ### Main Features
 - **Fully Managed:** 100% C# code, no external browser or unmanaged bindings required.
-- **Advanced CSS Support:** Supports modern CSS selectors, the standard box model (margins, borders, padding), inline styles, and external stylesheets.
-- **Font Subsetting:** Embeds only the required glyphs from TTF/OTF fonts to significantly reduce PDF file sizes.
-- **Rich Media Support:** Embeds JPEG and PNG images natively, preserving aspect ratios and transparency.
-- **Table Layouts:** Comprehensive support for complex `<table>` layouts, including spanning and borders.
-- **Dependency Injection:** First-class support for `Microsoft.Extensions.DependencyInjection`.
+- **CSS Support:** Type, class, id, universal (`*`), compound, and descendant selectors plus selector lists; the box model (margins, borders, padding); inline `style` attributes, `<style>` blocks, and additional stylesheets passed through `ConversionOptions.StyleSheets`.
+- **Flexbox Layout:** `display: flex` with `flex-direction`, `flex-wrap`, `justify-content`, `align-items`, `align-content`, `gap`, `flex-grow`, `flex-shrink`, `flex-basis`, and the `flex` shorthand.
+- **Font Embedding:** Registered TrueType (`glyf`) fonts are subset so only the used glyphs are embedded; CFF-based OpenType fonts are embedded in full.
+- **Images:** Embeds JPEG and PNG images from local files or `data:` URIs.
+- **Tables:** `<table>` layouts with `<thead>`, `<tbody>`, `<tfoot>`, and borders.
+- **Lists:** `<ul>` and `<ol>` with `list-style-type` (`disc`, `circle`, `square`, `decimal`, `lower-alpha`, `upper-alpha`, `lower-roman`, `upper-roman`, `none`).
+- **Links:** `<a href>` elements become clickable PDF link annotations.
+- **Headers and Footers:** Running header and footer HTML templates with `{page}` and `{total}` placeholders.
+- **Page Breaks:** `page-break-before`, `page-break-after`, and `page-break-inside`.
+- **Dependency Injection:** Registration extension for `Microsoft.Extensions.DependencyInjection`.
 
 ### Supported .NET Versions
 - **.NET 10.0** (Target framework: `net10.0`)
@@ -38,17 +43,17 @@ You can install the package via the NuGet Package Manager UI in Visual Studio, o
 
 **Using .NET CLI:**
 ```bash
-dotnet add package HtmlToPdfDotNet.Library --version 1.0.0
+dotnet add package HtmlToPdfDotNet --version 1.0.0
 ```
 
 **Using Package Manager Console (Visual Studio):**
 ```powershell
-Install-Package HtmlToPdfDotNet.Library -Version 1.0.0
+Install-Package HtmlToPdfDotNet -Version 1.0.0
 ```
 
 **Using PackageReference (in `.csproj`):**
 ```xml
-<PackageReference Include="HtmlToPdfDotNet.Library" Version="1.0.0" />
+<PackageReference Include="HtmlToPdfDotNet" Version="1.0.0" />
 ```
 
 ---
@@ -61,6 +66,7 @@ The simplest way to generate a PDF is by instantiating the generator directly an
 ```csharp
 using HtmlToPdfDotNet.Library;
 using HtmlToPdfDotNet.Library.Commons;
+using HtmlToPdfDotNet.Library.Models.Layout;
 
 // 1. Initialize configuration options
 var options = new ConversionOptions
@@ -95,7 +101,9 @@ generator.WritePdfFile(html, "output.pdf");
 ```
 
 ### Dependency Injection (DI) Example
-HtmlToPdfDotNet integrates seamlessly with modern .NET DI containers.
+`AddHtmlToPdfDotNet()` registers `PdfGenerator` as a singleton `IPdfGenerator` with default `ConversionOptions` (A4, compressed streams). It has no options overload; to customize options, register the generator yourself with a factory (see the ASP.NET Core example below).
+
+The library only references `Microsoft.Extensions.DependencyInjection.Abstractions`. ASP.NET Core and Worker Service apps already include the full container; a console app needs the `Microsoft.Extensions.DependencyInjection` package to call `BuildServiceProvider()`.
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
@@ -114,19 +122,67 @@ IPdfGenerator generator = serviceProvider.GetRequiredService<IPdfGenerator>();
 generator.WritePdfFile("<h1>Injected Generator</h1>", "di_output.pdf");
 ```
 
+### Headers and Footers
+Set `ConversionOptions.HeaderFooter` to a `HeaderFooterConfig` to render HTML templates on every page. `{page}` and `{total}` are replaced with the current page number and the total page count while `ShowPageNumbers` is `true` (the default). `FirstPageHeaderHtml`, when set, replaces the header on the first page only.
+
+The header is drawn at the top of the page content area and the footer at its bottom. `PageLayout.ReservedHeaderFooterHeight` shifts body content down to leave room for the header (see [Known Limitations](#known-limitations)).
+
+```csharp
+using HtmlToPdfDotNet.Library;
+using HtmlToPdfDotNet.Library.Commons;
+using HtmlToPdfDotNet.Library.Models.Layout;
+
+var options = new ConversionOptions
+{
+    Page = new PageLayout(595.28f, 841.89f, new PageMargins(40f))
+    {
+        ReservedHeaderFooterHeight = 30f
+    },
+    HeaderFooter = new HeaderFooterConfig
+    {
+        FirstPageHeaderHtml = "<h2>Quarterly Report</h2>",
+        HeaderHtml = "<p style='font-size: 9pt'>Quarterly Report (continued)</p>",
+        FooterHtml = "<p style='text-align: center; font-size: 9pt'>Page {page} of {total}</p>"
+    }
+};
+
+var generator = new PdfGenerator(options);
+generator.WritePdfFile("<p>Report body...</p>", "report-with-footer.pdf");
+```
+
+### Custom Fonts
+Register TTF/OTF files on `ConversionOptions.Fonts` (a `FontRegistry`) before constructing the generator. The family name is matched case-insensitively against CSS `font-family`; when omitted, the file name without extension is used. Font families that are not registered fall back to the standard PDF fonts (Helvetica, Times, Courier).
+
+```csharp
+using HtmlToPdfDotNet.Library;
+using HtmlToPdfDotNet.Library.Commons;
+
+var options = new ConversionOptions();
+options.Fonts.RegisterFont("fonts/Roboto-Regular.ttf", "Roboto");
+options.Fonts.RegisterFont("fonts/Roboto-Bold.ttf", "Roboto", bold: true);
+
+// Alternatively, register every *.ttf and *.otf file in a directory (recursively);
+// family, bold and italic are detected from the file names.
+// options.Fonts.RegisterDirectory("fonts");
+
+var generator = new PdfGenerator(options);
+byte[] pdf = generator.Convert("<p style=\"font-family: 'Roboto'\">Custom font</p>");
+```
+
 ### Important Classes and Interfaces
-- **`IPdfGenerator`**: The primary interface. Exposes methods like `Convert(html)`, `Convert(html, stream)`, and `WritePdfFile(html, path)`.
-- **`PdfGenerator`**: The default implementation of `IPdfGenerator`.
-- **`ConversionOptions`**: Configuration class allowing customization of page sizes (`PageLayout`), base paths for resources (`BasePath`), external stylesheets (`StyleSheets`), and custom fonts (`FontRegistry`).
-- **`PageLayout`**: Defines the physical page size (e.g., `PageLayout.A4`, `PageLayout.Letter`) and document margins.
+- **`IPdfGenerator`** (`HtmlToPdfDotNet.Library`): The primary interface. Exposes `Convert(html)` (returns a `byte[]`), `Convert(html, stream)`, `WritePdfFile(html, path)`, and `RunLayout(html)`, which returns the computed `LayoutResult` (page primitives) without writing a PDF.
+- **`PdfGenerator`** (`HtmlToPdfDotNet.Library`): The default implementation of `IPdfGenerator`.
+- **`ConversionOptions`** (`HtmlToPdfDotNet.Library.Commons`): Configuration for page size and margins (`Page`), stream compression (`CompressStreams`), the base directory for local resources (`BasePath`), additional stylesheets (`StyleSheets`), custom fonts (`Fonts`), and running headers/footers (`HeaderFooter`).
+- **`HeaderFooterConfig`** (`HtmlToPdfDotNet.Library.Commons`): Header and footer templates.
+- **`PageLayout`** (`HtmlToPdfDotNet.Library.Models.Layout`): Page size and margins, in points. Presets: `PageLayout.A4`, `PageLayout.Letter`, `PageLayout.Legal`. Custom sizes: `new PageLayout(width, height, new PageMargins(top, right, bottom, left))`. The default margins (`PageMargins.Default`) are 56.7pt (about 2 cm) on every side.
 
 ### Best Practices
-- **Reuse the Generator:** The `PdfGenerator` class captures a snapshot of `ConversionOptions` when it is constructed, is safe to reuse across concurrent conversions, and should be registered as a Singleton to prevent redundant memory allocations. Configure page settings, stylesheets, base paths, and fonts before constructing the generator.
-- **Use External Stylesheets:** Instead of large `<style>` blocks, pass pre-compiled CSS files via `ConversionOptions.StyleSheets` for faster parsing.
-- **Font Subsetting:** When using custom TTF fonts, explicitly register them using the `FontRegistry` to ensure only used glyphs are embedded, drastically reducing output file size.
+- **Reuse the Generator:** `PdfGenerator` captures a snapshot of `ConversionOptions` when it is constructed, is safe to reuse across concurrent conversions, and should be registered as a singleton. Configure page settings, stylesheets, base paths, and fonts before constructing the generator.
+- **Shared Stylesheets:** `ConversionOptions.StyleSheets` accepts entries that are either paths to existing CSS files or raw CSS text, and applies them before the document's own `<style>` blocks. `<link rel="stylesheet">` elements are not processed.
+- **Font Size:** Register custom TrueType fonts through `ConversionOptions.Fonts` so they are subset to the glyphs actually used.
 
 ### Error Handling Example
-Always wrap PDF generation in a `try-catch` block, especially when dealing with external HTML input or file I/O operations.
+Wrap PDF generation in a `try-catch` block, especially when dealing with external HTML input or file I/O operations.
 
 ```csharp
 try
@@ -139,7 +195,7 @@ catch (UnauthorizedAccessException ex)
 {
     Console.Error.WriteLine($"Permission denied while writing PDF: {ex.Message}");
 }
-catch (Exception ex) // Handles parsing or rendering errors
+catch (Exception ex) // Handles parsing, resource-loading, or rendering errors
 {
     Console.Error.WriteLine($"Failed to generate PDF: {ex.Message}");
 }
@@ -147,66 +203,112 @@ catch (Exception ex) // Handles parsing or rendering errors
 
 ---
 
+## Supported HTML and CSS
+
+- **Selectors:** type, class, id, `*`, compound (`p.intro`, `div#main`), descendant (`div p`), and selector lists (`h1, h2`).
+- **Display:** `block`, `inline`, `inline-block`, `flex`, `table`, `list-item`, `none`. Unknown values fall back to `block`.
+- **Box model:** `width`, `height`, `margin`, `padding`, `border` and their per-side longhands, `border-radius`.
+- **Text:** `color`, `font-family`, `font-size`, `font-weight`, `font-style`, `line-height`, `text-align`, `text-decoration`, `text-transform`.
+- **Background:** `background`, `background-color`.
+- **Flexbox:** see [Main Features](#main-features).
+- **Paging:** `page-break-before`, `page-break-after`, `page-break-inside`.
+- **Units:** `px` (converted at 1px = 0.75pt), `pt`, `em`, `rem`, `cm`, `mm`, `in`. Percentages are supported for `font-size`, `flex-basis`, and table cell `width` attributes; other lengths given in `%` are treated as zero.
+
+### Known Limitations
+- No CSS Grid (`display: grid` falls back to block layout), `float`, or `position`.
+- `@media`, `@font-face`, `@import`, and other at-rules are ignored; `!important` is stripped and has no effect on priority.
+- No attribute selectors, pseudo-classes, pseudo-elements, or child/sibling combinators.
+- Tables do not support `colspan` or `rowspan`.
+- No remote resources: images and stylesheets are never fetched over HTTP(S).
+- PNG alpha channel is currently not preserved.
+- Interlaced (Adam7) PNG images are not supported and cause the conversion to fail.
+- CMYK JPEG images are tagged as RGB, so their colors render incorrectly.
+- Font families that are not registered fall back to the standard PDF fonts.
+- `HeaderFooterConfig.HeaderHeight` and `FooterHeight` are not yet applied by the layout engine, so body content is not automatically kept clear of the footer.
+
+---
+
 ## Dependencies
 
-HtmlToPdfDotNet is designed to be lightweight, relying on minimal external packages.
+HtmlToPdfDotNet relies on a minimal set of managed packages.
 
-| Package | Version | Required | Purpose |
-|---------|---------|----------|---------|
-| **HtmlAgilityPack** | `1.12.4+` | Yes | Used for robust parsing of HTML strings into a navigable DOM tree. Handles malformed HTML gracefully. |
-| **Microsoft.Extensions.DependencyInjection** | `10.0.6+` | Yes | Provides core abstractions for the native DI container implementation, enabling seamless integration with ASP.NET Core and Worker Services. |
+| Package | Version | Purpose |
+|---------|---------|---------|
+| **HtmlAgilityPack** | `1.12.4` | Parses HTML strings into a navigable DOM tree. Handles malformed HTML gracefully. |
+| **Microsoft.Extensions.DependencyInjection.Abstractions** | `10.0.6` | `IServiceCollection` abstractions used by the `AddHtmlToPdfDotNet()` extension. |
 
-*There are no transitive unmanaged dependencies (no native `.dll` or `.so` files required).*
+*There are no unmanaged dependencies (no native `.dll` or `.so` files required).*
+
+---
+
+## Building from Source
+
+Requires the .NET 10 SDK.
+
+```bash
+# Build the solution
+dotnet build
+
+# Run the unit tests
+dotnet test HtmlToPdfDotNet.Tests
+
+# Run the benchmarks
+dotnet run -c Release --project HtmlToPdfDotNet.Benchmarks -- --filter '*'
+```
+
+The `HtmlToPdfDotNet.Example` project is an ASP.NET Core sample that renders a Razor view both as HTML and as a PDF (see [ASP.NET Core Integration](#aspnet-core-integration-with-razor-views)).
 
 ---
 
 ## Code Policies and Contribution Guidelines
 
-We enforce strict engineering standards to ensure high performance and maintainability.
-
 ### Development Standards
-- **Coding Standards:** Follow standard Microsoft C# coding conventions. Use C# 10.0+ language features (e.g., file-scoped namespaces, pattern matching, global usings).
+- **Coding Standards:** Follow standard Microsoft C# coding conventions. Use modern C# language features (e.g., file-scoped namespaces, pattern matching, primary constructors).
 - **Naming Conventions:**
   - Interfaces: `IPascalCase`
   - Classes/Records/Structs: `PascalCase`
   - Private Fields: `_camelCase`
   - Local Variables/Parameters: `camelCase`
-- **SOLID Principles:** Architecture is highly decoupled. Layout engines (`BlockLayoutEngine`, `TableLayoutEngine`) are strictly separated from PDF writing constructs (`PdfDocumentWriter`).
+- **Separation of Concerns:** Layout engines (`BlockLayoutEngine`, `InlineLayoutEngine`, `FlexLayoutEngine`, `TableLayoutEngine`) are separated from PDF writing (`PdfDocumentWriter`).
 - **Folder Structure:**
-  - `HtmlToPdfDotNet.Library/Commons/`: Static helpers and constants.
-  - `HtmlToPdfDotNet.Library/Models/Layout/`: Layout tree and rendering primitives.
-  - `HtmlToPdfDotNet.Library/Models/Styles/`: CSS parsing and cascade resolution.
+  - `HtmlToPdfDotNet.Library/`: Public entry points (`IPdfGenerator`, `PdfGenerator`).
+  - `HtmlToPdfDotNet.Library/Commons/`: Public configuration (`ConversionOptions`, `HeaderFooterConfig`), CSS value parsing, helpers, and constants.
+  - `HtmlToPdfDotNet.Library/Infrastructure/`: Dependency injection extension (`AddHtmlToPdfDotNet`).
+  - `HtmlToPdfDotNet.Library/Models/Layout/`: Layout engines, page layout, and rendering primitives.
+  - `HtmlToPdfDotNet.Library/Models/Styles/`: CSS parsing, selector matching, and cascade resolution.
   - `HtmlToPdfDotNet.Library/Models/Writer/`: PDF binary generation (XRefs, streams).
-  - `HtmlToPdfDotNet.Library/Models/Fonts/`: Custom TTF/OTF font loading, parsing, and subsetting to minimize PDF size.
+  - `HtmlToPdfDotNet.Library/Models/Fonts/`: TTF/OTF font loading, parsing, and subsetting.
   - `HtmlToPdfDotNet.Library/Models/Imaging/`: Native decoding of JPEG and PNG images and PDF Image XObject generation.
 
 ### Process Guidelines
-- **Unit Testing:** All new features must include xUnit tests. Code coverage for `HtmlToPdfDotNet.Library` must remain above 85%. Use `InternalsVisibleTo` to test internal layout behaviors.
-- **Error Handling:** Use exceptions only for truly exceptional circumstances (e.g., missing files, I/O failures). Use standard fallback mechanisms for CSS parsing errors (e.g., reverting to `auto` or default colors).
-- **Logging:** Do not use `Console.WriteLine` in the library. If diagnostics are required, inject an `ILogger<T>` instance.
-- **Performance:** Avoid excessive allocations. Use `Span<T>` and `ReadOnlySpan<char>` for text and CSS parsing. Use static readonly dictionaries for lookup tables.
+- **Unit Testing:** All new features must include xUnit tests. Aim for high coverage of `HtmlToPdfDotNet.Library`. Internals are visible to `HtmlToPdfDotNet.Tests` (`InternalsVisibleTo`) for testing layout behavior.
+- **Error Handling:** Use exceptions for truly exceptional circumstances (e.g., missing files, I/O failures). Use fallback values for unsupported or invalid CSS (e.g., `auto` or default colors).
+- **Logging:** Do not write to the console from the library.
+- **Performance:** Avoid excessive allocations. Prefer `Span<T>` and `ReadOnlySpan<char>` for text and CSS parsing, and static readonly lookup tables.
 
 ### Source Control Strategy
-- **Branching:** We use standard GitFlow. `main` contains production-ready code. Development happens on `feature/*` branches.
-- **Pull Requests:** PRs must include an updated CHANGELOG, pass all GitHub Actions CI tests, and require at least one approving review from a maintainer.
-- **Versioning:** We follow strict [Semantic Versioning (SemVer)](https://semver.org/).
+- **Branching:** `Master` contains production-ready code and `develop` is the integration branch. Work happens on feature branches.
+- **Pull Requests:** PRs must pass the GitHub Actions CI build and tests (which run for `Master`) and require at least one approving review from a maintainer.
+- **Versioning:** We follow [Semantic Versioning (SemVer)](https://semver.org/).
 
 ### Security
-- HTML input is treated as untrusted. External resources (images referenced via `src`) are only resolved if they fall under the configured `BasePath` or are valid `data:` URIs, preventing SSRF attacks.
+- HTML input is treated as untrusted. Image `src` values are resolved relative to `ConversionOptions.BasePath` (or the current working directory when it is not set) and confined to that directory; leading slashes and drive roots are stripped, so absolute paths cannot escape it. `data:` URIs are also supported. Remote URLs are never fetched.
+- When `BasePath` is set, `WritePdfFile` only writes inside `BasePath`; any other output path throws `UnauthorizedAccessException`.
 
 ---
 
 ## Advanced Examples
 
 ### ASP.NET Core Integration with Razor Views
-A highly effective pattern for generating professional PDFs in ASP.NET Core is rendering a Razor view (.cshtml) to an HTML string in memory, and then passing it to `HtmlToPdfDotNet`. This allows you to use the exact same template and CSS styles for both in-browser HTML previewing and offline PDF generation.
+A practical pattern for generating PDFs in ASP.NET Core is rendering a Razor view (.cshtml) to an HTML string in memory, and then passing it to `HtmlToPdfDotNet`. This lets you use the same template and CSS for both in-browser HTML previewing and PDF generation.
 
-This architectural pattern is fully implemented in the **`HtmlToPdfDotNet.Example`** project.
+This pattern is implemented in the **[`HtmlToPdfDotNet.Example`](https://github.com/guillercp93/HtmlToPdfDotNet/tree/Master/HtmlToPdfDotNet.Example)** project.
 
 #### 1. Register Services in `Program.cs`
 Register the MVC controller views, view-renderer helper, and the generator as a Singleton:
 ```csharp
 using HtmlToPdfDotNet.Library;
+using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Layout;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -261,7 +363,7 @@ public class RazorViewRenderer(
 ```
 
 #### 3. The Web API Controller
-Expose endpoints that either render the HTML in-browser (excellent for design and debugging CSS) or generate a downloadable PDF:
+Expose endpoints that either render the HTML in-browser (useful for designing and debugging CSS) or generate a downloadable PDF:
 ```csharp
 [ApiController]
 public class ReportController(IRazorViewRenderer renderer, IPdfGenerator pdfGenerator) : ControllerBase
@@ -283,20 +385,20 @@ public class ReportController(IRazorViewRenderer renderer, IPdfGenerator pdfGene
     {
         var model = new SalesReportModel();
         string html = await renderer.RenderToStringAsync("Report/SalesReport", model);
-        
+
         // Convert to PDF byte array directly
         byte[] pdfBytes = pdfGenerator.Convert(html);
-        
+
         return File(pdfBytes, "application/pdf", "SalesReport.pdf");
     }
 }
 ```
 
 ### Loading and Embedding Images
-HtmlToPdfDotNet supports loading images either by relative physical paths or by embedding them as Base64 Data URIs.
+HtmlToPdfDotNet loads images from local files under the base directory or from Base64 `data:` URIs.
 
 #### Option A: Embedding as Base64 Data URIs (Recommended)
-This approach is extremely robust for web environments because it eliminates path-resolution issues and runtime base-path complications across environments (development, production containers, etc.).
+This approach avoids path-resolution issues across environments (development, production containers, etc.).
 ```csharp
 // Inside your View Model
 public string LogoDataUri => GetLogoAsBase64();
@@ -314,17 +416,28 @@ Then, reference the property directly in your `.cshtml` view:
 ```
 
 #### Option B: Loading via BasePath
-If your HTML contains relative physical image paths (e.g. `<img src="images/logo.png" />`), you must configure the `BasePath` property inside the conversion options:
+Relative image paths (e.g. `<img src="images/logo.png" />`) are resolved against `ConversionOptions.BasePath`, or against the current working directory when it is not set. `BasePath` must be an existing directory. When it is set, the output path passed to `WritePdfFile` must also be inside `BasePath`; alternatively, use `Convert` and write the bytes yourself.
 ```csharp
+using HtmlToPdfDotNet.Library;
+using HtmlToPdfDotNet.Library.Commons;
+using HtmlToPdfDotNet.Library.Models.Layout;
+
+string assetsDir = "/var/www/html/assets"; // must exist and contain images/logo.png
+
 var options = new ConversionOptions
 {
-    BasePath = "/var/www/html/assets/", // Resolves images relative to this base directory
+    BasePath = assetsDir, // Resolves images relative to this directory
     Page = PageLayout.A4
 };
 
 var generator = new PdfGenerator(options);
-string html = @"<img src='images/logo.png' width='200' />"; 
-generator.WritePdfFile(html, "report.pdf");
+string html = @"<img src='images/logo.png' width='200' />";
+
+// Write inside BasePath...
+generator.WritePdfFile(html, Path.Combine(assetsDir, "report.pdf"));
+
+// ...or write anywhere yourself
+File.WriteAllBytes("report.pdf", generator.Convert(html));
 ```
 
 ---
@@ -332,17 +445,20 @@ generator.WritePdfFile(html, "report.pdf");
 ## Troubleshooting
 
 ### Common Installation Problems
-- **Error: `NU1202: Package HtmlToPdfDotNet.Library is not compatible with net8.0`**
-  - **Fix:** This library strictly targets `net10.0`. You must upgrade your project to .NET 10.0 or higher.
+- **Error: `NU1202: Package HtmlToPdfDotNet 1.0.0 is not compatible with net8.0`**
+  - **Fix:** This library targets `net10.0` only. Upgrade your project to .NET 10.0 or higher.
 
 ### Runtime Issues
-- **Images are not rendering (Blank spaces in PDF)**
-  - **Fix:** Ensure the `src` attribute is either an absolute path, a valid Base64 string (`data:image/png;base64,...`), or that you have configured `ConversionOptions.BasePath` for relative paths.
+- **`FileNotFoundException` or `NotSupportedException` while converting HTML with images**
+  - **Fix:** A missing image file throws `FileNotFoundException` and an unsupported image format throws `NotSupportedException`; in both cases the conversion fails. Make sure the `src` is either a `data:` URI or a path relative to `ConversionOptions.BasePath` (or the working directory when `BasePath` is not set), and that the image is a JPEG or non-interlaced PNG.
+- **`UnauthorizedAccessException` from `WritePdfFile`**
+  - **Fix:** When `BasePath` is set, the output path must be inside `BasePath`. Use `Convert` and write the bytes yourself to save elsewhere.
 - **Text overlapping or incorrect font sizes**
-  - **Fix:** By default, HTML assumes 96 DPI, while PDF uses 72 DPI. The library automatically scales `px` to `pt` (`1px = 0.75pt`). Ensure your CSS explicitly uses `pt` or `px` consistently.
+  - **Fix:** HTML assumes 96 DPI, while PDF uses 72 DPI. The library scales `px` to `pt` (`1px = 0.75pt`). Use `pt` or `px` consistently in your CSS.
 
 ### Debugging Tips
-- If the layout looks wrong, try disabling `CompressStreams = false` in `ConversionOptions`. This will output a raw, human-readable PDF file. You can then open the `.pdf` file in a text editor to inspect the raw PDF commands (e.g., `BT`, `Tf`, `cm`) being emitted.
+- If the layout looks wrong, set `CompressStreams = false` in `ConversionOptions`. This outputs uncompressed content streams that you can inspect in a text editor (e.g., `BT`, `Tf`, `cm` operators).
+- `IPdfGenerator.RunLayout(html)` returns the computed layout primitives without writing a PDF, which is useful for inspecting positions in tests.
 
 ---
 
@@ -352,10 +468,10 @@ generator.WritePdfFile(html, "report.pdf");
 A: No. HtmlToPdfDotNet is a static HTML/CSS layout engine. It does not execute JavaScript. If you need JS rendering (like React/Angular SPAs), you must pre-render the HTML before passing it to the library.
 
 **Q: Can I use TailwindCSS or Bootstrap?**
-A: Yes, but keep in mind that the library supports a subset of CSS. Complex flexbox or grid layouts might degrade gracefully into block layouts. It is recommended to use standard block, inline-block, and table layouts for maximum compatibility.
+A: Only partially. The library supports a subset of CSS: simple selectors, the box model, flexbox, and tables. Utility frameworks rely heavily on unsupported features (media queries, pseudo-classes, grid, positioning), so prefer purpose-written CSS using block, inline-block, flex, and table layouts.
 
 **Q: Why is the generated PDF larger than expected?**
-A: Make sure `CompressStreams = true` is enabled in your options. If you are embedding custom TTF fonts, ensure the subsetter is actively trimming unused glyphs.
+A: Make sure `CompressStreams = true` (the default) is set. CFF-based OpenType fonts are embedded in full; prefer TrueType (`.ttf`) fonts, which are subset to the glyphs used.
 
 ---
 
