@@ -1,0 +1,3256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Sales Report</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #1e293b; background-color: #f8fafc; padding: 10px; }
+        .report-header { background-color: #1e40af; color: #ffffff; padding: 20px 24px; margin-bottom: 20px; }
+        .report-header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; line-height: 1.3; }
+        .report-header .subtitle { font-size: 13px; margin-bottom: 12px; }
+        .report-header .meta { font-size: 10px; border-top: 1px solid #ffffff40; padding-top: 10px; margin-top: 10px; }
+        .section-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; }
+        .report-table { width: 100%; background-color: #ffffff; }
+        .report-table-header { background-color: #1e40af; color: #ffffff; }
+        .report-table-header th { padding: 11px; text-align: center; font-size: 10px; text-transform: uppercase; font-weight: 600; color: #ffffff; }
+        .idx { width: 24px; }
+        .num { text-align: right; }
+        .report-table-row { border-bottom: 1px solid #f1f5f9; }
+        table.report-table tbody tr:nth-child(even) { background-color: #f8fafc; }
+        table.report-table tbody td { padding: 9px; font-size: 12px; }
+        table.report-table tbody td.num { text-align: right; }
+        table.report-table tbody td.idx { color: #94a3b8; font-size: 11px; width: 24px; }
+        .badge { display: inline-block; padding: 2px 8px; font-size: 10px; font-weight: 600; }
+        .badge-Electronics { background-color: #dbeafe; color: #1d4ed8; }
+        .badge-Accessories { background-color: #dcfce7; color: #15803d; }
+        .badge-Audio { background-color: #fce7f3; color: #be185d; }
+        .badge-Office { background-color: #fef3c7; color: #b45309; }
+        .badge-Furniture { background-color: #ede9fe; color: #6d28d9; }
+        .report-footer { margin-top: 16px; font-size: 10px; color: #64748b; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <h1>Annual Sales Report</h1>
+        <div class="subtitle">Detailed line items for all regions</div>
+        <div class="meta">Generated for benchmarking purposes</div>
+    </div>
+    <div class="section-title">Line items</div>
+    <table class="report-table">
+        <thead>
+            <tr class="report-table-header">
+                <th class="idx">#</th>
+                <th>Product</th>
+                <th>Cat.</th>
+                <th class="num">Units</th>
+                <th class="num">Price</th>
+                <th class="num">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="report-table-row">
+                <td class="idx">1</td>
+                <td>Wireless Mouse #1</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">47</td>
+                <td class="num">$15.20</td>
+                <td class="num"><strong>$714.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">2</td>
+                <td>Noise Cancelling Headphones #2</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">84</td>
+                <td class="num">$20.50</td>
+                <td class="num"><strong>$1,722.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">3</td>
+                <td>Ergonomic Chair #3</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">121</td>
+                <td class="num">$25.80</td>
+                <td class="num"><strong>$3,121.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">4</td>
+                <td>USB-C Hub #4</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">158</td>
+                <td class="num">$31.10</td>
+                <td class="num"><strong>$4,913.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">5</td>
+                <td>Standing Desk #5</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">195</td>
+                <td class="num">$36.40</td>
+                <td class="num"><strong>$7,098.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">6</td>
+                <td>Mechanical Keyboard #6</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">232</td>
+                <td class="num">$41.70</td>
+                <td class="num"><strong>$9,674.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">7</td>
+                <td>4K Monitor #7</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">269</td>
+                <td class="num">$47.00</td>
+                <td class="num"><strong>$12,643.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">8</td>
+                <td>Laptop Pro 15 #8</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">306</td>
+                <td class="num">$52.30</td>
+                <td class="num"><strong>$16,003.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">9</td>
+                <td>Wireless Mouse #9</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">343</td>
+                <td class="num">$57.60</td>
+                <td class="num"><strong>$19,756.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">10</td>
+                <td>Noise Cancelling Headphones #10</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">380</td>
+                <td class="num">$62.90</td>
+                <td class="num"><strong>$23,902.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">11</td>
+                <td>Ergonomic Chair #11</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">417</td>
+                <td class="num">$68.20</td>
+                <td class="num"><strong>$28,439.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">12</td>
+                <td>USB-C Hub #12</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">454</td>
+                <td class="num">$73.50</td>
+                <td class="num"><strong>$33,369.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">13</td>
+                <td>Standing Desk #13</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">491</td>
+                <td class="num">$78.80</td>
+                <td class="num"><strong>$38,690.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">14</td>
+                <td>Mechanical Keyboard #14</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">528</td>
+                <td class="num">$84.10</td>
+                <td class="num"><strong>$44,404.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">15</td>
+                <td>4K Monitor #15</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">565</td>
+                <td class="num">$89.40</td>
+                <td class="num"><strong>$50,511.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">16</td>
+                <td>Laptop Pro 15 #16</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">602</td>
+                <td class="num">$94.70</td>
+                <td class="num"><strong>$57,009.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">17</td>
+                <td>Wireless Mouse #17</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">639</td>
+                <td class="num">$100.00</td>
+                <td class="num"><strong>$63,900.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">18</td>
+                <td>Noise Cancelling Headphones #18</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">676</td>
+                <td class="num">$105.30</td>
+                <td class="num"><strong>$71,182.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">19</td>
+                <td>Ergonomic Chair #19</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">713</td>
+                <td class="num">$110.60</td>
+                <td class="num"><strong>$78,857.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">20</td>
+                <td>USB-C Hub #20</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">750</td>
+                <td class="num">$115.90</td>
+                <td class="num"><strong>$86,925.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">21</td>
+                <td>Standing Desk #21</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">787</td>
+                <td class="num">$121.20</td>
+                <td class="num"><strong>$95,384.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">22</td>
+                <td>Mechanical Keyboard #22</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">824</td>
+                <td class="num">$126.50</td>
+                <td class="num"><strong>$104,236.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">23</td>
+                <td>4K Monitor #23</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">861</td>
+                <td class="num">$131.80</td>
+                <td class="num"><strong>$113,479.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">24</td>
+                <td>Laptop Pro 15 #24</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">898</td>
+                <td class="num">$137.10</td>
+                <td class="num"><strong>$123,115.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">25</td>
+                <td>Wireless Mouse #25</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">35</td>
+                <td class="num">$142.40</td>
+                <td class="num"><strong>$4,984.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">26</td>
+                <td>Noise Cancelling Headphones #26</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">72</td>
+                <td class="num">$147.70</td>
+                <td class="num"><strong>$10,634.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">27</td>
+                <td>Ergonomic Chair #27</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">109</td>
+                <td class="num">$153.00</td>
+                <td class="num"><strong>$16,677.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">28</td>
+                <td>USB-C Hub #28</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">146</td>
+                <td class="num">$158.30</td>
+                <td class="num"><strong>$23,111.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">29</td>
+                <td>Standing Desk #29</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">183</td>
+                <td class="num">$163.60</td>
+                <td class="num"><strong>$29,938.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">30</td>
+                <td>Mechanical Keyboard #30</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">220</td>
+                <td class="num">$168.90</td>
+                <td class="num"><strong>$37,158.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">31</td>
+                <td>4K Monitor #31</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">257</td>
+                <td class="num">$174.20</td>
+                <td class="num"><strong>$44,769.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">32</td>
+                <td>Laptop Pro 15 #32</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">294</td>
+                <td class="num">$179.50</td>
+                <td class="num"><strong>$52,773.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">33</td>
+                <td>Wireless Mouse #33</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">331</td>
+                <td class="num">$184.80</td>
+                <td class="num"><strong>$61,168.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">34</td>
+                <td>Noise Cancelling Headphones #34</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">368</td>
+                <td class="num">$190.10</td>
+                <td class="num"><strong>$69,956.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">35</td>
+                <td>Ergonomic Chair #35</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">405</td>
+                <td class="num">$195.40</td>
+                <td class="num"><strong>$79,137.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">36</td>
+                <td>USB-C Hub #36</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">442</td>
+                <td class="num">$200.70</td>
+                <td class="num"><strong>$88,709.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">37</td>
+                <td>Standing Desk #37</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">479</td>
+                <td class="num">$206.00</td>
+                <td class="num"><strong>$98,674.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">38</td>
+                <td>Mechanical Keyboard #38</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">516</td>
+                <td class="num">$11.30</td>
+                <td class="num"><strong>$5,830.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">39</td>
+                <td>4K Monitor #39</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">553</td>
+                <td class="num">$16.60</td>
+                <td class="num"><strong>$9,179.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">40</td>
+                <td>Laptop Pro 15 #40</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">590</td>
+                <td class="num">$21.90</td>
+                <td class="num"><strong>$12,921.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">41</td>
+                <td>Wireless Mouse #41</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">627</td>
+                <td class="num">$27.20</td>
+                <td class="num"><strong>$17,054.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">42</td>
+                <td>Noise Cancelling Headphones #42</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">664</td>
+                <td class="num">$32.50</td>
+                <td class="num"><strong>$21,580.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">43</td>
+                <td>Ergonomic Chair #43</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">701</td>
+                <td class="num">$37.80</td>
+                <td class="num"><strong>$26,497.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">44</td>
+                <td>USB-C Hub #44</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">738</td>
+                <td class="num">$43.10</td>
+                <td class="num"><strong>$31,807.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">45</td>
+                <td>Standing Desk #45</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">775</td>
+                <td class="num">$48.40</td>
+                <td class="num"><strong>$37,510.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">46</td>
+                <td>Mechanical Keyboard #46</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">812</td>
+                <td class="num">$53.70</td>
+                <td class="num"><strong>$43,604.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">47</td>
+                <td>4K Monitor #47</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">849</td>
+                <td class="num">$59.00</td>
+                <td class="num"><strong>$50,091.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">48</td>
+                <td>Laptop Pro 15 #48</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">886</td>
+                <td class="num">$64.30</td>
+                <td class="num"><strong>$56,969.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">49</td>
+                <td>Wireless Mouse #49</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">23</td>
+                <td class="num">$69.60</td>
+                <td class="num"><strong>$1,600.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">50</td>
+                <td>Noise Cancelling Headphones #50</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">60</td>
+                <td class="num">$74.90</td>
+                <td class="num"><strong>$4,494.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">51</td>
+                <td>Ergonomic Chair #51</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">97</td>
+                <td class="num">$80.20</td>
+                <td class="num"><strong>$7,779.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">52</td>
+                <td>USB-C Hub #52</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">134</td>
+                <td class="num">$85.50</td>
+                <td class="num"><strong>$11,457.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">53</td>
+                <td>Standing Desk #53</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">171</td>
+                <td class="num">$90.80</td>
+                <td class="num"><strong>$15,526.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">54</td>
+                <td>Mechanical Keyboard #54</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">208</td>
+                <td class="num">$96.10</td>
+                <td class="num"><strong>$19,988.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">55</td>
+                <td>4K Monitor #55</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">245</td>
+                <td class="num">$101.40</td>
+                <td class="num"><strong>$24,843.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">56</td>
+                <td>Laptop Pro 15 #56</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">282</td>
+                <td class="num">$106.70</td>
+                <td class="num"><strong>$30,089.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">57</td>
+                <td>Wireless Mouse #57</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">319</td>
+                <td class="num">$112.00</td>
+                <td class="num"><strong>$35,728.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">58</td>
+                <td>Noise Cancelling Headphones #58</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">356</td>
+                <td class="num">$117.30</td>
+                <td class="num"><strong>$41,758.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">59</td>
+                <td>Ergonomic Chair #59</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">393</td>
+                <td class="num">$122.60</td>
+                <td class="num"><strong>$48,181.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">60</td>
+                <td>USB-C Hub #60</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">430</td>
+                <td class="num">$127.90</td>
+                <td class="num"><strong>$54,997.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">61</td>
+                <td>Standing Desk #61</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">467</td>
+                <td class="num">$133.20</td>
+                <td class="num"><strong>$62,204.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">62</td>
+                <td>Mechanical Keyboard #62</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">504</td>
+                <td class="num">$138.50</td>
+                <td class="num"><strong>$69,804.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">63</td>
+                <td>4K Monitor #63</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">541</td>
+                <td class="num">$143.80</td>
+                <td class="num"><strong>$77,795.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">64</td>
+                <td>Laptop Pro 15 #64</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">578</td>
+                <td class="num">$149.10</td>
+                <td class="num"><strong>$86,179.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">65</td>
+                <td>Wireless Mouse #65</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">615</td>
+                <td class="num">$154.40</td>
+                <td class="num"><strong>$94,956.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">66</td>
+                <td>Noise Cancelling Headphones #66</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">652</td>
+                <td class="num">$159.70</td>
+                <td class="num"><strong>$104,124.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">67</td>
+                <td>Ergonomic Chair #67</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">689</td>
+                <td class="num">$165.00</td>
+                <td class="num"><strong>$113,685.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">68</td>
+                <td>USB-C Hub #68</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">726</td>
+                <td class="num">$170.30</td>
+                <td class="num"><strong>$123,637.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">69</td>
+                <td>Standing Desk #69</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">763</td>
+                <td class="num">$175.60</td>
+                <td class="num"><strong>$133,982.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">70</td>
+                <td>Mechanical Keyboard #70</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">800</td>
+                <td class="num">$180.90</td>
+                <td class="num"><strong>$144,720.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">71</td>
+                <td>4K Monitor #71</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">837</td>
+                <td class="num">$186.20</td>
+                <td class="num"><strong>$155,849.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">72</td>
+                <td>Laptop Pro 15 #72</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">874</td>
+                <td class="num">$191.50</td>
+                <td class="num"><strong>$167,371.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">73</td>
+                <td>Wireless Mouse #73</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">11</td>
+                <td class="num">$196.80</td>
+                <td class="num"><strong>$2,164.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">74</td>
+                <td>Noise Cancelling Headphones #74</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">48</td>
+                <td class="num">$202.10</td>
+                <td class="num"><strong>$9,700.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">75</td>
+                <td>Ergonomic Chair #75</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">85</td>
+                <td class="num">$207.40</td>
+                <td class="num"><strong>$17,629.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">76</td>
+                <td>USB-C Hub #76</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">122</td>
+                <td class="num">$12.70</td>
+                <td class="num"><strong>$1,549.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">77</td>
+                <td>Standing Desk #77</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">159</td>
+                <td class="num">$18.00</td>
+                <td class="num"><strong>$2,862.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">78</td>
+                <td>Mechanical Keyboard #78</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">196</td>
+                <td class="num">$23.30</td>
+                <td class="num"><strong>$4,566.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">79</td>
+                <td>4K Monitor #79</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">233</td>
+                <td class="num">$28.60</td>
+                <td class="num"><strong>$6,663.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">80</td>
+                <td>Laptop Pro 15 #80</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">270</td>
+                <td class="num">$33.90</td>
+                <td class="num"><strong>$9,153.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">81</td>
+                <td>Wireless Mouse #81</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">307</td>
+                <td class="num">$39.20</td>
+                <td class="num"><strong>$12,034.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">82</td>
+                <td>Noise Cancelling Headphones #82</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">344</td>
+                <td class="num">$44.50</td>
+                <td class="num"><strong>$15,308.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">83</td>
+                <td>Ergonomic Chair #83</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">381</td>
+                <td class="num">$49.80</td>
+                <td class="num"><strong>$18,973.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">84</td>
+                <td>USB-C Hub #84</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">418</td>
+                <td class="num">$55.10</td>
+                <td class="num"><strong>$23,031.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">85</td>
+                <td>Standing Desk #85</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">455</td>
+                <td class="num">$60.40</td>
+                <td class="num"><strong>$27,482.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">86</td>
+                <td>Mechanical Keyboard #86</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">492</td>
+                <td class="num">$65.70</td>
+                <td class="num"><strong>$32,324.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">87</td>
+                <td>4K Monitor #87</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">529</td>
+                <td class="num">$71.00</td>
+                <td class="num"><strong>$37,559.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">88</td>
+                <td>Laptop Pro 15 #88</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">566</td>
+                <td class="num">$76.30</td>
+                <td class="num"><strong>$43,185.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">89</td>
+                <td>Wireless Mouse #89</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">603</td>
+                <td class="num">$81.60</td>
+                <td class="num"><strong>$49,204.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">90</td>
+                <td>Noise Cancelling Headphones #90</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">640</td>
+                <td class="num">$86.90</td>
+                <td class="num"><strong>$55,616.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">91</td>
+                <td>Ergonomic Chair #91</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">677</td>
+                <td class="num">$92.20</td>
+                <td class="num"><strong>$62,419.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">92</td>
+                <td>USB-C Hub #92</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">714</td>
+                <td class="num">$97.50</td>
+                <td class="num"><strong>$69,615.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">93</td>
+                <td>Standing Desk #93</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">751</td>
+                <td class="num">$102.80</td>
+                <td class="num"><strong>$77,202.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">94</td>
+                <td>Mechanical Keyboard #94</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">788</td>
+                <td class="num">$108.10</td>
+                <td class="num"><strong>$85,182.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">95</td>
+                <td>4K Monitor #95</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">825</td>
+                <td class="num">$113.40</td>
+                <td class="num"><strong>$93,555.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">96</td>
+                <td>Laptop Pro 15 #96</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">862</td>
+                <td class="num">$118.70</td>
+                <td class="num"><strong>$102,319.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">97</td>
+                <td>Wireless Mouse #97</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">899</td>
+                <td class="num">$124.00</td>
+                <td class="num"><strong>$111,476.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">98</td>
+                <td>Noise Cancelling Headphones #98</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">36</td>
+                <td class="num">$129.30</td>
+                <td class="num"><strong>$4,654.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">99</td>
+                <td>Ergonomic Chair #99</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">73</td>
+                <td class="num">$134.60</td>
+                <td class="num"><strong>$9,825.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">100</td>
+                <td>USB-C Hub #100</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">110</td>
+                <td class="num">$139.90</td>
+                <td class="num"><strong>$15,389.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">101</td>
+                <td>Standing Desk #101</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">147</td>
+                <td class="num">$145.20</td>
+                <td class="num"><strong>$21,344.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">102</td>
+                <td>Mechanical Keyboard #102</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">184</td>
+                <td class="num">$150.50</td>
+                <td class="num"><strong>$27,692.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">103</td>
+                <td>4K Monitor #103</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">221</td>
+                <td class="num">$155.80</td>
+                <td class="num"><strong>$34,431.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">104</td>
+                <td>Laptop Pro 15 #104</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">258</td>
+                <td class="num">$161.10</td>
+                <td class="num"><strong>$41,563.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">105</td>
+                <td>Wireless Mouse #105</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">295</td>
+                <td class="num">$166.40</td>
+                <td class="num"><strong>$49,088.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">106</td>
+                <td>Noise Cancelling Headphones #106</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">332</td>
+                <td class="num">$171.70</td>
+                <td class="num"><strong>$57,004.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">107</td>
+                <td>Ergonomic Chair #107</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">369</td>
+                <td class="num">$177.00</td>
+                <td class="num"><strong>$65,313.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">108</td>
+                <td>USB-C Hub #108</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">406</td>
+                <td class="num">$182.30</td>
+                <td class="num"><strong>$74,013.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">109</td>
+                <td>Standing Desk #109</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">443</td>
+                <td class="num">$187.60</td>
+                <td class="num"><strong>$83,106.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">110</td>
+                <td>Mechanical Keyboard #110</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">480</td>
+                <td class="num">$192.90</td>
+                <td class="num"><strong>$92,592.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">111</td>
+                <td>4K Monitor #111</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">517</td>
+                <td class="num">$198.20</td>
+                <td class="num"><strong>$102,469.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">112</td>
+                <td>Laptop Pro 15 #112</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">554</td>
+                <td class="num">$203.50</td>
+                <td class="num"><strong>$112,739.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">113</td>
+                <td>Wireless Mouse #113</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">591</td>
+                <td class="num">$208.80</td>
+                <td class="num"><strong>$123,400.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">114</td>
+                <td>Noise Cancelling Headphones #114</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">628</td>
+                <td class="num">$14.10</td>
+                <td class="num"><strong>$8,854.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">115</td>
+                <td>Ergonomic Chair #115</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">665</td>
+                <td class="num">$19.40</td>
+                <td class="num"><strong>$12,901.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">116</td>
+                <td>USB-C Hub #116</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">702</td>
+                <td class="num">$24.70</td>
+                <td class="num"><strong>$17,339.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">117</td>
+                <td>Standing Desk #117</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">739</td>
+                <td class="num">$30.00</td>
+                <td class="num"><strong>$22,170.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">118</td>
+                <td>Mechanical Keyboard #118</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">776</td>
+                <td class="num">$35.30</td>
+                <td class="num"><strong>$27,392.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">119</td>
+                <td>4K Monitor #119</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">813</td>
+                <td class="num">$40.60</td>
+                <td class="num"><strong>$33,007.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">120</td>
+                <td>Laptop Pro 15 #120</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">850</td>
+                <td class="num">$45.90</td>
+                <td class="num"><strong>$39,015.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">121</td>
+                <td>Wireless Mouse #121</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">887</td>
+                <td class="num">$51.20</td>
+                <td class="num"><strong>$45,414.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">122</td>
+                <td>Noise Cancelling Headphones #122</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">24</td>
+                <td class="num">$56.50</td>
+                <td class="num"><strong>$1,356.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">123</td>
+                <td>Ergonomic Chair #123</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">61</td>
+                <td class="num">$61.80</td>
+                <td class="num"><strong>$3,769.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">124</td>
+                <td>USB-C Hub #124</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">98</td>
+                <td class="num">$67.10</td>
+                <td class="num"><strong>$6,575.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">125</td>
+                <td>Standing Desk #125</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">135</td>
+                <td class="num">$72.40</td>
+                <td class="num"><strong>$9,774.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">126</td>
+                <td>Mechanical Keyboard #126</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">172</td>
+                <td class="num">$77.70</td>
+                <td class="num"><strong>$13,364.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">127</td>
+                <td>4K Monitor #127</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">209</td>
+                <td class="num">$83.00</td>
+                <td class="num"><strong>$17,347.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">128</td>
+                <td>Laptop Pro 15 #128</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">246</td>
+                <td class="num">$88.30</td>
+                <td class="num"><strong>$21,721.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">129</td>
+                <td>Wireless Mouse #129</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">283</td>
+                <td class="num">$93.60</td>
+                <td class="num"><strong>$26,488.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">130</td>
+                <td>Noise Cancelling Headphones #130</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">320</td>
+                <td class="num">$98.90</td>
+                <td class="num"><strong>$31,648.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">131</td>
+                <td>Ergonomic Chair #131</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">357</td>
+                <td class="num">$104.20</td>
+                <td class="num"><strong>$37,199.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">132</td>
+                <td>USB-C Hub #132</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">394</td>
+                <td class="num">$109.50</td>
+                <td class="num"><strong>$43,143.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">133</td>
+                <td>Standing Desk #133</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">431</td>
+                <td class="num">$114.80</td>
+                <td class="num"><strong>$49,478.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">134</td>
+                <td>Mechanical Keyboard #134</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">468</td>
+                <td class="num">$120.10</td>
+                <td class="num"><strong>$56,206.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">135</td>
+                <td>4K Monitor #135</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">505</td>
+                <td class="num">$125.40</td>
+                <td class="num"><strong>$63,327.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">136</td>
+                <td>Laptop Pro 15 #136</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">542</td>
+                <td class="num">$130.70</td>
+                <td class="num"><strong>$70,839.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">137</td>
+                <td>Wireless Mouse #137</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">579</td>
+                <td class="num">$136.00</td>
+                <td class="num"><strong>$78,744.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">138</td>
+                <td>Noise Cancelling Headphones #138</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">616</td>
+                <td class="num">$141.30</td>
+                <td class="num"><strong>$87,040.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">139</td>
+                <td>Ergonomic Chair #139</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">653</td>
+                <td class="num">$146.60</td>
+                <td class="num"><strong>$95,729.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">140</td>
+                <td>USB-C Hub #140</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">690</td>
+                <td class="num">$151.90</td>
+                <td class="num"><strong>$104,811.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">141</td>
+                <td>Standing Desk #141</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">727</td>
+                <td class="num">$157.20</td>
+                <td class="num"><strong>$114,284.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">142</td>
+                <td>Mechanical Keyboard #142</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">764</td>
+                <td class="num">$162.50</td>
+                <td class="num"><strong>$124,150.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">143</td>
+                <td>4K Monitor #143</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">801</td>
+                <td class="num">$167.80</td>
+                <td class="num"><strong>$134,407.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">144</td>
+                <td>Laptop Pro 15 #144</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">838</td>
+                <td class="num">$173.10</td>
+                <td class="num"><strong>$145,057.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">145</td>
+                <td>Wireless Mouse #145</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">875</td>
+                <td class="num">$178.40</td>
+                <td class="num"><strong>$156,100.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">146</td>
+                <td>Noise Cancelling Headphones #146</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">12</td>
+                <td class="num">$183.70</td>
+                <td class="num"><strong>$2,204.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">147</td>
+                <td>Ergonomic Chair #147</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">49</td>
+                <td class="num">$189.00</td>
+                <td class="num"><strong>$9,261.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">148</td>
+                <td>USB-C Hub #148</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">86</td>
+                <td class="num">$194.30</td>
+                <td class="num"><strong>$16,709.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">149</td>
+                <td>Standing Desk #149</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">123</td>
+                <td class="num">$199.60</td>
+                <td class="num"><strong>$24,550.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">150</td>
+                <td>Mechanical Keyboard #150</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">160</td>
+                <td class="num">$204.90</td>
+                <td class="num"><strong>$32,784.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">151</td>
+                <td>4K Monitor #151</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">197</td>
+                <td class="num">$10.20</td>
+                <td class="num"><strong>$2,009.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">152</td>
+                <td>Laptop Pro 15 #152</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">234</td>
+                <td class="num">$15.50</td>
+                <td class="num"><strong>$3,627.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">153</td>
+                <td>Wireless Mouse #153</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">271</td>
+                <td class="num">$20.80</td>
+                <td class="num"><strong>$5,636.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">154</td>
+                <td>Noise Cancelling Headphones #154</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">308</td>
+                <td class="num">$26.10</td>
+                <td class="num"><strong>$8,038.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">155</td>
+                <td>Ergonomic Chair #155</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">345</td>
+                <td class="num">$31.40</td>
+                <td class="num"><strong>$10,833.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">156</td>
+                <td>USB-C Hub #156</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">382</td>
+                <td class="num">$36.70</td>
+                <td class="num"><strong>$14,019.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">157</td>
+                <td>Standing Desk #157</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">419</td>
+                <td class="num">$42.00</td>
+                <td class="num"><strong>$17,598.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">158</td>
+                <td>Mechanical Keyboard #158</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">456</td>
+                <td class="num">$47.30</td>
+                <td class="num"><strong>$21,568.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">159</td>
+                <td>4K Monitor #159</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">493</td>
+                <td class="num">$52.60</td>
+                <td class="num"><strong>$25,931.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">160</td>
+                <td>Laptop Pro 15 #160</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">530</td>
+                <td class="num">$57.90</td>
+                <td class="num"><strong>$30,687.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">161</td>
+                <td>Wireless Mouse #161</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">567</td>
+                <td class="num">$63.20</td>
+                <td class="num"><strong>$35,834.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">162</td>
+                <td>Noise Cancelling Headphones #162</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">604</td>
+                <td class="num">$68.50</td>
+                <td class="num"><strong>$41,374.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">163</td>
+                <td>Ergonomic Chair #163</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">641</td>
+                <td class="num">$73.80</td>
+                <td class="num"><strong>$47,305.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">164</td>
+                <td>USB-C Hub #164</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">678</td>
+                <td class="num">$79.10</td>
+                <td class="num"><strong>$53,629.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">165</td>
+                <td>Standing Desk #165</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">715</td>
+                <td class="num">$84.40</td>
+                <td class="num"><strong>$60,346.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">166</td>
+                <td>Mechanical Keyboard #166</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">752</td>
+                <td class="num">$89.70</td>
+                <td class="num"><strong>$67,454.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">167</td>
+                <td>4K Monitor #167</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">789</td>
+                <td class="num">$95.00</td>
+                <td class="num"><strong>$74,955.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">168</td>
+                <td>Laptop Pro 15 #168</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">826</td>
+                <td class="num">$100.30</td>
+                <td class="num"><strong>$82,847.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">169</td>
+                <td>Wireless Mouse #169</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">863</td>
+                <td class="num">$105.60</td>
+                <td class="num"><strong>$91,132.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">170</td>
+                <td>Noise Cancelling Headphones #170</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">900</td>
+                <td class="num">$110.90</td>
+                <td class="num"><strong>$99,810.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">171</td>
+                <td>Ergonomic Chair #171</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">37</td>
+                <td class="num">$116.20</td>
+                <td class="num"><strong>$4,299.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">172</td>
+                <td>USB-C Hub #172</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">74</td>
+                <td class="num">$121.50</td>
+                <td class="num"><strong>$8,991.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">173</td>
+                <td>Standing Desk #173</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">111</td>
+                <td class="num">$126.80</td>
+                <td class="num"><strong>$14,074.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">174</td>
+                <td>Mechanical Keyboard #174</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">148</td>
+                <td class="num">$132.10</td>
+                <td class="num"><strong>$19,550.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">175</td>
+                <td>4K Monitor #175</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">185</td>
+                <td class="num">$137.40</td>
+                <td class="num"><strong>$25,419.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">176</td>
+                <td>Laptop Pro 15 #176</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">222</td>
+                <td class="num">$142.70</td>
+                <td class="num"><strong>$31,679.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">177</td>
+                <td>Wireless Mouse #177</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">259</td>
+                <td class="num">$148.00</td>
+                <td class="num"><strong>$38,332.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">178</td>
+                <td>Noise Cancelling Headphones #178</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">296</td>
+                <td class="num">$153.30</td>
+                <td class="num"><strong>$45,376.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">179</td>
+                <td>Ergonomic Chair #179</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">333</td>
+                <td class="num">$158.60</td>
+                <td class="num"><strong>$52,813.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">180</td>
+                <td>USB-C Hub #180</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">370</td>
+                <td class="num">$163.90</td>
+                <td class="num"><strong>$60,643.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">181</td>
+                <td>Standing Desk #181</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">407</td>
+                <td class="num">$169.20</td>
+                <td class="num"><strong>$68,864.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">182</td>
+                <td>Mechanical Keyboard #182</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">444</td>
+                <td class="num">$174.50</td>
+                <td class="num"><strong>$77,478.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">183</td>
+                <td>4K Monitor #183</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">481</td>
+                <td class="num">$179.80</td>
+                <td class="num"><strong>$86,483.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">184</td>
+                <td>Laptop Pro 15 #184</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">518</td>
+                <td class="num">$185.10</td>
+                <td class="num"><strong>$95,881.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">185</td>
+                <td>Wireless Mouse #185</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">555</td>
+                <td class="num">$190.40</td>
+                <td class="num"><strong>$105,672.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">186</td>
+                <td>Noise Cancelling Headphones #186</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">592</td>
+                <td class="num">$195.70</td>
+                <td class="num"><strong>$115,854.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">187</td>
+                <td>Ergonomic Chair #187</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">629</td>
+                <td class="num">$201.00</td>
+                <td class="num"><strong>$126,429.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">188</td>
+                <td>USB-C Hub #188</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">666</td>
+                <td class="num">$206.30</td>
+                <td class="num"><strong>$137,395.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">189</td>
+                <td>Standing Desk #189</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">703</td>
+                <td class="num">$11.60</td>
+                <td class="num"><strong>$8,154.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">190</td>
+                <td>Mechanical Keyboard #190</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">740</td>
+                <td class="num">$16.90</td>
+                <td class="num"><strong>$12,506.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">191</td>
+                <td>4K Monitor #191</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">777</td>
+                <td class="num">$22.20</td>
+                <td class="num"><strong>$17,249.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">192</td>
+                <td>Laptop Pro 15 #192</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">814</td>
+                <td class="num">$27.50</td>
+                <td class="num"><strong>$22,385.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">193</td>
+                <td>Wireless Mouse #193</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">851</td>
+                <td class="num">$32.80</td>
+                <td class="num"><strong>$27,912.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">194</td>
+                <td>Noise Cancelling Headphones #194</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">888</td>
+                <td class="num">$38.10</td>
+                <td class="num"><strong>$33,832.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">195</td>
+                <td>Ergonomic Chair #195</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">25</td>
+                <td class="num">$43.40</td>
+                <td class="num"><strong>$1,085.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">196</td>
+                <td>USB-C Hub #196</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">62</td>
+                <td class="num">$48.70</td>
+                <td class="num"><strong>$3,019.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">197</td>
+                <td>Standing Desk #197</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">99</td>
+                <td class="num">$54.00</td>
+                <td class="num"><strong>$5,346.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">198</td>
+                <td>Mechanical Keyboard #198</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">136</td>
+                <td class="num">$59.30</td>
+                <td class="num"><strong>$8,064.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">199</td>
+                <td>4K Monitor #199</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">173</td>
+                <td class="num">$64.60</td>
+                <td class="num"><strong>$11,175.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">200</td>
+                <td>Laptop Pro 15 #200</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">210</td>
+                <td class="num">$69.90</td>
+                <td class="num"><strong>$14,679.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">201</td>
+                <td>Wireless Mouse #201</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">247</td>
+                <td class="num">$75.20</td>
+                <td class="num"><strong>$18,574.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">202</td>
+                <td>Noise Cancelling Headphones #202</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">284</td>
+                <td class="num">$80.50</td>
+                <td class="num"><strong>$22,862.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">203</td>
+                <td>Ergonomic Chair #203</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">321</td>
+                <td class="num">$85.80</td>
+                <td class="num"><strong>$27,541.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">204</td>
+                <td>USB-C Hub #204</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">358</td>
+                <td class="num">$91.10</td>
+                <td class="num"><strong>$32,613.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">205</td>
+                <td>Standing Desk #205</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">395</td>
+                <td class="num">$96.40</td>
+                <td class="num"><strong>$38,078.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">206</td>
+                <td>Mechanical Keyboard #206</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">432</td>
+                <td class="num">$101.70</td>
+                <td class="num"><strong>$43,934.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">207</td>
+                <td>4K Monitor #207</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">469</td>
+                <td class="num">$107.00</td>
+                <td class="num"><strong>$50,183.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">208</td>
+                <td>Laptop Pro 15 #208</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">506</td>
+                <td class="num">$112.30</td>
+                <td class="num"><strong>$56,823.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">209</td>
+                <td>Wireless Mouse #209</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">543</td>
+                <td class="num">$117.60</td>
+                <td class="num"><strong>$63,856.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">210</td>
+                <td>Noise Cancelling Headphones #210</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">580</td>
+                <td class="num">$122.90</td>
+                <td class="num"><strong>$71,282.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">211</td>
+                <td>Ergonomic Chair #211</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">617</td>
+                <td class="num">$128.20</td>
+                <td class="num"><strong>$79,099.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">212</td>
+                <td>USB-C Hub #212</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">654</td>
+                <td class="num">$133.50</td>
+                <td class="num"><strong>$87,309.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">213</td>
+                <td>Standing Desk #213</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">691</td>
+                <td class="num">$138.80</td>
+                <td class="num"><strong>$95,910.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">214</td>
+                <td>Mechanical Keyboard #214</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">728</td>
+                <td class="num">$144.10</td>
+                <td class="num"><strong>$104,904.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">215</td>
+                <td>4K Monitor #215</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">765</td>
+                <td class="num">$149.40</td>
+                <td class="num"><strong>$114,291.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">216</td>
+                <td>Laptop Pro 15 #216</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">802</td>
+                <td class="num">$154.70</td>
+                <td class="num"><strong>$124,069.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">217</td>
+                <td>Wireless Mouse #217</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">839</td>
+                <td class="num">$160.00</td>
+                <td class="num"><strong>$134,240.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">218</td>
+                <td>Noise Cancelling Headphones #218</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">876</td>
+                <td class="num">$165.30</td>
+                <td class="num"><strong>$144,802.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">219</td>
+                <td>Ergonomic Chair #219</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">13</td>
+                <td class="num">$170.60</td>
+                <td class="num"><strong>$2,217.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">220</td>
+                <td>USB-C Hub #220</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">50</td>
+                <td class="num">$175.90</td>
+                <td class="num"><strong>$8,795.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">221</td>
+                <td>Standing Desk #221</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">87</td>
+                <td class="num">$181.20</td>
+                <td class="num"><strong>$15,764.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">222</td>
+                <td>Mechanical Keyboard #222</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">124</td>
+                <td class="num">$186.50</td>
+                <td class="num"><strong>$23,126.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">223</td>
+                <td>4K Monitor #223</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">161</td>
+                <td class="num">$191.80</td>
+                <td class="num"><strong>$30,879.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">224</td>
+                <td>Laptop Pro 15 #224</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">198</td>
+                <td class="num">$197.10</td>
+                <td class="num"><strong>$39,025.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">225</td>
+                <td>Wireless Mouse #225</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">235</td>
+                <td class="num">$202.40</td>
+                <td class="num"><strong>$47,564.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">226</td>
+                <td>Noise Cancelling Headphones #226</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">272</td>
+                <td class="num">$207.70</td>
+                <td class="num"><strong>$56,494.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">227</td>
+                <td>Ergonomic Chair #227</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">309</td>
+                <td class="num">$13.00</td>
+                <td class="num"><strong>$4,017.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">228</td>
+                <td>USB-C Hub #228</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">346</td>
+                <td class="num">$18.30</td>
+                <td class="num"><strong>$6,331.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">229</td>
+                <td>Standing Desk #229</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">383</td>
+                <td class="num">$23.60</td>
+                <td class="num"><strong>$9,038.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">230</td>
+                <td>Mechanical Keyboard #230</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">420</td>
+                <td class="num">$28.90</td>
+                <td class="num"><strong>$12,138.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">231</td>
+                <td>4K Monitor #231</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">457</td>
+                <td class="num">$34.20</td>
+                <td class="num"><strong>$15,629.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">232</td>
+                <td>Laptop Pro 15 #232</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">494</td>
+                <td class="num">$39.50</td>
+                <td class="num"><strong>$19,513.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">233</td>
+                <td>Wireless Mouse #233</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">531</td>
+                <td class="num">$44.80</td>
+                <td class="num"><strong>$23,788.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">234</td>
+                <td>Noise Cancelling Headphones #234</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">568</td>
+                <td class="num">$50.10</td>
+                <td class="num"><strong>$28,456.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">235</td>
+                <td>Ergonomic Chair #235</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">605</td>
+                <td class="num">$55.40</td>
+                <td class="num"><strong>$33,517.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">236</td>
+                <td>USB-C Hub #236</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">642</td>
+                <td class="num">$60.70</td>
+                <td class="num"><strong>$38,969.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">237</td>
+                <td>Standing Desk #237</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">679</td>
+                <td class="num">$66.00</td>
+                <td class="num"><strong>$44,814.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">238</td>
+                <td>Mechanical Keyboard #238</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">716</td>
+                <td class="num">$71.30</td>
+                <td class="num"><strong>$51,050.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">239</td>
+                <td>4K Monitor #239</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">753</td>
+                <td class="num">$76.60</td>
+                <td class="num"><strong>$57,679.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">240</td>
+                <td>Laptop Pro 15 #240</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">790</td>
+                <td class="num">$81.90</td>
+                <td class="num"><strong>$64,701.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">241</td>
+                <td>Wireless Mouse #241</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">827</td>
+                <td class="num">$87.20</td>
+                <td class="num"><strong>$72,114.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">242</td>
+                <td>Noise Cancelling Headphones #242</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">864</td>
+                <td class="num">$92.50</td>
+                <td class="num"><strong>$79,920.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">243</td>
+                <td>Ergonomic Chair #243</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">901</td>
+                <td class="num">$97.80</td>
+                <td class="num"><strong>$88,117.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">244</td>
+                <td>USB-C Hub #244</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">38</td>
+                <td class="num">$103.10</td>
+                <td class="num"><strong>$3,917.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">245</td>
+                <td>Standing Desk #245</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">75</td>
+                <td class="num">$108.40</td>
+                <td class="num"><strong>$8,130.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">246</td>
+                <td>Mechanical Keyboard #246</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">112</td>
+                <td class="num">$113.70</td>
+                <td class="num"><strong>$12,734.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">247</td>
+                <td>4K Monitor #247</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">149</td>
+                <td class="num">$119.00</td>
+                <td class="num"><strong>$17,731.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">248</td>
+                <td>Laptop Pro 15 #248</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">186</td>
+                <td class="num">$124.30</td>
+                <td class="num"><strong>$23,119.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">249</td>
+                <td>Wireless Mouse #249</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">223</td>
+                <td class="num">$129.60</td>
+                <td class="num"><strong>$28,900.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">250</td>
+                <td>Noise Cancelling Headphones #250</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">260</td>
+                <td class="num">$134.90</td>
+                <td class="num"><strong>$35,074.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">251</td>
+                <td>Ergonomic Chair #251</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">297</td>
+                <td class="num">$140.20</td>
+                <td class="num"><strong>$41,639.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">252</td>
+                <td>USB-C Hub #252</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">334</td>
+                <td class="num">$145.50</td>
+                <td class="num"><strong>$48,597.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">253</td>
+                <td>Standing Desk #253</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">371</td>
+                <td class="num">$150.80</td>
+                <td class="num"><strong>$55,946.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">254</td>
+                <td>Mechanical Keyboard #254</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">408</td>
+                <td class="num">$156.10</td>
+                <td class="num"><strong>$63,688.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">255</td>
+                <td>4K Monitor #255</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">445</td>
+                <td class="num">$161.40</td>
+                <td class="num"><strong>$71,823.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">256</td>
+                <td>Laptop Pro 15 #256</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">482</td>
+                <td class="num">$166.70</td>
+                <td class="num"><strong>$80,349.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">257</td>
+                <td>Wireless Mouse #257</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">519</td>
+                <td class="num">$172.00</td>
+                <td class="num"><strong>$89,268.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">258</td>
+                <td>Noise Cancelling Headphones #258</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">556</td>
+                <td class="num">$177.30</td>
+                <td class="num"><strong>$98,578.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">259</td>
+                <td>Ergonomic Chair #259</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">593</td>
+                <td class="num">$182.60</td>
+                <td class="num"><strong>$108,281.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">260</td>
+                <td>USB-C Hub #260</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">630</td>
+                <td class="num">$187.90</td>
+                <td class="num"><strong>$118,377.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">261</td>
+                <td>Standing Desk #261</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">667</td>
+                <td class="num">$193.20</td>
+                <td class="num"><strong>$128,864.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">262</td>
+                <td>Mechanical Keyboard #262</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">704</td>
+                <td class="num">$198.50</td>
+                <td class="num"><strong>$139,744.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">263</td>
+                <td>4K Monitor #263</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">741</td>
+                <td class="num">$203.80</td>
+                <td class="num"><strong>$151,015.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">264</td>
+                <td>Laptop Pro 15 #264</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">778</td>
+                <td class="num">$209.10</td>
+                <td class="num"><strong>$162,679.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">265</td>
+                <td>Wireless Mouse #265</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">815</td>
+                <td class="num">$14.40</td>
+                <td class="num"><strong>$11,736.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">266</td>
+                <td>Noise Cancelling Headphones #266</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">852</td>
+                <td class="num">$19.70</td>
+                <td class="num"><strong>$16,784.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">267</td>
+                <td>Ergonomic Chair #267</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">889</td>
+                <td class="num">$25.00</td>
+                <td class="num"><strong>$22,225.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">268</td>
+                <td>USB-C Hub #268</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">26</td>
+                <td class="num">$30.30</td>
+                <td class="num"><strong>$787.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">269</td>
+                <td>Standing Desk #269</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">63</td>
+                <td class="num">$35.60</td>
+                <td class="num"><strong>$2,242.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">270</td>
+                <td>Mechanical Keyboard #270</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">100</td>
+                <td class="num">$40.90</td>
+                <td class="num"><strong>$4,090.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">271</td>
+                <td>4K Monitor #271</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">137</td>
+                <td class="num">$46.20</td>
+                <td class="num"><strong>$6,329.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">272</td>
+                <td>Laptop Pro 15 #272</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">174</td>
+                <td class="num">$51.50</td>
+                <td class="num"><strong>$8,961.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">273</td>
+                <td>Wireless Mouse #273</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">211</td>
+                <td class="num">$56.80</td>
+                <td class="num"><strong>$11,984.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">274</td>
+                <td>Noise Cancelling Headphones #274</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">248</td>
+                <td class="num">$62.10</td>
+                <td class="num"><strong>$15,400.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">275</td>
+                <td>Ergonomic Chair #275</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">285</td>
+                <td class="num">$67.40</td>
+                <td class="num"><strong>$19,209.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">276</td>
+                <td>USB-C Hub #276</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">322</td>
+                <td class="num">$72.70</td>
+                <td class="num"><strong>$23,409.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">277</td>
+                <td>Standing Desk #277</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">359</td>
+                <td class="num">$78.00</td>
+                <td class="num"><strong>$28,002.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">278</td>
+                <td>Mechanical Keyboard #278</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">396</td>
+                <td class="num">$83.30</td>
+                <td class="num"><strong>$32,986.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">279</td>
+                <td>4K Monitor #279</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">433</td>
+                <td class="num">$88.60</td>
+                <td class="num"><strong>$38,363.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">280</td>
+                <td>Laptop Pro 15 #280</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">470</td>
+                <td class="num">$93.90</td>
+                <td class="num"><strong>$44,133.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">281</td>
+                <td>Wireless Mouse #281</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">507</td>
+                <td class="num">$99.20</td>
+                <td class="num"><strong>$50,294.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">282</td>
+                <td>Noise Cancelling Headphones #282</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">544</td>
+                <td class="num">$104.50</td>
+                <td class="num"><strong>$56,848.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">283</td>
+                <td>Ergonomic Chair #283</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">581</td>
+                <td class="num">$109.80</td>
+                <td class="num"><strong>$63,793.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">284</td>
+                <td>USB-C Hub #284</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">618</td>
+                <td class="num">$115.10</td>
+                <td class="num"><strong>$71,131.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">285</td>
+                <td>Standing Desk #285</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">655</td>
+                <td class="num">$120.40</td>
+                <td class="num"><strong>$78,862.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">286</td>
+                <td>Mechanical Keyboard #286</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">692</td>
+                <td class="num">$125.70</td>
+                <td class="num"><strong>$86,984.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">287</td>
+                <td>4K Monitor #287</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">729</td>
+                <td class="num">$131.00</td>
+                <td class="num"><strong>$95,499.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">288</td>
+                <td>Laptop Pro 15 #288</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">766</td>
+                <td class="num">$136.30</td>
+                <td class="num"><strong>$104,405.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">289</td>
+                <td>Wireless Mouse #289</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">803</td>
+                <td class="num">$141.60</td>
+                <td class="num"><strong>$113,704.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">290</td>
+                <td>Noise Cancelling Headphones #290</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">840</td>
+                <td class="num">$146.90</td>
+                <td class="num"><strong>$123,396.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">291</td>
+                <td>Ergonomic Chair #291</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">877</td>
+                <td class="num">$152.20</td>
+                <td class="num"><strong>$133,479.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">292</td>
+                <td>USB-C Hub #292</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">14</td>
+                <td class="num">$157.50</td>
+                <td class="num"><strong>$2,205.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">293</td>
+                <td>Standing Desk #293</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">51</td>
+                <td class="num">$162.80</td>
+                <td class="num"><strong>$8,302.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">294</td>
+                <td>Mechanical Keyboard #294</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">88</td>
+                <td class="num">$168.10</td>
+                <td class="num"><strong>$14,792.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">295</td>
+                <td>4K Monitor #295</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">125</td>
+                <td class="num">$173.40</td>
+                <td class="num"><strong>$21,675.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">296</td>
+                <td>Laptop Pro 15 #296</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">162</td>
+                <td class="num">$178.70</td>
+                <td class="num"><strong>$28,949.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">297</td>
+                <td>Wireless Mouse #297</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">199</td>
+                <td class="num">$184.00</td>
+                <td class="num"><strong>$36,616.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">298</td>
+                <td>Noise Cancelling Headphones #298</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">236</td>
+                <td class="num">$189.30</td>
+                <td class="num"><strong>$44,674.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">299</td>
+                <td>Ergonomic Chair #299</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">273</td>
+                <td class="num">$194.60</td>
+                <td class="num"><strong>$53,125.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">300</td>
+                <td>USB-C Hub #300</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">310</td>
+                <td class="num">$199.90</td>
+                <td class="num"><strong>$61,969.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">301</td>
+                <td>Standing Desk #301</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">347</td>
+                <td class="num">$205.20</td>
+                <td class="num"><strong>$71,204.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">302</td>
+                <td>Mechanical Keyboard #302</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">384</td>
+                <td class="num">$10.50</td>
+                <td class="num"><strong>$4,032.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">303</td>
+                <td>4K Monitor #303</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">421</td>
+                <td class="num">$15.80</td>
+                <td class="num"><strong>$6,651.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">304</td>
+                <td>Laptop Pro 15 #304</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">458</td>
+                <td class="num">$21.10</td>
+                <td class="num"><strong>$9,663.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">305</td>
+                <td>Wireless Mouse #305</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">495</td>
+                <td class="num">$26.40</td>
+                <td class="num"><strong>$13,068.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">306</td>
+                <td>Noise Cancelling Headphones #306</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">532</td>
+                <td class="num">$31.70</td>
+                <td class="num"><strong>$16,864.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">307</td>
+                <td>Ergonomic Chair #307</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">569</td>
+                <td class="num">$37.00</td>
+                <td class="num"><strong>$21,053.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">308</td>
+                <td>USB-C Hub #308</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">606</td>
+                <td class="num">$42.30</td>
+                <td class="num"><strong>$25,633.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">309</td>
+                <td>Standing Desk #309</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">643</td>
+                <td class="num">$47.60</td>
+                <td class="num"><strong>$30,606.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">310</td>
+                <td>Mechanical Keyboard #310</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">680</td>
+                <td class="num">$52.90</td>
+                <td class="num"><strong>$35,972.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">311</td>
+                <td>4K Monitor #311</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">717</td>
+                <td class="num">$58.20</td>
+                <td class="num"><strong>$41,729.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">312</td>
+                <td>Laptop Pro 15 #312</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">754</td>
+                <td class="num">$63.50</td>
+                <td class="num"><strong>$47,879.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">313</td>
+                <td>Wireless Mouse #313</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">791</td>
+                <td class="num">$68.80</td>
+                <td class="num"><strong>$54,420.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">314</td>
+                <td>Noise Cancelling Headphones #314</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">828</td>
+                <td class="num">$74.10</td>
+                <td class="num"><strong>$61,354.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">315</td>
+                <td>Ergonomic Chair #315</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">865</td>
+                <td class="num">$79.40</td>
+                <td class="num"><strong>$68,681.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">316</td>
+                <td>USB-C Hub #316</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">902</td>
+                <td class="num">$84.70</td>
+                <td class="num"><strong>$76,399.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">317</td>
+                <td>Standing Desk #317</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">39</td>
+                <td class="num">$90.00</td>
+                <td class="num"><strong>$3,510.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">318</td>
+                <td>Mechanical Keyboard #318</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">76</td>
+                <td class="num">$95.30</td>
+                <td class="num"><strong>$7,242.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">319</td>
+                <td>4K Monitor #319</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">113</td>
+                <td class="num">$100.60</td>
+                <td class="num"><strong>$11,367.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">320</td>
+                <td>Laptop Pro 15 #320</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">150</td>
+                <td class="num">$105.90</td>
+                <td class="num"><strong>$15,885.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">321</td>
+                <td>Wireless Mouse #321</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">187</td>
+                <td class="num">$111.20</td>
+                <td class="num"><strong>$20,794.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">322</td>
+                <td>Noise Cancelling Headphones #322</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">224</td>
+                <td class="num">$116.50</td>
+                <td class="num"><strong>$26,096.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">323</td>
+                <td>Ergonomic Chair #323</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">261</td>
+                <td class="num">$121.80</td>
+                <td class="num"><strong>$31,789.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">324</td>
+                <td>USB-C Hub #324</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">298</td>
+                <td class="num">$127.10</td>
+                <td class="num"><strong>$37,875.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">325</td>
+                <td>Standing Desk #325</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">335</td>
+                <td class="num">$132.40</td>
+                <td class="num"><strong>$44,354.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">326</td>
+                <td>Mechanical Keyboard #326</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">372</td>
+                <td class="num">$137.70</td>
+                <td class="num"><strong>$51,224.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">327</td>
+                <td>4K Monitor #327</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">409</td>
+                <td class="num">$143.00</td>
+                <td class="num"><strong>$58,487.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">328</td>
+                <td>Laptop Pro 15 #328</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">446</td>
+                <td class="num">$148.30</td>
+                <td class="num"><strong>$66,141.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">329</td>
+                <td>Wireless Mouse #329</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">483</td>
+                <td class="num">$153.60</td>
+                <td class="num"><strong>$74,188.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">330</td>
+                <td>Noise Cancelling Headphones #330</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">520</td>
+                <td class="num">$158.90</td>
+                <td class="num"><strong>$82,628.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">331</td>
+                <td>Ergonomic Chair #331</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">557</td>
+                <td class="num">$164.20</td>
+                <td class="num"><strong>$91,459.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">332</td>
+                <td>USB-C Hub #332</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">594</td>
+                <td class="num">$169.50</td>
+                <td class="num"><strong>$100,683.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">333</td>
+                <td>Standing Desk #333</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">631</td>
+                <td class="num">$174.80</td>
+                <td class="num"><strong>$110,298.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">334</td>
+                <td>Mechanical Keyboard #334</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">668</td>
+                <td class="num">$180.10</td>
+                <td class="num"><strong>$120,306.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">335</td>
+                <td>4K Monitor #335</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">705</td>
+                <td class="num">$185.40</td>
+                <td class="num"><strong>$130,707.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">336</td>
+                <td>Laptop Pro 15 #336</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">742</td>
+                <td class="num">$190.70</td>
+                <td class="num"><strong>$141,499.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">337</td>
+                <td>Wireless Mouse #337</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">779</td>
+                <td class="num">$196.00</td>
+                <td class="num"><strong>$152,684.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">338</td>
+                <td>Noise Cancelling Headphones #338</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">816</td>
+                <td class="num">$201.30</td>
+                <td class="num"><strong>$164,260.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">339</td>
+                <td>Ergonomic Chair #339</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">853</td>
+                <td class="num">$206.60</td>
+                <td class="num"><strong>$176,229.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">340</td>
+                <td>USB-C Hub #340</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">890</td>
+                <td class="num">$11.90</td>
+                <td class="num"><strong>$10,591.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">341</td>
+                <td>Standing Desk #341</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">27</td>
+                <td class="num">$17.20</td>
+                <td class="num"><strong>$464.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">342</td>
+                <td>Mechanical Keyboard #342</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">64</td>
+                <td class="num">$22.50</td>
+                <td class="num"><strong>$1,440.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">343</td>
+                <td>4K Monitor #343</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">101</td>
+                <td class="num">$27.80</td>
+                <td class="num"><strong>$2,807.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">344</td>
+                <td>Laptop Pro 15 #344</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">138</td>
+                <td class="num">$33.10</td>
+                <td class="num"><strong>$4,567.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">345</td>
+                <td>Wireless Mouse #345</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">175</td>
+                <td class="num">$38.40</td>
+                <td class="num"><strong>$6,720.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">346</td>
+                <td>Noise Cancelling Headphones #346</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">212</td>
+                <td class="num">$43.70</td>
+                <td class="num"><strong>$9,264.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">347</td>
+                <td>Ergonomic Chair #347</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">249</td>
+                <td class="num">$49.00</td>
+                <td class="num"><strong>$12,201.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">348</td>
+                <td>USB-C Hub #348</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">286</td>
+                <td class="num">$54.30</td>
+                <td class="num"><strong>$15,529.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">349</td>
+                <td>Standing Desk #349</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">323</td>
+                <td class="num">$59.60</td>
+                <td class="num"><strong>$19,250.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">350</td>
+                <td>Mechanical Keyboard #350</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">360</td>
+                <td class="num">$64.90</td>
+                <td class="num"><strong>$23,364.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">351</td>
+                <td>4K Monitor #351</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">397</td>
+                <td class="num">$70.20</td>
+                <td class="num"><strong>$27,869.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">352</td>
+                <td>Laptop Pro 15 #352</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">434</td>
+                <td class="num">$75.50</td>
+                <td class="num"><strong>$32,767.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">353</td>
+                <td>Wireless Mouse #353</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">471</td>
+                <td class="num">$80.80</td>
+                <td class="num"><strong>$38,056.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">354</td>
+                <td>Noise Cancelling Headphones #354</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">508</td>
+                <td class="num">$86.10</td>
+                <td class="num"><strong>$43,738.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">355</td>
+                <td>Ergonomic Chair #355</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">545</td>
+                <td class="num">$91.40</td>
+                <td class="num"><strong>$49,813.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">356</td>
+                <td>USB-C Hub #356</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">582</td>
+                <td class="num">$96.70</td>
+                <td class="num"><strong>$56,279.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">357</td>
+                <td>Standing Desk #357</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">619</td>
+                <td class="num">$102.00</td>
+                <td class="num"><strong>$63,138.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">358</td>
+                <td>Mechanical Keyboard #358</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">656</td>
+                <td class="num">$107.30</td>
+                <td class="num"><strong>$70,388.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">359</td>
+                <td>4K Monitor #359</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">693</td>
+                <td class="num">$112.60</td>
+                <td class="num"><strong>$78,031.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">360</td>
+                <td>Laptop Pro 15 #360</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">730</td>
+                <td class="num">$117.90</td>
+                <td class="num"><strong>$86,067.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">361</td>
+                <td>Wireless Mouse #361</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">767</td>
+                <td class="num">$123.20</td>
+                <td class="num"><strong>$94,494.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">362</td>
+                <td>Noise Cancelling Headphones #362</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">804</td>
+                <td class="num">$128.50</td>
+                <td class="num"><strong>$103,314.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">363</td>
+                <td>Ergonomic Chair #363</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">841</td>
+                <td class="num">$133.80</td>
+                <td class="num"><strong>$112,525.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">364</td>
+                <td>USB-C Hub #364</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">878</td>
+                <td class="num">$139.10</td>
+                <td class="num"><strong>$122,129.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">365</td>
+                <td>Standing Desk #365</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">15</td>
+                <td class="num">$144.40</td>
+                <td class="num"><strong>$2,166.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">366</td>
+                <td>Mechanical Keyboard #366</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">52</td>
+                <td class="num">$149.70</td>
+                <td class="num"><strong>$7,784.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">367</td>
+                <td>4K Monitor #367</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">89</td>
+                <td class="num">$155.00</td>
+                <td class="num"><strong>$13,795.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">368</td>
+                <td>Laptop Pro 15 #368</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">126</td>
+                <td class="num">$160.30</td>
+                <td class="num"><strong>$20,197.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">369</td>
+                <td>Wireless Mouse #369</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">163</td>
+                <td class="num">$165.60</td>
+                <td class="num"><strong>$26,992.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">370</td>
+                <td>Noise Cancelling Headphones #370</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">200</td>
+                <td class="num">$170.90</td>
+                <td class="num"><strong>$34,180.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">371</td>
+                <td>Ergonomic Chair #371</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">237</td>
+                <td class="num">$176.20</td>
+                <td class="num"><strong>$41,759.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">372</td>
+                <td>USB-C Hub #372</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">274</td>
+                <td class="num">$181.50</td>
+                <td class="num"><strong>$49,731.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">373</td>
+                <td>Standing Desk #373</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">311</td>
+                <td class="num">$186.80</td>
+                <td class="num"><strong>$58,094.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">374</td>
+                <td>Mechanical Keyboard #374</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">348</td>
+                <td class="num">$192.10</td>
+                <td class="num"><strong>$66,850.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">375</td>
+                <td>4K Monitor #375</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">385</td>
+                <td class="num">$197.40</td>
+                <td class="num"><strong>$75,999.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">376</td>
+                <td>Laptop Pro 15 #376</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">422</td>
+                <td class="num">$202.70</td>
+                <td class="num"><strong>$85,539.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">377</td>
+                <td>Wireless Mouse #377</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">459</td>
+                <td class="num">$208.00</td>
+                <td class="num"><strong>$95,472.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">378</td>
+                <td>Noise Cancelling Headphones #378</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">496</td>
+                <td class="num">$13.30</td>
+                <td class="num"><strong>$6,596.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">379</td>
+                <td>Ergonomic Chair #379</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">533</td>
+                <td class="num">$18.60</td>
+                <td class="num"><strong>$9,913.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">380</td>
+                <td>USB-C Hub #380</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">570</td>
+                <td class="num">$23.90</td>
+                <td class="num"><strong>$13,623.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">381</td>
+                <td>Standing Desk #381</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">607</td>
+                <td class="num">$29.20</td>
+                <td class="num"><strong>$17,724.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">382</td>
+                <td>Mechanical Keyboard #382</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">644</td>
+                <td class="num">$34.50</td>
+                <td class="num"><strong>$22,218.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">383</td>
+                <td>4K Monitor #383</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">681</td>
+                <td class="num">$39.80</td>
+                <td class="num"><strong>$27,103.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">384</td>
+                <td>Laptop Pro 15 #384</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">718</td>
+                <td class="num">$45.10</td>
+                <td class="num"><strong>$32,381.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">385</td>
+                <td>Wireless Mouse #385</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">755</td>
+                <td class="num">$50.40</td>
+                <td class="num"><strong>$38,052.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">386</td>
+                <td>Noise Cancelling Headphones #386</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">792</td>
+                <td class="num">$55.70</td>
+                <td class="num"><strong>$44,114.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">387</td>
+                <td>Ergonomic Chair #387</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">829</td>
+                <td class="num">$61.00</td>
+                <td class="num"><strong>$50,569.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">388</td>
+                <td>USB-C Hub #388</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">866</td>
+                <td class="num">$66.30</td>
+                <td class="num"><strong>$57,415.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">389</td>
+                <td>Standing Desk #389</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">903</td>
+                <td class="num">$71.60</td>
+                <td class="num"><strong>$64,654.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">390</td>
+                <td>Mechanical Keyboard #390</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">40</td>
+                <td class="num">$76.90</td>
+                <td class="num"><strong>$3,076.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">391</td>
+                <td>4K Monitor #391</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">77</td>
+                <td class="num">$82.20</td>
+                <td class="num"><strong>$6,329.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">392</td>
+                <td>Laptop Pro 15 #392</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">114</td>
+                <td class="num">$87.50</td>
+                <td class="num"><strong>$9,975.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">393</td>
+                <td>Wireless Mouse #393</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">151</td>
+                <td class="num">$92.80</td>
+                <td class="num"><strong>$14,012.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">394</td>
+                <td>Noise Cancelling Headphones #394</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">188</td>
+                <td class="num">$98.10</td>
+                <td class="num"><strong>$18,442.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">395</td>
+                <td>Ergonomic Chair #395</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">225</td>
+                <td class="num">$103.40</td>
+                <td class="num"><strong>$23,265.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">396</td>
+                <td>USB-C Hub #396</td>
+                <td><span class="badge badge-Accessories">Accessories</span></td>
+                <td class="num">262</td>
+                <td class="num">$108.70</td>
+                <td class="num"><strong>$28,479.40</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">397</td>
+                <td>Standing Desk #397</td>
+                <td><span class="badge badge-Audio">Audio</span></td>
+                <td class="num">299</td>
+                <td class="num">$114.00</td>
+                <td class="num"><strong>$34,086.00</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">398</td>
+                <td>Mechanical Keyboard #398</td>
+                <td><span class="badge badge-Office">Office</span></td>
+                <td class="num">336</td>
+                <td class="num">$119.30</td>
+                <td class="num"><strong>$40,084.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">399</td>
+                <td>4K Monitor #399</td>
+                <td><span class="badge badge-Furniture">Furniture</span></td>
+                <td class="num">373</td>
+                <td class="num">$124.60</td>
+                <td class="num"><strong>$46,475.80</strong></td>
+            </tr>
+            <tr class="report-table-row">
+                <td class="idx">400</td>
+                <td>Laptop Pro 15 #400</td>
+                <td><span class="badge badge-Electronics">Electronics</span></td>
+                <td class="num">410</td>
+                <td class="num">$129.90</td>
+                <td class="num"><strong>$53,259.00</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="report-footer">End of report</div>
+</body>
+</html>

@@ -140,7 +140,8 @@ public sealed class BlockLayoutEngine
             // Flush pending inline runs before any block-level element
             if (inlineBuffer.Count > 0)
             {
-                LayoutTextRuns(inlineBuffer, x, availableWidth, parentTextAlign);
+                LayoutTextRuns(inlineBuffer, x, availableWidth, parentTextAlign,
+                    parentStyle?.FontSize ?? 0f, parentStyle?.LineHeight ?? 0f);
                 inlineBuffer.Clear();
             }
 
@@ -216,7 +217,8 @@ public sealed class BlockLayoutEngine
         // Flush any remaining inline content at the end of the container
         if (inlineBuffer.Count > 0)
         {
-            LayoutTextRuns(inlineBuffer, x, availableWidth, parentTextAlign);
+            LayoutTextRuns(inlineBuffer, x, availableWidth, parentTextAlign,
+                parentStyle?.FontSize ?? 0f, parentStyle?.LineHeight ?? 0f);
         }
 
         // Restore parent list counter (each list has its own CSS counter scope)
@@ -271,6 +273,7 @@ public sealed class BlockLayoutEngine
         // Capture the index before layouting children so we can insert the background/borders
         // behind them in the primitives list (Z-order).
         int boxPrimitiveIndex = _result.Primitives.Count;
+        int pageBeforeContent = _currentPage;
 
         // Layout children nodes
         float childrenHeight = LayoutBlockContent(node, style, contentX, contentWidth);
@@ -280,12 +283,20 @@ public sealed class BlockLayoutEngine
             childrenHeight);
 
         box.ContentHeight = contentHeight;
-        _cursorY = boxTop + style.BorderTop.Width.Points + style.Padding.Top.Points + contentHeight
-                          + style.Padding.Bottom.Points + style.BorderBottom.Width.Points;
 
-        // Emit box primitives (background and borders)
-        // We insert them at boxPrimitiveIndex so they are drawn BEFORE the children.
+        // contentHeight is measured in continuous (page-stacked) coordinates, so the box's
+        // bottom edge on the page where it ends is its virtual bottom minus the full pages
+        // already consumed. This also advances the cursor past the bottom padding and border
+        // of a box whose content continued onto later pages.
+        float borderBoxBottom = boxTop + style.BorderTop.Width.Points + style.Padding.Top.Points + contentHeight
+                                + style.Padding.Bottom.Points + style.BorderBottom.Width.Points;
+        _cursorY = borderBoxBottom - (_currentPage - pageBeforeContent) * _pageContentH;
+
+        // Emit box primitives on the page where the box started
+        int savedPage = _currentPage;
+        _currentPage = pageBeforeContent;
         EmitBox(box, boxTop, parentX + style.Margin.Left.Points, boxPrimitiveIndex);
+        _currentPage = savedPage;
 
         _cursorY += style.Margin.Bottom.Points;
 
@@ -311,8 +322,14 @@ public sealed class BlockLayoutEngine
 
         // Mixed children or only blocks
         float startY = _cursorY;
+        int startPage = _currentPage;
         LayoutChildren(node, contentX, contentWidth);
-        return _cursorY - startY;
+        if (_currentPage == startPage)
+            return _cursorY - startY;
+
+        float remaining = _pageContentH - startY;
+        float fullPages = (_currentPage - startPage - 1) * _pageContentH;
+        return Math.Max(0f, remaining) + fullPages + _cursorY;
     }
 
     /// <summary>
@@ -331,7 +348,7 @@ public sealed class BlockLayoutEngine
             return 0f;
         }
 
-        return LayoutTextRuns(runs, contentX, contentWidth, containerStyle.TextAlign);
+        return LayoutTextRuns(runs, contentX, contentWidth, containerStyle);
     }
 
     /// <summary>
@@ -344,7 +361,7 @@ public sealed class BlockLayoutEngine
         {
             return 0f;
         }
-        return LayoutTextRuns(runs, x, availableWidth, style.TextAlign);
+        return LayoutTextRuns(runs, x, availableWidth, style);
     }
 
     /// <summary>
@@ -354,26 +371,36 @@ public sealed class BlockLayoutEngine
     /// <param name="contentX">The horizontal start position.</param>
     /// <param name="contentWidth">The width available for text wrapping.</param>
     /// <param name="align">The text alignment.</param>
+    /// <param name="containerFontSize">Font size of the container for CSS line-height.</param>
+    /// <param name="lineHeightMultiplier">CSS line-height multiplier of the container.</param>
     /// <returns>The height of the resulting line boxes.</returns>
-    private float LayoutTextRuns(IReadOnlyList<InlineRun> runs, float contentX, float contentWidth, TextAlign align)
+    private float LayoutTextRuns(IReadOnlyList<InlineRun> runs, float contentX, float contentWidth, TextAlign align,
+        float containerFontSize = 0f, float lineHeightMultiplier = 0f)
     {
         if (runs.Count == 0) return 0f;
 
-        List<LineBox> lines = InlineLayoutEngine.Layout(runs, contentWidth, align);
+        List<LineBox> lines = InlineLayoutEngine.Layout(runs, contentWidth, align, containerFontSize, lineHeightMultiplier);
         float startY = _cursorY;
+        int startPage = _currentPage;
 
         foreach (LineBox line in lines)
         {
+            float fontMetricHeight = line.Ascent - line.Descent;
+            float actualLineHeight = line.LineHeight;
+
+            // Half-leading for vertical centering of text within the CSS line-height
+            float halfLeading = (actualLineHeight - fontMetricHeight) / 2f;
+
             // Check if the line fits on the current page
-            if (_cursorY + line.LineHeight > _pageContentH)
+            if (_cursorY + actualLineHeight > _pageContentH)
             {
                 AdvancePage();
             }
 
             // Line top Y (before advancing cursor)
             float lineTopY = _cursorY;
-            // Baseline Y (reference: inside the page, Y from top)
-            float baselineY = lineTopY + line.Ascent;
+            // Baseline Y adjusted for half-leading
+            float baselineY = lineTopY + halfLeading + line.Ascent;
 
             foreach ((InlineRun runItem, float runX) in line.Items)
             {
@@ -425,16 +452,32 @@ public sealed class BlockLayoutEngine
                         X = contentX + runX,
                         Y = lineTopY,
                         Width = runItem.Width,
-                        Height = line.LineHeight,
+                        Height = actualLineHeight,
                         Uri = runItem.LinkUri,
                     });
                 }
             }
 
-            _cursorY += line.LineHeight;
+            _cursorY += actualLineHeight;
         }
 
-        return _cursorY - startY;
+        if (_currentPage == startPage)
+            return _cursorY - startY;
+
+        float remaining = _pageContentH - startY;
+        float fullPages = (_currentPage - startPage - 1) * _pageContentH;
+        return Math.Max(0f, remaining) + fullPages + _cursorY;
+    }
+
+    private float LayoutTextRuns(IReadOnlyList<InlineRun> runs, float contentX, float contentWidth, ComputedStyle style)
+    {
+        return LayoutTextRuns(runs, contentX, contentWidth, style.TextAlign,
+            style.FontSize, style.LineHeight);
+    }
+
+    private float LayoutTextRuns(IReadOnlyList<InlineRun> runs, float contentX, float contentWidth, TextAlign align)
+    {
+        return LayoutTextRuns(runs, contentX, contentWidth, align, 0f, 0f);
     }
 
     /// <summary>
@@ -505,6 +548,9 @@ public sealed class BlockLayoutEngine
 
     /// <summary>
     /// Emits background and border primitives for the specified box model.
+    /// When the box extends past the bottom of the current page, one part is emitted per
+    /// spanned page, each clipped to that page's content area: the top border is drawn only
+    /// on the first part and the bottom border only on the last one.
     /// </summary>
     /// <param name="box">The box model to emit.</param>
     /// <param name="borderBoxTop">The Y coordinate of the top of the border box.</param>
@@ -512,10 +558,61 @@ public sealed class BlockLayoutEngine
     /// <param name="insertAt">The optional index at which to insert the primitives (for Z-order control).</param>
     private void EmitBox(BoxModel box, float borderBoxTop, float borderBoxX, int? insertAt = null)
     {
-        float bbW = box.BorderBoxWidth;
-        float bbH = box.BorderBoxHeight;
+        List<BoxPart> parts = SplitBoxIntoPages(box.BorderBoxHeight, borderBoxTop, insertAt ?? _result.Primitives.Count);
 
-        int currentIdx = insertAt ?? _result.Primitives.Count;
+        // Insert from the last part backwards so the insertion indices of earlier parts
+        // (which precede later ones in the primitives list) stay valid.
+        for (int i = parts.Count - 1; i >= 0; i--)
+        {
+            EmitBoxPart(box, borderBoxX, parts[i], isFirst: i == 0, isLast: i == parts.Count - 1);
+        }
+    }
+
+    /// <summary>
+    /// A page-clipped slice of a border box.
+    /// </summary>
+    /// <param name="Page">The page index of the slice.</param>
+    /// <param name="Top">The Y coordinate of the slice top on its page.</param>
+    /// <param name="Height">The height of the slice.</param>
+    /// <param name="InsertAt">The primitives index where the slice is inserted (behind the box content).</param>
+    private readonly record struct BoxPart(int Page, float Top, float Height, int InsertAt);
+
+    /// <summary>
+    /// Splits a border box into one part per page it spans. Each continuation part is placed
+    /// right after the page break that starts its page, so it is drawn behind that page's content.
+    /// </summary>
+    private List<BoxPart> SplitBoxIntoPages(float bbH, float borderBoxTop, int insertAt)
+    {
+        const float epsilon = 0.01f;
+
+        float firstH = Math.Clamp(_pageContentH - borderBoxTop, 0f, bbH);
+        List<BoxPart> parts = [new BoxPart(_currentPage, borderBoxTop, firstH, insertAt)];
+
+        float remaining = bbH - firstH;
+        int searchFrom = insertAt;
+        while (remaining > epsilon)
+        {
+            int pageBreakIdx = _result.Primitives.FindIndex(searchFrom, p => p is PageBreakPrimitive);
+            if (pageBreakIdx < 0) break;
+
+            float partH = Math.Min(remaining, _pageContentH);
+            parts.Add(new BoxPart(_currentPage + parts.Count, 0f, partH, pageBreakIdx + 1));
+            remaining -= partH;
+            searchFrom = pageBreakIdx + 1;
+        }
+
+        return parts;
+    }
+
+    /// <summary>
+    /// Emits the background and borders of one page-clipped part of a box.
+    /// </summary>
+    private void EmitBoxPart(BoxModel box, float borderBoxX, BoxPart part, bool isFirst, bool isLast)
+    {
+        float bbW = box.BorderBoxWidth;
+        float top = part.Top;
+        float bottom = part.Top + part.Height;
+        int idx = part.InsertAt;
 
         float borderRadius = box.Style.BorderRadius.Points;
         if (borderRadius > 0f)
@@ -528,58 +625,92 @@ public sealed class BlockLayoutEngine
             float strokeWidth = activeBorder.IsVisible ? activeBorder.Width.Points : 0f;
             CssColor strokeColor = activeBorder.IsVisible ? activeBorder.Color : CssColor.Transparent;
 
-            _result.Primitives.Insert(currentIdx++, new RectPrimitive
+            if (isFirst)
             {
-                PageIndex = _currentPage,
-                X = borderBoxX,
-                Y = borderBoxTop,
-                Width = bbW,
-                Height = bbH,
-                Fill = box.Style.BackgroundColor,
-                BorderRadius = borderRadius,
-                Stroke = strokeColor,
-                StrokeWidth = strokeWidth
-            });
-        }
-        else
-        {
-            // Background
-            if (box.Style.BackgroundColor.A > 0f)
-            {
-                _result.Primitives.Insert(currentIdx++, new RectPrimitive
+                _result.Primitives.Insert(idx, new RectPrimitive
                 {
-                    PageIndex = _currentPage,
+                    PageIndex = part.Page,
                     X = borderBoxX,
-                    Y = borderBoxTop,
+                    Y = top,
                     Width = bbW,
-                    Height = bbH,
+                    Height = part.Height,
                     Fill = box.Style.BackgroundColor,
+                    BorderRadius = borderRadius,
+                    Stroke = strokeColor,
+                    StrokeWidth = strokeWidth
                 });
+                return;
             }
 
-            // Bordes
-            currentIdx = EmitBorder(box.Style.BorderTop, borderBoxX, borderBoxTop, borderBoxX + bbW, borderBoxTop, currentIdx);
-            currentIdx = EmitBorder(box.Style.BorderBottom, borderBoxX, borderBoxTop + bbH, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
-            currentIdx = EmitBorder(box.Style.BorderLeft, borderBoxX, borderBoxTop, borderBoxX, borderBoxTop + bbH, currentIdx);
-            currentIdx = EmitBorder(box.Style.BorderRight, borderBoxX + bbW, borderBoxTop, borderBoxX + bbW, borderBoxTop + bbH, currentIdx);
+            float sw2 = strokeWidth / 2f;
+
+            // Fill rect expanded by strokeWidth/2 so the stroke's outer half
+            // falls on the white fill instead of the body background (#f8fafc).
+            _result.Primitives.Insert(idx++, new RectPrimitive
+            {
+                PageIndex = part.Page,
+                X = borderBoxX - sw2,
+                Y = top - sw2,
+                Width = bbW + strokeWidth,
+                Height = part.Height + strokeWidth,
+                Fill = box.Style.BackgroundColor,
+                BorderRadius = borderRadius,
+            });
+
+            // Stroke rect on original boundary — entire stroke width lands on
+            // the expanded fill, avoiding contrast loss from the gray page fill.
+            _result.Primitives.Insert(idx, new RectPrimitive
+            {
+                PageIndex = part.Page,
+                X = borderBoxX,
+                Y = top,
+                Width = bbW,
+                Height = part.Height,
+                BorderRadius = borderRadius,
+                Stroke = strokeColor,
+                StrokeWidth = strokeWidth,
+            });
+            return;
         }
+
+        if (box.Style.BackgroundColor.A > 0f)
+        {
+            _result.Primitives.Insert(idx++, new RectPrimitive
+            {
+                PageIndex = part.Page,
+                X = borderBoxX,
+                Y = top,
+                Width = bbW,
+                Height = part.Height,
+                Fill = box.Style.BackgroundColor,
+            });
+        }
+
+        if (isFirst)
+            idx = EmitBorder(box.Style.BorderTop, part.Page, borderBoxX, top, borderBoxX + bbW, top, idx);
+        if (isLast)
+            idx = EmitBorder(box.Style.BorderBottom, part.Page, borderBoxX, bottom, borderBoxX + bbW, bottom, idx);
+        idx = EmitBorder(box.Style.BorderLeft, part.Page, borderBoxX, top, borderBoxX, bottom, idx);
+        EmitBorder(box.Style.BorderRight, part.Page, borderBoxX + bbW, top, borderBoxX + bbW, bottom, idx);
     }
 
     /// <summary>
     /// Emits a line primitive for a specific border side if it is visible.
     /// </summary>
     /// <param name="side">The border side to emit.</param>
+    /// <param name="page">The page index of the border line.</param>
     /// <param name="x1">The X coordinate of the start of the border line.</param>
     /// <param name="y1">The Y coordinate of the start of the border line.</param>
     /// <param name="x2">The X coordinate of the end of the border line.</param>
     /// <param name="y2">The Y coordinate of the end of the border line.</param>
     /// <param name="insertAt">The index at which to insert the primitive.</param>
-    private int EmitBorder(CssBorderSide side, float x1, float y1, float x2, float y2, int insertAt)
+    /// <returns>The index following the inserted primitive.</returns>
+    private int EmitBorder(CssBorderSide side, int page, float x1, float y1, float x2, float y2, int insertAt)
     {
         if (!side.IsVisible) return insertAt;
         _result.Primitives.Insert(insertAt, new BorderLinePrimitive
         {
-            PageIndex = _currentPage,
+            PageIndex = page,
             X1 = x1,
             Y1 = y1,
             X2 = x2,

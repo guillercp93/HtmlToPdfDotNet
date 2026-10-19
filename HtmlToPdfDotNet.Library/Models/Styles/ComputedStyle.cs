@@ -63,6 +63,11 @@ public sealed class ComputedStyle
     public JustifyContent JustifyContent { get; set; } = JustifyContent.FlexStart;
     public AlignItems AlignItems { get; set; } = AlignItems.Stretch;
     public CssLength Gap { get; set; } = CssLength.Zero;
+    public FlexWrap FlexWrap { get; set; } = FlexWrap.Nowrap;
+    public float FlexGrow { get; set; } = 0f;
+    public float FlexShrink { get; set; } = 1f;
+    public CssLength FlexBasis { get; set; } = CssLength.Auto;
+    public AlignContent AlignContent { get; set; } = AlignContent.Stretch;
     #endregion
 
     /// <summary>

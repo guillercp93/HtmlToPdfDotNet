@@ -67,15 +67,45 @@ public static class CssValueParser
     {
         if (string.IsNullOrWhiteSpace(value)) return CssEdges.Zero;
 
-        string[] parts = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        CssLength[] lengths = Array.ConvertAll(parts, p => ParseLength(p, parentFontSize));
-
-        return lengths.Length switch
+        // Same tokenization as Trim() + Split(' ', RemoveEmptyEntries), without the intermediate
+        // arrays. Only the first four tokens are used; the rest are ignored.
+        ReadOnlySpan<char> trimmed = value.AsSpan().Trim();
+        int offset = value.Length - value.AsSpan().TrimStart().Length;
+        CssLength l0 = default, l1 = default, l2 = default, l3 = default;
+        int count = 0;
+        int i = 0;
+        while (i < trimmed.Length && count < 4)
         {
-            1 => new CssEdges(lengths[0]),
-            2 => new CssEdges(lengths[0], lengths[1]),
-            3 => new CssEdges(lengths[0], lengths[1], lengths[2], lengths[1]),
-            _ => new CssEdges(lengths[0], lengths[1], lengths[2], lengths[3]),
+            if (trimmed[i] == ' ')
+            {
+                i++;
+                continue;
+            }
+
+            int start = i;
+            while (i < trimmed.Length && trimmed[i] != ' ') i++;
+
+            // A single token spanning the whole value can be parsed without a substring.
+            string token = start == 0 && i == trimmed.Length && trimmed.Length == value.Length
+                ? value
+                : value.Substring(offset + start, i - start);
+            CssLength length = ParseLength(token, parentFontSize);
+            switch (count)
+            {
+                case 0: l0 = length; break;
+                case 1: l1 = length; break;
+                case 2: l2 = length; break;
+                default: l3 = length; break;
+            }
+            count++;
+        }
+
+        return count switch
+        {
+            1 => new CssEdges(l0),
+            2 => new CssEdges(l0, l1),
+            3 => new CssEdges(l0, l1, l2, l1),
+            _ => new CssEdges(l0, l1, l2, l3),
         };
     }
     #endregion
@@ -388,6 +418,139 @@ public static class CssValueParser
         "oblique" => FontStyle.Oblique,
         _ => FontStyle.Normal,
     };
+    #endregion
+
+    #region Flexbox
+
+    /// <summary>
+    /// Parses a CSS flex-wrap value.
+    /// </summary>
+    public static FlexWrap ParseFlexWrap(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "wrap" => FlexWrap.Wrap,
+        "wrap-reverse" => FlexWrap.WrapReverse,
+        _ => FlexWrap.Nowrap,
+    };
+
+    /// <summary>
+    /// Parses a CSS align-content value.
+    /// </summary>
+    public static AlignContent ParseAlignContent(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "flex-start" => AlignContent.FlexStart,
+        "flex-end" => AlignContent.FlexEnd,
+        "center" => AlignContent.Center,
+        "space-between" => AlignContent.SpaceBetween,
+        "space-around" => AlignContent.SpaceAround,
+        _ => AlignContent.Stretch,
+    };
+
+    /// <summary>
+    /// Parses a CSS flex-grow value (non-negative float, default 0).
+    /// </summary>
+    public static float ParseFlexGrow(string? value)
+        => TryParseFlexFactor(value, out float result) ? result : 0f;
+
+    /// <summary>
+    /// Parses a CSS flex-shrink value (non-negative float, default 1).
+    /// </summary>
+    public static float ParseFlexShrink(string? value)
+        => TryParseFlexFactor(value, out float result) ? result : 1f;
+
+    /// <summary>
+    /// Parses the CSS flex shorthand following the CSS Flexbox spec.
+    /// Supported forms:
+    ///   "none" → (0, 0, auto)
+    ///   "auto" → (1, 1, auto)
+    ///   "initial" → (0, 1, auto)
+    ///   "L" → grow=1, shrink=1, basis=L
+    ///   "N" → grow=N, shrink=1, basis=0
+    ///   "N M" → grow=N, shrink=M, basis=0
+    ///   "N L" → grow=N, shrink=1, basis=L
+    ///   "N M L" → grow=N, shrink=M, basis=L
+    /// Invalid input (unknown tokens, negative factors, too many values) yields
+    /// the initial value (0, 1, auto).
+    /// </summary>
+    /// <returns>A tuple (flexGrow, flexShrink, flexBasis).</returns>
+    public static (float grow, float shrink, CssLength basis) ParseFlexShorthand(string? value, float parentFontSize)
+    {
+        (float, float, CssLength) initial = (0f, 1f, CssLength.Auto);
+
+        if (string.IsNullOrWhiteSpace(value))
+            return initial;
+
+        string v = value.Trim().ToLowerInvariant();
+
+        switch (v)
+        {
+            case "none": return (0f, 0f, CssLength.Auto);
+            case "auto": return (1f, 1f, CssLength.Auto);
+            case "initial": return initial;
+        }
+
+        string[] parts = v.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length > 3)
+            return initial;
+
+        var factors = new List<float>(2);
+        CssLength? basis = null;
+
+        foreach (string part in parts)
+        {
+            // A unitless zero is a flex factor unless two factors were already given.
+            bool isFactor = TryParseFloat(part, out float number) && !(number == 0f && factors.Count == 2);
+
+            if (isFactor)
+            {
+                // Factors must be non-negative and contiguous (basis may only lead or trail).
+                if (number < 0f || factors.Count == 2 || (basis is not null && factors.Count > 0))
+                    return initial;
+                factors.Add(number);
+            }
+            else
+            {
+                if (basis is not null || !IsFlexBasisToken(part))
+                    return initial;
+                basis = ParseLength(part, parentFontSize);
+            }
+        }
+
+        if (factors.Count == 0)
+            return (1f, 1f, basis ?? CssLength.Auto);
+
+        float grow = factors[0];
+        float shrink = factors.Count == 2 ? factors[1] : 1f;
+        return (grow, shrink, basis ?? CssLength.Zero);
+    }
+
+    /// <summary>
+    /// Tries to parse a non-negative flex factor (flex-grow / flex-shrink).
+    /// </summary>
+    private static bool TryParseFlexFactor(string? value, out float result)
+    {
+        result = 0f;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        return TryParseFloat(value.Trim(), out result) && result >= 0f;
+    }
+
+    /// <summary>
+    /// Returns true when the token is a valid flex-basis: "auto", "0", or a
+    /// non-negative number followed by a supported unit or "%".
+    /// </summary>
+    private static bool IsFlexBasisToken(string token)
+    {
+        if (token is "auto" or "0") return true;
+
+        string[] suffixes = ["px", "pt", "rem", "em", "cm", "mm", "in", "%"];
+        foreach (string suffix in suffixes)
+        {
+            if (token.EndsWith(suffix, StringComparison.Ordinal))
+                return TryParseFloat(token[..^suffix.Length], out float n) && n >= 0f;
+        }
+
+        return false;
+    }
+
     #endregion
 
     #region Helpers

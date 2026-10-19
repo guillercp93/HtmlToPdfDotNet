@@ -14,6 +14,7 @@ namespace HtmlToPdfDotNet.Library.Models.Styles;
 public sealed class StyleResolver
 {
     private readonly List<CssRule> _stylesheetRules;
+    private readonly CssRuleIndex _ruleIndex;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StyleResolver"/> class.
@@ -24,6 +25,7 @@ public sealed class StyleResolver
         _stylesheetRules = stylesheetRules is null ?
             [] :
             [.. stylesheetRules];
+        _ruleIndex = new CssRuleIndex(_stylesheetRules);
     }
 
     #region Tag Defaults
@@ -89,7 +91,9 @@ public sealed class StyleResolver
     {
         Dictionary<HtmlNode, ComputedStyle> result = new();
         ComputedStyle initial = new(); // initial values
-        ResolveNode(root, initial, result);
+        // One match buffer per call (not per node, not per instance) keeps Resolve thread-safe
+        CssRuleMatchBuffer matchBuffer = new();
+        ResolveNode(root, initial, result, matchBuffer);
         return result;
     }
 
@@ -100,15 +104,17 @@ public sealed class StyleResolver
     /// <param name="node">Root of the DOM (usually the &lt;html&gt; node).</param>
     /// <param name="parentStyle">Computed style of the parent node.</param>
     /// <param name="result">Dictionary to store the computed style of each node.</param>
+    /// <param name="matchBuffer">Reusable buffer for the stylesheet rules matching a node.</param>
     private void ResolveNode(HtmlNode node,
                              ComputedStyle parentStyle,
-                             Dictionary<HtmlNode, ComputedStyle> result)
+                             Dictionary<HtmlNode, ComputedStyle> result,
+                             CssRuleMatchBuffer matchBuffer)
     {
         if (node.NodeType == HtmlNodeType.Document)
         {
             // The document node has no style of its own; we only traverse children
             foreach (HtmlNode child in node.ChildNodes)
-                ResolveNode(child, parentStyle, result);
+                ResolveNode(child, parentStyle, result, matchBuffer);
             return;
         }
 
@@ -129,7 +135,7 @@ public sealed class StyleResolver
         ApplyTagDefaults(node.Name, style);
 
         // 3 Apply Stylesheet rules
-        ApplyStylesheetRules(node, style);
+        ApplyStylesheetRules(node, style, matchBuffer);
 
         // 3.1 Inline style attribute
         ApplyInlineStyle(node, style);
@@ -138,7 +144,7 @@ public sealed class StyleResolver
 
         // 4. Recursion in children
         foreach (HtmlNode child in node.ChildNodes)
-            ResolveNode(child, style, result);
+            ResolveNode(child, style, result, matchBuffer);
     }
     #endregion
 
@@ -183,14 +189,36 @@ public sealed class StyleResolver
     #endregion
 
     #region  StyleSheet rules
-    private void ApplyStylesheetRules(HtmlNode node, ComputedStyle style)
+    /// <summary>
+    /// Applies the declarations of the stylesheet rules matching the node, in cascade order.
+    /// </summary>
+    /// <param name="node">The HTML node.</param>
+    /// <param name="style">The computed style to apply the declarations to.</param>
+    /// <param name="matchBuffer">Reusable buffer for the matching rules; overwritten on each call.</param>
+    private void ApplyStylesheetRules(HtmlNode node,
+                                      ComputedStyle style,
+                                      CssRuleMatchBuffer matchBuffer)
     {
-        if (_stylesheetRules.Count != 0)
+        if (_stylesheetRules.Count == 0) return;
+
+        _ruleIndex.CollectMatchingRules(node, matchBuffer);
+        List<CssSelectorMatcher.MatchedRule> matches = matchBuffer.Matches;
+        for (int i = 0; i < matches.Count; i++)
         {
-            List<CssRule> matchingRules = CssSelectorMatcher.GetMatchingRules(node, _stylesheetRules).ToList();
-            foreach (CssRule rule in matchingRules)
-                foreach ((string prop, string value) in rule.Declarations)
+            IReadOnlyDictionary<string, string> declarations = matches[i].Rule.Declarations;
+
+            // The parser stores a Dictionary; enumerate it through its struct enumerator to avoid
+            // boxing one interface enumerator per matched rule. Enumeration order is identical.
+            if (declarations is Dictionary<string, string> dictionary)
+            {
+                foreach ((string prop, string value) in dictionary)
                     ApplyDeclaration(prop, value, style);
+            }
+            else
+            {
+                foreach ((string prop, string value) in declarations)
+                    ApplyDeclaration(prop, value, style);
+            }
         }
     }
     #endregion
@@ -376,6 +404,29 @@ public sealed class StyleResolver
                 CssLength gap = CssValueParser.ParseLength(value, style.FontSize);
                 if (gap.Points >= 0f) style.Gap = gap;
                 break;
+            case "flex-wrap":
+                style.FlexWrap = CssValueParser.ParseFlexWrap(value);
+                break;
+            case "flex-grow":
+                style.FlexGrow = CssValueParser.ParseFlexGrow(value);
+                break;
+            case "flex-shrink":
+                style.FlexShrink = CssValueParser.ParseFlexShrink(value);
+                break;
+            case "flex-basis":
+                style.FlexBasis = CssValueParser.ParseLength(value, style.FontSize);
+                break;
+            case "align-content":
+                style.AlignContent = CssValueParser.ParseAlignContent(value);
+                break;
+            case "flex":
+                {
+                    var (grow, shrink, basis) = CssValueParser.ParseFlexShorthand(value, style.FontSize);
+                    style.FlexGrow = grow;
+                    style.FlexShrink = shrink;
+                    style.FlexBasis = basis;
+                    break;
+                }
         }
     }
     #endregion

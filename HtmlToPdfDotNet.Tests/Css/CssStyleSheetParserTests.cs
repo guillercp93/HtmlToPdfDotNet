@@ -172,6 +172,130 @@ public class CssSelectorMatcherTests
         CssSelector tag = Selector("p");
         Assert.True(cls.SpecificityScore > tag.SpecificityScore);
     }
+
+    private static HtmlNode NodeById(string html, string id)
+    {
+        HtmlDocument doc = new();
+        doc.LoadHtml(html);
+        return doc.GetElementbyId(id);
+    }
+
+    [Theory]
+    [InlineData(".a", true)]
+    [InlineData(".b", true)]
+    [InlineData(".a.c", true)]
+    [InlineData(".a.b.c", true)]
+    [InlineData(".d", false)]
+    [InlineData(".a.d", false)]
+    public void ClassSelector_MultipleClasses_RequiresEveryClass(string selector, bool expected)
+    {
+        HtmlNode node = Node("<p class=\"a b c\">text</p>");
+        Assert.Equal(expected, CssSelectorMatcher.Matches(node, Selector(selector)));
+    }
+
+    [Theory]
+    [InlineData("  a   b  ")]
+    [InlineData(" a b")]
+    [InlineData("a b ")]
+    public void ClassSelector_ExtraSpaces_AreIgnored(string classAttr)
+    {
+        HtmlNode node = Node($"<p class=\"{classAttr}\">text</p>");
+        Assert.True(CssSelectorMatcher.Matches(node, Selector(".a")));
+        Assert.True(CssSelectorMatcher.Matches(node, Selector(".b")));
+        Assert.True(CssSelectorMatcher.Matches(node, Selector(".a.b")));
+    }
+
+    [Fact]
+    public void ClassSelector_TabSeparatedClasses_AreNotSplit()
+    {
+        // Current behavior: only the space character separates class tokens.
+        HtmlNode node = Node("<p class=\"a\tb\">text</p>");
+        Assert.False(CssSelectorMatcher.Matches(node, Selector(".a")));
+        Assert.False(CssSelectorMatcher.Matches(node, Selector(".b")));
+    }
+
+    [Theory]
+    [InlineData("foobar")]
+    [InlineData("xfoo")]
+    [InlineData("foo-bar")]
+    public void ClassSelector_Substring_DoesNotMatch(string classAttr)
+    {
+        HtmlNode node = Node($"<p class=\"{classAttr}\">text</p>");
+        Assert.False(CssSelectorMatcher.Matches(node, Selector(".foo")));
+    }
+
+    [Fact]
+    public void ClassSelector_EmptyOrMissingClassAttribute_DoesNotMatch()
+    {
+        Assert.False(CssSelectorMatcher.Matches(Node("<p class=\"\">text</p>"), Selector(".a")));
+        Assert.False(CssSelectorMatcher.Matches(Node("<p class=\"   \">text</p>"), Selector(".a")));
+        Assert.False(CssSelectorMatcher.Matches(Node("<p>text</p>"), Selector(".a")));
+    }
+
+    [Fact]
+    public void ClassSelector_IsCaseInsensitive()
+    {
+        HtmlNode node = Node("<p class=\"Intro\">text</p>");
+        Assert.True(CssSelectorMatcher.Matches(node, Selector(".intro")));
+        Assert.True(CssSelectorMatcher.Matches(node, Selector(".INTRO")));
+    }
+
+    [Fact]
+    public void IdSelector_IsCaseInsensitive()
+    {
+        HtmlNode node = Node("<div id=\"Main\">text</div>");
+        Assert.True(CssSelectorMatcher.Matches(node, Selector("#main")));
+        Assert.True(CssSelectorMatcher.Matches(node, Selector("#MAIN")));
+    }
+
+    [Fact]
+    public void TagSelector_IsCaseInsensitive()
+    {
+        HtmlNode node = Node("<P>text</P>");
+        Assert.True(CssSelectorMatcher.Matches(node, Selector("p")));
+        Assert.True(CssSelectorMatcher.Matches(node, Selector("P")));
+    }
+
+    [Fact]
+    public void CompoundSelector_TagIdAndClasses()
+    {
+        HtmlNode node = Node("<p id=\"x\" class=\"a b\">text</p>");
+        Assert.True(CssSelectorMatcher.Matches(node, Selector("p#x.a.b")));
+        Assert.False(CssSelectorMatcher.Matches(node, Selector("p#y.a")));
+        Assert.False(CssSelectorMatcher.Matches(node, Selector("div.a.b")));
+    }
+
+    [Theory]
+    [InlineData("div p", true)]
+    [InlineData("div section p", true)]
+    [InlineData("div section article p", true)]
+    [InlineData(".outer .inner p", true)]
+    [InlineData("#root p", true)]
+    [InlineData("section div p", false)]
+    [InlineData("span p", false)]
+    [InlineData("div section article", false)]
+    public void DescendantSelector_AcrossSeveralAncestorLevels(string selector, bool expected)
+    {
+        HtmlNode node = NodeById(
+            "<div id=\"root\" class=\"outer\"><section class=\"inner\"><article><p id=\"t\">x</p></article></section></div>",
+            "t");
+        Assert.Equal(expected, CssSelectorMatcher.Matches(node, Selector(selector)));
+    }
+
+    [Fact]
+    public void GetMatchingRules_OrdersBySpecificityThenSourceOrder()
+    {
+        List<CssRule> rules = CssStyleSheetParser.Parse(
+            "#x { width: 1pt; } .a { width: 2pt; } p { width: 3pt; } span { width: 4pt; } .b { width: 5pt; } p { width: 6pt; }")
+            .ToList();
+        HtmlNode node = Node("<p id=\"x\" class=\"a b\">text</p>");
+
+        List<string> widths = CssSelectorMatcher.GetMatchingRules(node, rules)
+            .Select(r => r.Declarations["width"])
+            .ToList();
+
+        Assert.Equal(["3pt", "6pt", "2pt", "5pt", "1pt"], widths);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -225,6 +349,76 @@ public class StyleResolverCascadeTests
         Assert.Equal(1f, p.Color.B, precision: 2);
     }
 
+    [Fact]
+    public void EqualSpecificity_LaterRuleWins()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve(
+            "<p class=\"a b\">text</p>",
+            ".a { color: #ff0000; } .b { color: #0000ff; }");
+
+        ComputedStyle p = styles.First(kv => kv.Key.Name == "p").Value;
+
+        Assert.Equal(0f, p.Color.R, precision: 2);
+        Assert.Equal(1f, p.Color.B, precision: 2);
+    }
+
+    [Fact]
+    public void LowerSpecificityLater_DoesNotOverrideEarlierHigherSpecificity()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve(
+            "<p id=\"x\" class=\"a\">text</p>",
+            "#x { color: #ff0000; } .a { color: #0000ff; } p { color: #00ff00; }");
+
+        ComputedStyle p = styles.First(kv => kv.Key.Name == "p").Value;
+
+        Assert.Equal(1f, p.Color.R, precision: 2);
+        Assert.Equal(0f, p.Color.G, precision: 2);
+        Assert.Equal(0f, p.Color.B, precision: 2);
+    }
+
+    [Fact]
+    public void ManyEqualSpecificityRules_SourceOrderIsStable()
+    {
+        // More than 16 matching rules forces List.Sort out of insertion sort; source order must still win.
+        StringBuilder css = new();
+        for (int i = 0; i < 40; i++)
+            css.Append($"p {{ width: {i + 1}pt; }} ");
+
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve("<p>text</p>", css.ToString());
+        ComputedStyle p = styles.First(kv => kv.Key.Name == "p").Value;
+
+        Assert.False(p.Width.IsAuto);
+        Assert.Equal(40f, p.Width.Points, precision: 2);
+    }
+
+    [Fact]
+    public void MultiSelectorRule_UsesSpecificityOfFirstMatchingSelector()
+    {
+        // Current behavior: a rule applies once per node with the specificity of the FIRST selector
+        // in the list that matches ("p" here), not the most specific one ("#x").
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve(
+            "<p id=\"x\" class=\"c\">text</p>",
+            "p, #x { color: #ff0000; } .c { color: #0000ff; }");
+
+        ComputedStyle p = styles.First(kv => kv.Key.Name == "p").Value;
+
+        Assert.Equal(0f, p.Color.R, precision: 2);
+        Assert.Equal(1f, p.Color.B, precision: 2);
+    }
+
+    [Fact]
+    public void DescendantRule_AppliedOnlyInsideAncestor()
+    {
+        Dictionary<HtmlNode, ComputedStyle> styles = Resolve(
+            "<div class=\"box\"><section><p id=\"in\">a</p></section></div><p id=\"out\">b</p>",
+            ".box p { color: #ff0000; }");
+
+        ComputedStyle inside = styles.First(kv => kv.Key.Id == "in").Value;
+        ComputedStyle outside = styles.First(kv => kv.Key.Id == "out").Value;
+
+        Assert.Equal(1f, inside.Color.R, precision: 2);
+        Assert.Equal(0f, outside.Color.R, precision: 2);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -376,4 +570,6 @@ public class EndToEndTests
         Assert.True(compressed.Length < uncompressed.Length,
             $"Comprimido={compressed.Length} debe ser < sin comprimir={uncompressed.Length}");
     }
+
+
 }

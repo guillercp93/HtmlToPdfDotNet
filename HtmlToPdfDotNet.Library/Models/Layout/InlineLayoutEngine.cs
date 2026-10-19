@@ -17,7 +17,9 @@ public static class InlineLayoutEngine
     /// <returns>Sequence of lines ready to render.</returns>
     public static List<LineBox> Layout(IEnumerable<InlineRun> runs,
                                        float availableWidth,
-                                       TextAlign textAlign = TextAlign.Left)
+                                       TextAlign textAlign = TextAlign.Left,
+                                       float containerFontSize = 0f,
+                                       float lineHeightMultiplier = 0f)
     {
         List<LineBox> lines = new();
         LineBox line = new();
@@ -38,6 +40,7 @@ public static class InlineLayoutEngine
                 // If the word does not fit and the line already has content -> new line
                 if (curX + wordWidth > availableWidth && line.Items.Count > 0)
                 {
+                    ApplyCssLineHeight(line, containerFontSize, lineHeightMultiplier);
                     Helpers.FinalizeAndAlign(line, availableWidth, textAlign);
                     lines.Add(line);
                     line = new LineBox();
@@ -89,6 +92,7 @@ public static class InlineLayoutEngine
         // Last line
         if (line.Items.Count > 0)
         {
+            ApplyCssLineHeight(line, containerFontSize, lineHeightMultiplier);
             // Last line is never justified (CSS behavior)
             TextAlign lastAlign = textAlign == TextAlign.Justify ? TextAlign.Left : textAlign;
             Helpers.FinalizeAndAlign(line, availableWidth, lastAlign);
@@ -96,5 +100,13 @@ public static class InlineLayoutEngine
         }
 
         return lines;
+    }
+
+    private static void ApplyCssLineHeight(LineBox line, float containerFontSize, float lineHeightMultiplier)
+    {
+        if (containerFontSize <= 0f || lineHeightMultiplier <= 0f) return;
+        float cssLineHeight = containerFontSize * lineHeightMultiplier;
+        if (cssLineHeight > line.Ascent - line.Descent)
+            line.SetLineHeight(cssLineHeight);
     }
 }
