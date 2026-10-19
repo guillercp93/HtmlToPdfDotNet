@@ -361,9 +361,9 @@ A: Make sure `CompressStreams = true` is enabled in your options. If you are emb
 
 ## License
 
-This project is licensed under the **MIT + Commercial License** model.
+This project is licensed under the **MIT License with the Commons Clause License Condition v1.0**.
 
-- **MIT License:** You are free to use, modify, and include this software in commercial or non-commercial products.
-- **Commercial Clause:** You may **NOT** sell this library as a standalone SaaS product (e.g., a "PDF Generation API as a Service"). 
+- **MIT License:** You may use, copy, modify, merge, publish and distribute the software, subject to the conditions below.
+- **Commons Clause:** You may **NOT** sell the software. "Sell" means providing to third parties, for a fee or other consideration, a product or service whose value derives entirely or substantially from the functionality of the software (for example, a paid "PDF Generation API as a Service", or a paid product whose main value is the PDF conversion this library performs).
 
-Please refer to the `LICENSE` file in the repository root for the full legal text.
+This is not an OSI-approved open source license. The summary above is informational only; the [`LICENSE`](LICENSE) file in the repository root is the full and binding legal text.
