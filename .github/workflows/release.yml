@@ -1,5 +1,7 @@
 # Publishes the library to nuget.org when a version tag (e.g. v1.0.0) is pushed.
-# Requires the repository secret NUGET_API_KEY.
+# Uses nuget.org Trusted Publishing (OIDC): no long-lived API key is stored.
+# Requires a nuget.org Trusted Publishing policy for this repository and workflow file
+# (release.yml), and the repository secret NUGET_USER (nuget.org profile name, not email).
 
 name: Release
 
@@ -18,6 +20,10 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      id-token: write  # OIDC token for nuget.org Trusted Publishing
+
     steps:
     - uses: actions/checkout@v4
     - name: Setup .NET
@@ -32,7 +38,13 @@ jobs:
       run: dotnet test --no-build -c Release --verbosity normal
     - name: Pack
       run: dotnet pack HtmlToPdfDotNet.Library --no-build -c Release -o artifacts -p:Version=${GITHUB_REF_NAME#v}
+    # Exchange the OIDC token for a short-lived (1 hour) API key right before pushing.
+    - name: NuGet login (OIDC)
+      uses: NuGet/login@v1
+      id: login
+      with:
+        user: ${{ secrets.NUGET_USER }}
     - name: Push to nuget.org
       run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
       env:
-        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
