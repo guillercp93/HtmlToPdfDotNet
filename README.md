@@ -366,4 +366,4 @@ This project is licensed under the **MIT License with the Commons Clause License
 - **MIT License:** You may use, copy, modify, merge, publish and distribute the software, subject to the conditions below.
 - **Commons Clause:** You may **NOT** sell the software. "Sell" means providing to third parties, for a fee or other consideration, a product or service whose value derives entirely or substantially from the functionality of the software (for example, a paid "PDF Generation API as a Service", or a paid product whose main value is the PDF conversion this library performs).
 
-This is not an OSI-approved open source license. The summary above is informational only; the [`LICENSE`](LICENSE) file in the repository root is the full and binding legal text.
+This is not an OSI-approved open source license. The summary above is informational only; the [`LICENSE`](https://github.com/guillercp93/HtmlToPdfDotNet/blob/Master/LICENSE) file in the repository root is the full and binding legal text.
