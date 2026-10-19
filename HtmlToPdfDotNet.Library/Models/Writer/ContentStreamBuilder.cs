@@ -261,7 +261,7 @@ public sealed class ContentStreamBuilder
     /// <summary>
     /// Sets the current font and size in the graphic state if they have changed.
     /// </summary>
-    /// <param name="name">The name of the font to set.</param>
+    /// <param name="alias">The resource alias of the font to set.</param>
     /// <param name="size">The size of the font to set.</param>
     private void SetFont(string alias, float size)
     {

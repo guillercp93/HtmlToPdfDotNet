@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace HtmlToPdfDotNet.Library.Models.Styles;
 
 /// <summary>
-/// Parses CSS style sheets (blocks <style> or external .css files)
+/// Parses CSS style sheets (blocks &lt;style&gt; or external .css files)
 /// and produces an ordered list of <see cref="CssRule"/>.
 ///
 /// Supports:
@@ -32,7 +32,7 @@ public static class CssStyleSheetParser
     }
 
     /// <summary>
-    /// Extracts all <style> blocks from an HTML document and parses them.
+    /// Extracts all &lt;style&gt; blocks from an HTML document and parses them.
     /// </summary>
     /// <param name="html">The HTML document to parse.</param>
     /// <returns>An ordered list of <see cref="CssRule"/>.</returns>
@@ -46,7 +46,7 @@ public static class CssStyleSheetParser
     }
 
     /// <summary>
-    /// Extracts all <style> blocks from an HTML document.
+    /// Extracts all &lt;style&gt; blocks from an HTML document.
     /// </summary>
     /// <param name="html">The HTML document to extract style blocks from.</param>
     /// <returns>An enumerable collection of style block contents.</returns>

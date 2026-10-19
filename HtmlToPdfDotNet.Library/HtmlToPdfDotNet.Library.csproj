@@ -8,20 +8,39 @@
     <RootNamespace>HtmlToPdfDotNet</RootNamespace>
     <AssemblyName>HtmlToPdfDotNet</AssemblyName>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <PackageId>HtmlToPdfDotNet.Library</PackageId>
+    <PackageId>HtmlToPdfDotNet</PackageId>
     <Authors>Guillermo Castillo</Authors>
-    <Description>A library for converting HTML to PDF using .NET.</Description>
-    <PackageLicenseExpression>MIT + Commercial License</PackageLicenseExpression>
+    <Description>A fully managed library for converting HTML and CSS to PDF in .NET, with no browser or native dependencies.</Description>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/guillercp93/HtmlToPdfDotNet</PackageProjectUrl>
     <RepositoryUrl>https://github.com/guillercp93/HtmlToPdfDotNet.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>pdf;html;converter;css;dotnet</PackageTags>
     <Version>1.0.0</Version>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Missing XML docs on public members are tracked separately; malformed docs still warn. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.6" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE" Pack="true" PackagePath="" />
+    <None Include="..\README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
   <ItemGroup>

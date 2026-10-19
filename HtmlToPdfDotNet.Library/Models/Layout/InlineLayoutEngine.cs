@@ -14,6 +14,8 @@ public static class InlineLayoutEngine
     /// <param name="runs">Sequence of runs with inline text styling.</param>
     /// <param name="availableWidth">Available width in points.</param>
     /// <param name="textAlign">Horizontal alignment of text.</param>
+    /// <param name="containerFontSize">Font size of the containing block in points; 0 disables CSS line-height.</param>
+    /// <param name="lineHeightMultiplier">CSS line-height multiplier of the containing block; 0 disables it.</param>
     /// <returns>Sequence of lines ready to render.</returns>
     public static List<LineBox> Layout(IEnumerable<InlineRun> runs,
                                        float availableWidth,

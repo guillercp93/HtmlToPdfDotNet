@@ -27,7 +27,7 @@ public enum DisplayType
 /// Value of list-style-type CSS property.
 /// Specifies the style of the list item marker for &lt;li&gt; elements.
 /// </summary>
-/// <see cref="https://developer.mozilla.org/en-US/docs/Web/CSS/list-style-type"/>
+/// <see href="https://developer.mozilla.org/en-US/docs/Web/CSS/list-style-type"/>
 public enum ListStyleType
 {
     /// <summary>A filled circle (bullet, "•"). Default value.</summary>
@@ -96,7 +96,7 @@ public enum FontWeight
 /// <summary>
 /// Value of font-style CSS property
 /// </summary>
-/// <see cref="https://developer.mozilla.org/en-US/docs/Web/CSS/font-style"/>
+/// <see href="https://developer.mozilla.org/en-US/docs/Web/CSS/font-style"/>
 public enum FontStyle
 {
     Normal,
