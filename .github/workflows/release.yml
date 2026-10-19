@@ -1,0 +1,38 @@
+# Publishes the library to nuget.org when a version tag (e.g. v1.0.0) is pushed.
+# Requires the repository secret NUGET_API_KEY.
+
+name: Release
+
+on:
+  push:
+    tags: [ "v*.*.*" ]
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  publish:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore -c Release
+    - name: Test
+      run: dotnet test --no-build -c Release --verbosity normal
+    - name: Pack
+      run: dotnet pack HtmlToPdfDotNet.Library --no-build -c Release -o artifacts -p:Version=${GITHUB_REF_NAME#v}
+    - name: Push to nuget.org
+      run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}

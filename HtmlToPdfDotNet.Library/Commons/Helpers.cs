@@ -91,6 +91,7 @@ public static class Helpers
     ///   carries an <see cref="EmbeddedFontInfo"/> and the layout engine uses its
     ///   hmtx widths instead of the AFM approximations.
     /// </param>
+    /// <param name="linkUri">Optional hyperlink target carried by the run, or <c>null</c>.</param>
     /// <returns>
     ///   An <see cref="InlineRun"/> representing the text with the given style.
     /// </returns>
