@@ -121,7 +121,7 @@ public static class ImageLoader
     /// Reads the dimensions of a JPEG image from the given bytes.
     /// </summary>
     /// <param name="data">The raw JPEG image bytes.</param>
-    /// <returns><see cref="(int width, int height)"/></returns>
+    /// <returns>The image width and height in pixels.</returns>
     private static (int width, int height) ReadJpegDimensions(byte[] data)
     {
         int i = 2; // skip marker FF D8

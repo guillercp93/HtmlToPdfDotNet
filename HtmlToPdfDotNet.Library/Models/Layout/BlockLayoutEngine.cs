@@ -744,7 +744,7 @@ public sealed class BlockLayoutEngine
     #region List markers
     /// <summary>
     /// Emits a list marker (bullet, number, etc.) for a list-item element.
-    /// Called before laying out the <li> block content.
+    /// Called before laying out the &lt;li&gt; block content.
     /// </summary>
     private void EmitListMarker(HtmlNode node, ComputedStyle style, float contentX)
     {
