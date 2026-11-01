@@ -156,6 +156,102 @@ public class TrueTypeFontParserTests
                 $"Astral-plane codepoint U+{cp:X} should map to GID > 0, got {gid}");
         }
     }
+
+    // ── Malformed cmap Format 12 (untrusted font input) ──────────────────────
+
+    [Fact]
+    public void Parse_Format12_DeclaredGroupCountExceedsData_UsesGroupsPresent()
+    {
+        byte[] font = BuildFormat12Font(declaredGroups: uint.MaxValue, (0x41, 0x42, 7));
+
+        EmbeddedFontInfo info = TrueTypeFontParser.Parse(font, "Malformed", false, false);
+
+        Assert.Equal(2, info.CmapUnicodeToGid.Count);
+        Assert.Equal(7, info.CmapUnicodeToGid[0x41]);
+        Assert.Equal(8, info.CmapUnicodeToGid[0x42]);
+    }
+
+    [Fact]
+    public void Parse_Format12_EndCharCodeBeyondUnicode_IsClampedToMaxCodePoint()
+    {
+        byte[] font = BuildFormat12Font(declaredGroups: 1, (0x10FFF0, uint.MaxValue, 1));
+
+        EmbeddedFontInfo info = ParseWithin(font, TimeSpan.FromSeconds(5));
+
+        Assert.Equal(16, info.CmapUnicodeToGid.Count);
+        Assert.All(info.CmapUnicodeToGid.Keys, cp => Assert.InRange(cp, 0x10FFF0, 0x10FFFF));
+    }
+
+    [Fact]
+    public void Parse_Format12_ManyOverlappingGroups_CompletesQuickly()
+    {
+        // 100,000 copies of U+0000..U+FFFF would be ~6.5 billion iterations without a cap.
+        var groups = Enumerable.Repeat<(uint, uint, uint)>((0, 0xFFFF, 0), 100_000).ToArray();
+        byte[] font = BuildFormat12Font(declaredGroups: (uint)groups.Length, groups);
+
+        EmbeddedFontInfo info = ParseWithin(font, TimeSpan.FromSeconds(5));
+
+        Assert.Equal(0x10000, info.CmapUnicodeToGid.Count);
+    }
+
+    [Fact]
+    public void Parse_Format12_GlyphIdBeyondUInt16_IsSkipped()
+    {
+        byte[] font = BuildFormat12Font(declaredGroups: 1, (0x41, 0x43, 0xFFFF));
+
+        EmbeddedFontInfo info = TrueTypeFontParser.Parse(font, "Malformed", false, false);
+
+        Assert.Equal(0xFFFF, Assert.Single(info.CmapUnicodeToGid).Value);
+    }
+
+    private static EmbeddedFontInfo ParseWithin(byte[] font, TimeSpan timeout)
+    {
+        Task<EmbeddedFontInfo> parse = Task.Run(() => TrueTypeFontParser.Parse(font, "Malformed", false, false));
+        Assert.True(parse.Wait(timeout), $"Parsing did not finish within {timeout.TotalSeconds}s.");
+        return parse.Result;
+    }
+
+    /// <summary>
+    /// Builds a minimal sfnt containing only a cmap table with one
+    /// Platform 3 / Encoding 10 / Format 12 subtable.
+    /// </summary>
+    private static byte[] BuildFormat12Font(uint declaredGroups, params (uint Start, uint End, uint StartGid)[] groups)
+    {
+        const int cmapOffset = 12 + 16;
+        const int subtableOffset = 12; // relative to the cmap table
+        int subtableLength = 16 + groups.Length * 12;
+        byte[] data = new byte[cmapOffset + subtableOffset + subtableLength];
+        Span<byte> s = data;
+
+        // sfnt header + single table directory entry
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(s[0..], 0x00010000);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(s[4..], 1);
+        Encoding.ASCII.GetBytes("cmap").CopyTo(s[12..]);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(s[20..], cmapOffset);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(s[24..], (uint)(subtableOffset + subtableLength));
+
+        // cmap header + encoding record
+        Span<byte> cmap = s[cmapOffset..];
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(cmap[2..], 1);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(cmap[4..], 3);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(cmap[6..], 10);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(cmap[8..], subtableOffset);
+
+        // Format 12 subtable
+        Span<byte> sub = cmap[subtableOffset..];
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(sub[0..], 12);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(sub[4..], (uint)subtableLength);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(sub[12..], declaredGroups);
+        for (int g = 0; g < groups.Length; g++)
+        {
+            Span<byte> group = sub[(16 + g * 12)..];
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(group[0..], groups[g].Start);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(group[4..], groups[g].End);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(group[8..], groups[g].StartGid);
+        }
+
+        return data;
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

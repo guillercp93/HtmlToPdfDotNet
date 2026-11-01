@@ -330,26 +330,46 @@ public sealed class TrueTypeFontParser
     /// <summary>Parses a cmap Format 12 subtable (full Unicode coverage, 32-bit).</summary>
     /// <param name="sub">The subtable to parse.</param>
     /// <returns>A dictionary mapping Unicode code points to glyph IDs.</returns>
+    /// <remarks>
+    /// The subtable comes from the font file, so every value is treated as untrusted:
+    /// the group count is bounded by the bytes present, ranges are clamped to U+10FFFF,
+    /// glyph IDs beyond 16 bits are dropped, and the total number of mapped code points
+    /// is capped so overlapping groups cannot cause unbounded work.
+    /// </remarks>
     private static Dictionary<int, int> ParseFormat12(ReadOnlySpan<byte> sub)
     {
+        const uint MaxCodePoint = 0x10FFFF;
+        const int GroupSize = 12;
+
         if (sub.Length < 16) return new();
 
-        uint numGroups = BinaryPrimitives.ReadUInt32BigEndian(sub[12..16]);
-        Dictionary<int, int> result = new((int)numGroups * 8);
+        uint declaredGroups = BinaryPrimitives.ReadUInt32BigEndian(sub[12..16]);
+        int groupCount = (int)Math.Min(declaredGroups, (uint)((sub.Length - 16) / GroupSize));
+        Dictionary<int, int> result = new((int)Math.Min(groupCount * 8L, MaxCodePoint + 1));
 
-        for (int g = 0; g < (int)numGroups; g++)
+        // A well-formed table maps each code point at most once.
+        long remaining = MaxCodePoint + 1;
+
+        for (int g = 0; g < groupCount; g++)
         {
-            int groupOff = 16 + g * 12;
-            if (groupOff + 12 > sub.Length) break;
+            int groupOff = 16 + g * GroupSize;
 
             uint startCharCode = BinaryPrimitives.ReadUInt32BigEndian(sub[groupOff..(groupOff + 4)]);
             uint endCharCode = BinaryPrimitives.ReadUInt32BigEndian(sub[(groupOff + 4)..(groupOff + 8)]);
             uint startGlyphId = BinaryPrimitives.ReadUInt32BigEndian(sub[(groupOff + 8)..(groupOff + 12)]);
 
-            for (uint cp = startCharCode; cp <= endCharCode; cp++)
+            if (startCharCode > endCharCode || startCharCode > MaxCodePoint) continue;
+
+            // Clamping also prevents the uint loop counter from wrapping at uint.MaxValue.
+            uint lastCharCode = Math.Min(endCharCode, MaxCodePoint);
+            for (uint cp = startCharCode; cp <= lastCharCode; cp++)
             {
-                int gid = (int)(startGlyphId + (cp - startCharCode));
-                result[(int)cp] = gid;
+                if (--remaining < 0) return result;
+
+                ulong gid = (ulong)startGlyphId + (cp - startCharCode);
+                if (gid > ushort.MaxValue) break; // later code points in this group are larger still
+
+                result[(int)cp] = (int)gid;
             }
         }
 
