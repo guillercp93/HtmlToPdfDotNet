@@ -160,6 +160,26 @@ public static class Helpers
         return new string(chars);
     }
 
+    private static readonly HashSet<string> _SafeLinkSchemes =
+        new(StringComparer.OrdinalIgnoreCase) { "http", "https", "mailto" };
+
+    /// <summary>
+    /// Returns the trimmed <paramref name="href"/> when it is an absolute URI with an
+    /// allowed scheme (http, https, mailto); otherwise null. PDF viewers can act on other
+    /// schemes (file://, smb://, javascript:), so those never become link annotations.
+    /// </summary>
+    /// <param name="href">The raw href attribute value.</param>
+    /// <returns>The link target to annotate, or null when the link must not be clickable.</returns>
+    internal static string? GetSafeLinkUri(string? href)
+    {
+        if (string.IsNullOrWhiteSpace(href)) return null;
+
+        string trimmed = href.Trim();
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) && _SafeLinkSchemes.Contains(uri.Scheme)
+            ? trimmed
+            : null;
+    }
+
     /// <summary>
     /// Normalizes the text by replacing line breaks and tabs with spaces.
     /// </summary>
@@ -332,6 +352,33 @@ public static class Helpers
         using MemoryStream output = new();
         using ZLibStream zlib = new(input, CompressionMode.Decompress);
         zlib.CopyTo(output);
+        return output.ToArray();
+    }
+
+    /// <summary>
+    /// Decompresses zlib/Deflate data, stopping after <paramref name="maxLength"/> bytes.
+    /// Memory grows with the data actually inflated, so a small compressed payload cannot
+    /// expand without bound (decompression bomb).
+    /// </summary>
+    /// <param name="data">The compressed data.</param>
+    /// <param name="maxLength">The maximum number of decompressed bytes to return.</param>
+    /// <returns>At most <paramref name="maxLength"/> decompressed bytes.</returns>
+    public static byte[] ZlibDecompress(byte[] data, int maxLength)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(maxLength);
+
+        using MemoryStream input = new(data);
+        using MemoryStream output = new();
+        using ZLibStream zlib = new(input, CompressionMode.Decompress);
+
+        byte[] buffer = new byte[Math.Min(maxLength, 81920)];
+        while (output.Length < maxLength)
+        {
+            int read = zlib.Read(buffer, 0, (int)Math.Min(buffer.Length, maxLength - output.Length));
+            if (read == 0) break;
+            output.Write(buffer, 0, read);
+        }
+
         return output.ToArray();
     }
 

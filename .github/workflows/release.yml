@@ -2,6 +2,12 @@
 # Uses nuget.org Trusted Publishing (OIDC): no long-lived API key is stored.
 # Requires a nuget.org Trusted Publishing policy for this repository and workflow file
 # (release.yml), and the repository secret NUGET_USER (nuget.org profile name, not email).
+#
+# Two jobs keep the publishing identity away from build code:
+#   build   - restores, builds, tests and packs WITHOUT id-token permission, so no MSBuild
+#             target, analyzer, test or package executed here can request the OIDC token.
+#   publish - the only job with id-token: write. It runs no repository code: it downloads the
+#             packages, checks them against the checksum the build job reported, logs in and pushes.
 
 name: Release
 
@@ -9,27 +15,28 @@ on:
   push:
     tags: [ "v*.*.*" ]
 
-permissions:
-  contents: read
+permissions: {}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  publish:
+  build:
 
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
-      id-token: write  # OIDC token for nuget.org Trusted Publishing
+
+    outputs:
+      packages-sha256: ${{ steps.checksum.outputs.sha256 }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       with:
         persist-credentials: false
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
       with:
         dotnet-version: 10.0.x
     - name: Restore dependencies
@@ -40,13 +47,60 @@ jobs:
       run: dotnet test --no-build -c Release --verbosity normal
     - name: Pack
       run: dotnet pack HtmlToPdfDotNet.Library --no-build -c Release -o artifacts -p:Version=${GITHUB_REF_NAME#v}
+    # The checksum travels to the publish job as a job output, a channel separate from the artifact.
+    - name: Record package checksum
+      id: checksum
+      working-directory: artifacts
+      run: echo "sha256=$(sha256sum *.nupkg *.snupkg | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+    - name: Upload packages
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: packages
+        path: |
+          artifacts/*.nupkg
+          artifacts/*.snupkg
+        if-no-files-found: error
+        retention-days: 1
+
+  publish:
+
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write  # OIDC token for nuget.org Trusted Publishing; granted to this job only
+
+    steps:
+    - name: Download packages
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      with:
+        name: packages
+        path: artifacts
+    - name: Verify packages
+      working-directory: artifacts
+      env:
+        EXPECTED_SHA256: ${{ needs.build.outputs.packages-sha256 }}
+      run: |
+        actual="$(sha256sum *.nupkg *.snupkg | sha256sum | cut -d' ' -f1)"
+        if [ -z "$EXPECTED_SHA256" ] || [ "$actual" != "$EXPECTED_SHA256" ]; then
+          echo "::error::Package checksum mismatch (expected '$EXPECTED_SHA256', got '$actual')."
+          exit 1
+        fi
+        version="${GITHUB_REF_NAME#v}"
+        if [ ! -f "HtmlToPdfDotNet.${version}.nupkg" ]; then
+          echo "::error::Expected HtmlToPdfDotNet.${version}.nupkg for tag ${GITHUB_REF_NAME}."
+          ls -l
+          exit 1
+        fi
     # Exchange the OIDC token for a short-lived (1 hour) API key right before pushing.
     - name: NuGet login (OIDC)
       uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
       id: login
       with:
         user: ${{ secrets.NUGET_USER }}
+    # Uses the .NET SDK preinstalled on the runner image: no setup action runs in this job.
     - name: Push to nuget.org
-      run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      working-directory: artifacts
+      run: dotnet nuget push "HtmlToPdfDotNet.${GITHUB_REF_NAME#v}.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
       env:
         NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}

@@ -1093,4 +1093,25 @@ public class FlexLayoutTests
     }
 
     #endregion
+
+    #region Nested flex cost
+
+    /// <summary>
+    /// Nested flex containers used to re-run every inner layout once per measurement pass,
+    /// so the cost grew exponentially with nesting depth (80 levels took over a minute).
+    /// </summary>
+    [Theory]
+    [InlineData("<div style=\"display:flex\">", "</div>")]
+    [InlineData("<div style=\"display:flex\"><div style=\"flex:1\">a</div><div>", "</div></div>")]
+    public void DeeplyNestedFlexContainers_LayOutQuickly(string open, string close)
+    {
+        string html = string.Concat(Enumerable.Repeat(open, 80)) + "x" + string.Concat(Enumerable.Repeat(close, 80));
+
+        Task<LayoutResult> layout = Task.Run(() => RunLayout(html));
+
+        Assert.True(layout.Wait(TimeSpan.FromSeconds(5)), "Nested flex layout did not finish within 5 s.");
+        Assert.Contains(layout.Result.Primitives.OfType<TextPrimitive>(), t => t.Text == "x");
+    }
+
+    #endregion
 }

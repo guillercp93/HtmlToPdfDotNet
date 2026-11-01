@@ -40,7 +40,8 @@ public static class ImageLoader
 
         if (!File.Exists(path))
         {
-            throw new FileNotFoundException($"Image file not found: {path}", path);
+            // Report the caller's src, not the resolved path, so server directories are not disclosed.
+            throw new FileNotFoundException($"Image file not found: {src}", src);
         }
 
         byte[] bytes = File.ReadAllBytes(path);
@@ -237,11 +238,8 @@ public static class ImageLoader
         // Combine and canonicalize the final destination path
         string resolvedPath = Path.GetFullPath(Path.Combine(canonicalBasePath, sanitizedSrc));
 
-        // Enforce the directory boundary limit
-        if (!resolvedPath.StartsWith(canonicalBasePath, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new UnauthorizedAccessException($"Access to the path '{src}' is denied. It lies outside the allowed base directory.");
-        }
+        // Enforce the directory boundary with filesystem semantics (case rules, symbolic links)
+        PathContainment.EnsureInside(canonicalBasePath, resolvedPath, src);
 
         return resolvedPath;
     }

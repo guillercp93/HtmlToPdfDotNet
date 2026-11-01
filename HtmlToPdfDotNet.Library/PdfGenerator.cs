@@ -119,17 +119,8 @@ public class PdfGenerator : IPdfGenerator
         string resolvedPath = pdfPath;
         if (!string.IsNullOrEmpty(_options.BasePath))
         {
-            string canonicalBasePath = Path.GetFullPath(_options.BasePath);
-            if (!canonicalBasePath.EndsWith(Path.DirectorySeparatorChar.ToString()))
-            {
-                canonicalBasePath += Path.DirectorySeparatorChar;
-            }
-
             string fullPdfPath = Path.GetFullPath(pdfPath);
-            if (!fullPdfPath.StartsWith(canonicalBasePath, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new UnauthorizedAccessException($"Access to the path '{pdfPath}' is denied. It lies outside the allowed base directory.");
-            }
+            PathContainment.EnsureInside(_options.BasePath, fullPdfPath, pdfPath);
             resolvedPath = fullPdfPath;
         }
 
@@ -147,10 +138,18 @@ public class PdfGenerator : IPdfGenerator
     public LayoutResult RunLayout(string html)
     {
         ArgumentNullException.ThrowIfNullOrEmpty(html);
+        if (html.Length > _options.MaxHtmlLength)
+        {
+            throw new ArgumentException(
+                $"The HTML is {html.Length} characters long, which exceeds ConversionOptions.MaxHtmlLength ({_options.MaxHtmlLength}).",
+                nameof(html));
+        }
 
         HtmlDocument doc = new();
 
         doc.LoadHtml(Helpers.CleanHtml(html));
+        EnsureWithinNestingDepth(doc);
+        EnsureLocalImagesAllowed(doc);
 
         List<CssRule> cssRules = ResolveStyleSheets(_options.StyleSheets)
                                          .SelectMany(CssStyleSheetParser.Parse)
@@ -252,12 +251,14 @@ public class PdfGenerator : IPdfGenerator
     /// <param name="html">The HTML fragment to lay out.</param>
     /// <param name="contentWidth">The available width for the layout.</param>
     /// <returns>The list of render primitives for the HTML fragment.</returns>
-    private static List<RenderPrimitive> LayoutHtmlFragment(string html, float contentWidth)
+    private List<RenderPrimitive> LayoutHtmlFragment(string html, float contentWidth)
     {
         if (string.IsNullOrWhiteSpace(html)) return [];
 
         HtmlDocument doc = new();
         doc.LoadHtml(html);
+        EnsureWithinNestingDepth(doc);
+        EnsureLocalImagesAllowed(doc);
         StyleResolver resolver = new();
         Dictionary<HtmlNode, ComputedStyle> styles = resolver.Resolve(doc.DocumentNode);
 
@@ -394,6 +395,57 @@ public class PdfGenerator : IPdfGenerator
             }
 
             yield return styleSheet;
+        }
+    }
+
+    /// <summary>
+    /// Enforces <see cref="ConversionOptions.MaxNestingDepth"/>. The walk is iterative so the check
+    /// itself cannot overflow the stack on the documents it exists to reject.
+    /// </summary>
+    /// <param name="doc">The parsed HTML document or fragment.</param>
+    private void EnsureWithinNestingDepth(HtmlDocument doc)
+    {
+        if (_options.MaxNestingDepth is not int maxDepth) return;
+
+        Stack<(HtmlNode Node, int Depth)> pending = new();
+        pending.Push((doc.DocumentNode, 0));
+        while (pending.Count > 0)
+        {
+            (HtmlNode node, int depth) = pending.Pop();
+            foreach (HtmlNode child in node.ChildNodes)
+            {
+                if (child.NodeType != HtmlNodeType.Element) continue;
+
+                int childDepth = depth + 1;
+                if (childDepth > maxDepth)
+                {
+                    throw new ArgumentException(
+                        $"The HTML nests elements deeper than ConversionOptions.MaxNestingDepth ({maxDepth}).");
+                }
+
+                pending.Push((child, childDepth));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Enforces <see cref="ConversionOptions.RequireBasePathForLocalFiles"/>: when it is set and no
+    /// <see cref="ConversionOptions.BasePath"/> is configured, any <c>&lt;img&gt;</c> whose src is not a
+    /// <c>data:</c> URI is rejected before layout, instead of resolving against the current directory.
+    /// </summary>
+    /// <param name="doc">The parsed HTML document or fragment.</param>
+    private void EnsureLocalImagesAllowed(HtmlDocument doc)
+    {
+        if (!_options.RequireBasePathForLocalFiles || !string.IsNullOrWhiteSpace(_options.BasePath)) return;
+
+        foreach (HtmlNode img in doc.DocumentNode.Descendants("img"))
+        {
+            string src = img.GetAttributeValue("src", string.Empty).Trim();
+            if (src.Length > 0 && !src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException(
+                    $"Local image '{src}' cannot be loaded: ConversionOptions.BasePath is required when RequireBasePathForLocalFiles is enabled.");
+            }
         }
     }
 

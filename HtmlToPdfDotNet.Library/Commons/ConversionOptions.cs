@@ -25,6 +25,56 @@ public class ConversionOptions
     public string? BasePath { get; set; }
 
     /// <summary>
+    /// When true, local image files are only loaded if <see cref="BasePath"/> is set.
+    /// A document (or header/footer template) that references a local image <c>src</c>
+    /// without a <see cref="BasePath"/> is rejected with <see cref="UnauthorizedAccessException"/>
+    /// instead of being resolved against the current working directory. <c>data:</c> URIs are
+    /// always allowed. Defaults to false for backward compatibility; enable it when the HTML
+    /// may contain untrusted content.
+    /// </summary>
+    public bool RequireBasePathForLocalFiles { get; set; }
+
+    /// <summary>
+    /// Maximum length, in characters, of the HTML passed to the generator. Longer input is
+    /// rejected with <see cref="ArgumentException"/> before parsing. Null (the default) means unlimited.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">When set to zero or a negative value.</exception>
+    public int? MaxHtmlLength
+    {
+        get => _maxHtmlLength;
+        set => _maxHtmlLength = EnsurePositive(value, nameof(MaxHtmlLength));
+    }
+
+    /// <summary>
+    /// Maximum element nesting depth of the document and header/footer templates. Deeper
+    /// documents are rejected with <see cref="ArgumentException"/> before layout, because the
+    /// layout engine is recursive and extreme nesting would overflow the thread's stack and
+    /// terminate the process. Defaults to 256; null disables the check.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">When set to zero or a negative value.</exception>
+    public int? MaxNestingDepth
+    {
+        get => _maxNestingDepth;
+        set => _maxNestingDepth = EnsurePositive(value, nameof(MaxNestingDepth));
+    }
+
+    /// <summary>Default value of <see cref="MaxNestingDepth"/>.</summary>
+    public const int DefaultMaxNestingDepth = 256;
+
+    private int? _maxHtmlLength;
+    private int? _maxNestingDepth = DefaultMaxNestingDepth;
+
+    private static int? EnsurePositive(int? value, string name)
+    {
+        if (value is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(name, value, $"{name} must be positive, or null for no limit.");
+        }
+
+        return value;
+    }
+
+    /// <summary>
     /// Optional list of CSS file paths to include in the PDF.
     /// </summary>
     public IEnumerable<string> StyleSheets { get; set; } = [];
@@ -83,6 +133,9 @@ public class ConversionOptions
         };
         CompressStreams = source.CompressStreams;
         BasePath = source.BasePath;
+        RequireBasePathForLocalFiles = source.RequireBasePathForLocalFiles;
+        MaxHtmlLength = source.MaxHtmlLength;
+        MaxNestingDepth = source.MaxNestingDepth;
         StyleSheets = source.StyleSheets.ToArray();
         Fonts = new FontRegistry(source.Fonts);
 

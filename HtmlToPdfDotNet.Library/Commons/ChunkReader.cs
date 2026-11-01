@@ -42,7 +42,9 @@ public sealed class ChunkReader
         _pos += 4;
 
         // payload bytes
-        if (_pos + length > _data.Length)
+        // The length comes from the file: reject negative values and compare without
+        // computing _pos + length, which can overflow int.
+        if (length < 0 || length > _data.Length - _pos)
         {
             throw new InvalidDataException($"PNG: chunk {type} data truncated.");
         }

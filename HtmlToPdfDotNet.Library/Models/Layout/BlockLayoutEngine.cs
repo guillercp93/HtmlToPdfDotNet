@@ -508,8 +508,8 @@ public sealed class BlockLayoutEngine
         if (node.NodeType == HtmlNodeType.Element
             && node.Name.Equals("a", StringComparison.OrdinalIgnoreCase))
         {
-            string href = node.GetAttributeValue("href", "");
-            if (!string.IsNullOrEmpty(href))
+            string? href = Helpers.GetSafeLinkUri(node.GetAttributeValue("href", ""));
+            if (href is not null)
                 currentLinkUri = href;
         }
 
@@ -532,8 +532,8 @@ public sealed class BlockLayoutEngine
                 string? childLinkUri = currentLinkUri;
                 if (child.Name.Equals("a", StringComparison.OrdinalIgnoreCase))
                 {
-                    string href = child.GetAttributeValue("href", "");
-                    if (!string.IsNullOrEmpty(href))
+                    string? href = Helpers.GetSafeLinkUri(child.GetAttributeValue("href", ""));
+                    if (href is not null)
                         childLinkUri = href;
                 }
 

@@ -17,7 +17,7 @@ The primary goal of HtmlToPdfDotNet is to provide a fully managed solution for g
 - **Images:** Embeds JPEG and PNG images from local files or `data:` URIs.
 - **Tables:** `<table>` layouts with `<thead>`, `<tbody>`, `<tfoot>`, and borders.
 - **Lists:** `<ul>` and `<ol>` with `list-style-type` (`disc`, `circle`, `square`, `decimal`, `lower-alpha`, `upper-alpha`, `lower-roman`, `upper-roman`, `none`).
-- **Links:** `<a href>` elements become clickable PDF link annotations.
+- **Links:** `<a href>` elements with an `http`, `https`, or `mailto` target become clickable PDF link annotations. Other targets (`javascript:`, `file://`, `smb://`, relative paths, `#fragment`) render as plain text without a link.
 - **Headers and Footers:** Running header and footer HTML templates with `{page}` and `{total}` placeholders.
 - **Page Breaks:** `page-break-before`, `page-break-after`, and `page-break-inside`.
 - **Dependency Injection:** Registration extension for `Microsoft.Extensions.DependencyInjection`.
@@ -43,17 +43,17 @@ You can install the package via the NuGet Package Manager UI in Visual Studio, o
 
 **Using .NET CLI:**
 ```bash
-dotnet add package HtmlToPdfDotNet --version 1.0.0
+dotnet add package HtmlToPdfDotNet --version 1.1.0
 ```
 
 **Using Package Manager Console (Visual Studio):**
 ```powershell
-Install-Package HtmlToPdfDotNet -Version 1.0.0
+Install-Package HtmlToPdfDotNet -Version 1.1.0
 ```
 
 **Using PackageReference (in `.csproj`):**
 ```xml
-<PackageReference Include="HtmlToPdfDotNet" Version="1.0.0" />
+<PackageReference Include="HtmlToPdfDotNet" Version="1.1.0" />
 ```
 
 ---
@@ -172,7 +172,7 @@ byte[] pdf = generator.Convert("<p style=\"font-family: 'Roboto'\">Custom font</
 ### Important Classes and Interfaces
 - **`IPdfGenerator`** (`HtmlToPdfDotNet.Library`): The primary interface. Exposes `Convert(html)` (returns a `byte[]`), `Convert(html, stream)`, `WritePdfFile(html, path)`, and `RunLayout(html)`, which returns the computed `LayoutResult` (page primitives) without writing a PDF.
 - **`PdfGenerator`** (`HtmlToPdfDotNet.Library`): The default implementation of `IPdfGenerator`.
-- **`ConversionOptions`** (`HtmlToPdfDotNet.Library.Commons`): Configuration for page size and margins (`Page`), stream compression (`CompressStreams`), the base directory for local resources (`BasePath`), additional stylesheets (`StyleSheets`), custom fonts (`Fonts`), and running headers/footers (`HeaderFooter`).
+- **`ConversionOptions`** (`HtmlToPdfDotNet.Library.Commons`): Configuration for page size and margins (`Page`), stream compression (`CompressStreams`), the base directory for local resources (`BasePath`) and whether it is mandatory for local images (`RequireBasePathForLocalFiles`), input limits (`MaxHtmlLength`, `MaxNestingDepth`), additional stylesheets (`StyleSheets`), custom fonts (`Fonts`), and running headers/footers (`HeaderFooter`).
 - **`HeaderFooterConfig`** (`HtmlToPdfDotNet.Library.Commons`): Header and footer templates.
 - **`PageLayout`** (`HtmlToPdfDotNet.Library.Models.Layout`): Page size and margins, in points. Presets: `PageLayout.A4`, `PageLayout.Letter`, `PageLayout.Legal`. Custom sizes: `new PageLayout(width, height, new PageMargins(top, right, bottom, left))`. The default margins (`PageMargins.Default`) are 56.7pt (about 2 cm) on every side.
 
@@ -222,6 +222,7 @@ catch (Exception ex) // Handles parsing, resource-loading, or rendering errors
 - No remote resources: images and stylesheets are never fetched over HTTP(S).
 - PNG alpha channel is currently not preserved.
 - Interlaced (Adam7) PNG images are not supported and cause the conversion to fail.
+- PNG images wider or taller than 8192 pixels (`PngDecoder.MaxDimension`), or whose header dimensions are invalid, are rejected with `InvalidDataException`; compressed image data is never inflated beyond the size its header declares.
 - CMYK JPEG images are tagged as RGB, so their colors render incorrectly.
 - Font families that are not registered fall back to the standard PDF fonts.
 - `HeaderFooterConfig.HeaderHeight` and `FooterHeight` are not yet applied by the layout engine, so body content is not automatically kept clear of the footer.
@@ -293,7 +294,11 @@ The `HtmlToPdfDotNet.Example` project is an ASP.NET Core sample that renders a R
 
 ### Security
 - HTML input is treated as untrusted. Image `src` values are resolved relative to `ConversionOptions.BasePath` (or the current working directory when it is not set) and confined to that directory; leading slashes and drive roots are stripped, so absolute paths cannot escape it. `data:` URIs are also supported. Remote URLs are never fetched.
+- Set `ConversionOptions.RequireBasePathForLocalFiles = true` when the HTML may contain untrusted content. Without a `BasePath`, any local image `src` (including in header/footer templates) then throws `UnauthorizedAccessException` instead of falling back to the current working directory; `data:` URIs keep working. It is `false` by default for backward compatibility.
+- Documents nesting elements deeper than `ConversionOptions.MaxNestingDepth` (default 256) are rejected with `ArgumentException` before layout, because extreme nesting would overflow the thread's stack and terminate the process. Set it to `null` to disable the check.
+- `ConversionOptions.MaxHtmlLength` (unlimited by default) rejects longer input before parsing. Set it when converting untrusted HTML: the HtmlAgilityPack parser's time grows quadratically with nesting depth, so a deeply nested document of about 1 MB can take minutes to parse.
 - When `BasePath` is set, `WritePdfFile` only writes inside `BasePath`; any other output path throws `UnauthorizedAccessException`.
+- Containment follows the host filesystem: symbolic links are resolved to their real location before the check, and paths are compared with the platform's case rules (case-sensitive on Linux), so a case-variant sibling directory or a link pointing outside `BasePath` is rejected. A link replaced between the check and the file access is not covered.
 
 ---
 
@@ -445,7 +450,7 @@ File.WriteAllBytes("report.pdf", generator.Convert(html));
 ## Troubleshooting
 
 ### Common Installation Problems
-- **Error: `NU1202: Package HtmlToPdfDotNet 1.0.0 is not compatible with net8.0`**
+- **Error: `NU1202: Package HtmlToPdfDotNet 1.1.0 is not compatible with net8.0`**
   - **Fix:** This library targets `net10.0` only. Upgrade your project to .NET 10.0 or higher.
 
 ### Runtime Issues

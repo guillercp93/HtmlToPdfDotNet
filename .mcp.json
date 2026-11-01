@@ -13,7 +13,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@aikidosec/mcp@latest"
+        "@aikidosec/mcp@1.0.33"
       ]
     }
   }

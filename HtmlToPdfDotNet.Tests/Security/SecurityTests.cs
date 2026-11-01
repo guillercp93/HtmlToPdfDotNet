@@ -305,6 +305,18 @@ public class SecurityTests : IDisposable
     }
 
     [Fact]
+    public void ImageLoader_Load_MissingFile_DoesNotRevealResolvedServerPath()
+    {
+        FileNotFoundException ex = Assert.Throws<FileNotFoundException>(
+            () => ImageLoader.Load("images/missing.png", _sandbox));
+
+        Assert.Contains("images/missing.png", ex.Message);
+        Assert.Equal("images/missing.png", ex.FileName);
+        Assert.DoesNotContain(Path.GetFullPath(_sandbox), ex.Message);
+        Assert.DoesNotContain(Path.GetFullPath(_sandbox), ex.FileName);
+    }
+
+    [Fact]
     public void ImageLoader_Load_DataUri_BypassesFileResolution()
     {
         ImageData imageData = ImageLoader.Load(_png64);
@@ -491,6 +503,257 @@ public class SecurityTests : IDisposable
         byte[] pdf = generator.Convert(safeHtml);
         Assert.NotNull(pdf);
         Assert.True(pdf.Length > 0);
+    }
+
+    #endregion
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  ConversionOptions.RequireBasePathForLocalFiles (opt-in fail-closed)
+    // ═══════════════════════════════════════════════════════════════════
+
+    #region RequireBasePathForLocalFiles
+
+    [Fact]
+    public void RequireBasePath_WithoutBasePath_LocalImage_Throws()
+    {
+        PdfGenerator generator = new(new ConversionOptions { RequireBasePathForLocalFiles = true });
+
+        Assert.Throws<UnauthorizedAccessException>(
+            () => generator.Convert("<p>Hi</p><img src=\"images/test.png\" />"));
+    }
+
+    [Fact]
+    public void RequireBasePath_WithoutBasePath_LocalImageInHeader_Throws()
+    {
+        PdfGenerator generator = new(new ConversionOptions
+        {
+            RequireBasePathForLocalFiles = true,
+            HeaderFooter = new HeaderFooterConfig { HeaderHtml = "<img src=\"logo.png\" />" },
+        });
+
+        Assert.Throws<UnauthorizedAccessException>(() => generator.Convert("<p>Hi</p>"));
+    }
+
+    [Fact]
+    public void RequireBasePath_WithoutBasePath_DataUriImage_Converts()
+    {
+        PdfGenerator generator = new(new ConversionOptions { RequireBasePathForLocalFiles = true });
+
+        byte[] pdf = generator.Convert($"<p>Hi</p><img src=\"{_png64}\" />");
+
+        Assert.Contains("/Subtype /Image", System.Text.Encoding.Latin1.GetString(pdf));
+    }
+
+    [Fact]
+    public void RequireBasePath_WithBasePath_LocalImage_Converts()
+    {
+        PdfGenerator generator = new(new ConversionOptions
+        {
+            RequireBasePathForLocalFiles = true,
+            BasePath = _sandbox,
+        });
+        // CreateMinimalPng() is not decodable; write the valid 1x1 PNG from _png64 instead.
+        File.WriteAllBytes(Path.Combine(_sandbox, "valid.png"), Convert.FromBase64String(_png64[(_png64.IndexOf(',') + 1)..]));
+
+        byte[] pdf = generator.Convert("<p>Hi</p><img src=\"valid.png\" />");
+
+        Assert.Contains("/Subtype /Image", System.Text.Encoding.Latin1.GetString(pdf));
+    }
+
+    [Fact]
+    public void RequireBasePath_DefaultIsFalse_KeepsCurrentDirectoryFallback()
+    {
+        Assert.False(new ConversionOptions().RequireBasePathForLocalFiles);
+
+        // Previous behavior: the src is resolved against the current directory and is simply missing.
+        PdfGenerator generator = new();
+        Assert.Throws<FileNotFoundException>(
+            () => generator.Convert($"<img src=\"missing_{Guid.NewGuid():N}.png\" />"));
+    }
+
+    #endregion
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Containment must follow filesystem semantics: case and symlinks
+    // ═══════════════════════════════════════════════════════════════════
+
+    #region Case-variant siblings and symbolic links
+
+    private byte[] ValidPng() => Convert.FromBase64String(_png64[(_png64.IndexOf(',') + 1)..]);
+
+    /// <summary>
+    /// Creates base dir "assets" and a sibling "Assets"; returns false when the filesystem
+    /// is case-insensitive (both names are the same directory), so the scenario cannot exist.
+    /// </summary>
+    private bool TryCreateCaseVariantSibling(out string baseDir, out string siblingDir)
+    {
+        baseDir = Path.Combine(_sandbox, "assets");
+        siblingDir = Path.Combine(_sandbox, "Assets");
+        Directory.CreateDirectory(baseDir);
+        File.WriteAllBytes(Path.Combine(baseDir, "probe.png"), ValidPng());
+        if (File.Exists(Path.Combine(siblingDir, "probe.png"))) return false;
+        Directory.CreateDirectory(siblingDir);
+        return true;
+    }
+
+    [Fact]
+    public void ImageLoader_CaseVariantSiblingOfBasePath_Throws()
+    {
+        if (!TryCreateCaseVariantSibling(out string baseDir, out string siblingDir)) return;
+        File.WriteAllBytes(Path.Combine(siblingDir, "private.png"), ValidPng());
+
+        Assert.Throws<UnauthorizedAccessException>(() => ImageLoader.Load("../Assets/private.png", baseDir));
+    }
+
+    [Fact]
+    public void WritePdfFile_CaseVariantSiblingOfBasePath_Throws()
+    {
+        if (!TryCreateCaseVariantSibling(out string baseDir, out string siblingDir)) return;
+        PdfGenerator generator = new(new ConversionOptions { BasePath = baseDir });
+        string target = Path.Combine(siblingDir, "out.pdf");
+
+        Assert.Throws<UnauthorizedAccessException>(() => generator.WritePdfFile("<p>x</p>", target));
+        Assert.False(File.Exists(target));
+    }
+
+    [Fact]
+    public void ImageLoader_SameCaseFileInsideBasePath_StillLoads()
+    {
+        string baseDir = Path.Combine(_sandbox, "assets");
+        Directory.CreateDirectory(baseDir);
+        File.WriteAllBytes(Path.Combine(baseDir, "ok.png"), ValidPng());
+
+        Assert.Equal(ImageFormat.Png, ImageLoader.Load("ok.png", baseDir).Format);
+    }
+
+    /// <summary>Creates a symbolic link, or returns false where the OS does not allow it.</summary>
+    private static bool TryCreateSymlink(string linkPath, string target, bool directory)
+    {
+        try
+        {
+            if (directory) Directory.CreateSymbolicLink(linkPath, target);
+            else File.CreateSymbolicLink(linkPath, target);
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    [Fact]
+    public void ImageLoader_DirectorySymlinkInsideBasePathPointingOutside_Throws()
+    {
+        string baseDir = Path.Combine(_sandbox, "root");
+        string outside = Path.Combine(_sandbox, "outside");
+        Directory.CreateDirectory(baseDir);
+        Directory.CreateDirectory(outside);
+        File.WriteAllBytes(Path.Combine(outside, "secret.png"), ValidPng());
+        if (!TryCreateSymlink(Path.Combine(baseDir, "link"), outside, directory: true)) return;
+
+        Assert.Throws<UnauthorizedAccessException>(() => ImageLoader.Load("link/secret.png", baseDir));
+    }
+
+    [Fact]
+    public void ImageLoader_FileSymlinkInsideBasePathPointingOutside_Throws()
+    {
+        string baseDir = Path.Combine(_sandbox, "root");
+        string outside = Path.Combine(_sandbox, "outside");
+        Directory.CreateDirectory(baseDir);
+        Directory.CreateDirectory(outside);
+        File.WriteAllBytes(Path.Combine(outside, "secret.png"), ValidPng());
+        if (!TryCreateSymlink(Path.Combine(baseDir, "secret.png"), Path.Combine(outside, "secret.png"), directory: false)) return;
+
+        Assert.Throws<UnauthorizedAccessException>(() => ImageLoader.Load("secret.png", baseDir));
+    }
+
+    [Fact]
+    public void ImageLoader_SymlinkInsideBasePathPointingInside_Loads()
+    {
+        string baseDir = Path.Combine(_sandbox, "root");
+        Directory.CreateDirectory(Path.Combine(baseDir, "real"));
+        File.WriteAllBytes(Path.Combine(baseDir, "real", "a.png"), ValidPng());
+        if (!TryCreateSymlink(Path.Combine(baseDir, "alias"), Path.Combine(baseDir, "real"), directory: true)) return;
+
+        Assert.Equal(ImageFormat.Png, ImageLoader.Load("alias/a.png", baseDir).Format);
+    }
+
+    [Fact]
+    public void ImageLoader_BasePathItselfBehindSymlink_LoadsFilesInside()
+    {
+        string real = Path.Combine(_sandbox, "realbase");
+        Directory.CreateDirectory(real);
+        File.WriteAllBytes(Path.Combine(real, "a.png"), ValidPng());
+        string linkedBase = Path.Combine(_sandbox, "linkedbase");
+        if (!TryCreateSymlink(linkedBase, real, directory: true)) return;
+
+        Assert.Equal(ImageFormat.Png, ImageLoader.Load("a.png", linkedBase).Format);
+    }
+
+    /// <summary>
+    /// A link whose relative target passes through another link and then "..": the kernel
+    /// resolves "deeplink" first, so "deeplink/.." is the outside directory, not the base.
+    /// </summary>
+    [Fact]
+    public void ImageLoader_LinkTargetThroughAnotherLinkThenDotDot_Throws()
+    {
+        string baseDir = Path.Combine(_sandbox, "root");
+        string deep = Path.Combine(_sandbox, "outside", "deep");
+        Directory.CreateDirectory(baseDir);
+        Directory.CreateDirectory(deep);
+        File.WriteAllBytes(Path.Combine(_sandbox, "outside", "secret.png"), ValidPng());
+        if (!TryCreateSymlink(Path.Combine(baseDir, "deeplink"), deep, directory: true)) return;
+        if (!TryCreateSymlink(Path.Combine(baseDir, "trick.png"), "deeplink/../secret.png", directory: false)) return;
+        if (!TryCreateSymlink(Path.Combine(baseDir, "trickdir"), "deeplink/..", directory: true)) return;
+
+        Assert.Throws<UnauthorizedAccessException>(() => ImageLoader.Load("trick.png", baseDir));
+        Assert.Throws<UnauthorizedAccessException>(() => ImageLoader.Load("trickdir/secret.png", baseDir));
+    }
+
+    [Fact]
+    public void WritePdfFile_LinkTargetThroughAnotherLinkThenDotDot_Throws()
+    {
+        string baseDir = Path.Combine(_sandbox, "root");
+        string outside = Path.Combine(_sandbox, "outside");
+        Directory.CreateDirectory(baseDir);
+        Directory.CreateDirectory(Path.Combine(outside, "deep"));
+        if (!TryCreateSymlink(Path.Combine(baseDir, "deeplink"), Path.Combine(outside, "deep"), directory: true)) return;
+        if (!TryCreateSymlink(Path.Combine(baseDir, "trickdir"), "deeplink/..", directory: true)) return;
+        if (!TryCreateSymlink(Path.Combine(baseDir, "dangle.pdf"), "deeplink/../created.pdf", directory: false)) return;
+        PdfGenerator generator = new(new ConversionOptions { BasePath = baseDir });
+
+        Assert.Throws<UnauthorizedAccessException>(
+            () => generator.WritePdfFile("<p>x</p>", Path.Combine(baseDir, "trickdir", "out.pdf")));
+        Assert.Throws<UnauthorizedAccessException>(
+            () => generator.WritePdfFile("<p>x</p>", Path.Combine(baseDir, "dangle.pdf")));
+        Assert.False(File.Exists(Path.Combine(outside, "out.pdf")));
+        Assert.False(File.Exists(Path.Combine(outside, "created.pdf")));
+    }
+
+    [Fact]
+    public void ImageLoader_SymlinkLoop_FailsWithoutHanging()
+    {
+        string baseDir = Path.Combine(_sandbox, "root");
+        Directory.CreateDirectory(baseDir);
+        if (!TryCreateSymlink(Path.Combine(baseDir, "loop1"), "loop2", directory: true)) return;
+        if (!TryCreateSymlink(Path.Combine(baseDir, "loop2"), "loop1", directory: true)) return;
+
+        Assert.ThrowsAny<IOException>(() => ImageLoader.Load("loop1/x.png", baseDir));
+    }
+
+    [Fact]
+    public void WritePdfFile_SymlinkInsideBasePathPointingOutside_Throws()
+    {
+        string baseDir = Path.Combine(_sandbox, "root");
+        string outside = Path.Combine(_sandbox, "outside");
+        Directory.CreateDirectory(baseDir);
+        Directory.CreateDirectory(outside);
+        if (!TryCreateSymlink(Path.Combine(baseDir, "link"), outside, directory: true)) return;
+        PdfGenerator generator = new(new ConversionOptions { BasePath = baseDir });
+
+        Assert.Throws<UnauthorizedAccessException>(
+            () => generator.WritePdfFile("<p>x</p>", Path.Combine(baseDir, "link", "out.pdf")));
+        Assert.False(File.Exists(Path.Combine(outside, "out.pdf")));
     }
 
     #endregion
