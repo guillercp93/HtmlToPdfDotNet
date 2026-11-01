@@ -43,17 +43,17 @@ You can install the package via the NuGet Package Manager UI in Visual Studio, o
 
 **Using .NET CLI:**
 ```bash
-dotnet add package HtmlToPdfDotNet --version 1.0.0
+dotnet add package HtmlToPdfDotNet --version 1.1.0
 ```
 
 **Using Package Manager Console (Visual Studio):**
 ```powershell
-Install-Package HtmlToPdfDotNet -Version 1.0.0
+Install-Package HtmlToPdfDotNet -Version 1.1.0
 ```
 
 **Using PackageReference (in `.csproj`):**
 ```xml
-<PackageReference Include="HtmlToPdfDotNet" Version="1.0.0" />
+<PackageReference Include="HtmlToPdfDotNet" Version="1.1.0" />
 ```
 
 ---
@@ -449,7 +449,7 @@ File.WriteAllBytes("report.pdf", generator.Convert(html));
 ## Troubleshooting
 
 ### Common Installation Problems
-- **Error: `NU1202: Package HtmlToPdfDotNet 1.0.0 is not compatible with net8.0`**
+- **Error: `NU1202: Package HtmlToPdfDotNet 1.1.0 is not compatible with net8.0`**
   - **Fix:** This library targets `net10.0` only. Upgrade your project to .NET 10.0 or higher.
 
 ### Runtime Issues

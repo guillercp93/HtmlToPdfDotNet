@@ -1,0 +1,45 @@
+# Threat model fixes (v1.1.0)
+
+Objective: fix every confirmed issue from the recon threat model evaluation, one commit per issue, then PR to Master and publish v1.1.0 to NuGet.
+Branch: `develop` (joins open PR #13 to `Master`). Delivery: `single-pr`, non-breaking minor release. Test runner: `dotnet test HtmlToPdfDotNet.Tests`.
+
+## Specs
+
+- **S1 Link schemes.** Only `http`, `https` and `mailto` link targets become PDF link annotations; any other scheme (`javascript:`, `file://`, `smb://`, ...) or a scheme-less href produces no annotation, and the link text still renders.
+- **S2 Path leak.** A missing local image must not reveal the resolved server path in the exception message; report the original `src` only.
+- **S3 BasePath opt-in** (user decision: "Opt-in, v1.1.0"). New `ConversionOptions.RequireBasePathForLocalFiles` (default `false`, current behavior unchanged). When `true` and `BasePath` is not set, a local image `src` throws `UnauthorizedAccessException`; `data:` URIs keep working.
+- **S4 Document limits.** New optional limits on `ConversionOptions`: maximum HTML length and maximum element nesting depth. Documents above a limit are rejected with an exception before layout. Defaults: length unlimited; depth 256, which may reject very deep documents that convert today on large stacks (decision recorded in L5).
+- **S5 Image bombs.** PNG width/height must be positive and bounded, and zlib decompression must stop at the size the header implies, so a small malicious PNG cannot exhaust memory or overflow `int` arithmetic.
+- **S6 Example rate limiting.** The Example app limits `/report/pdf` per client and answers HTTP 429 above the limit.
+- **S7 Docs and version.** README documents the new options and security behavior; library version 1.1.0.
+- **S8 Delivery.** "create PR to Master and launch new publish in nuget": PR to `Master`, then tag `v1.1.0` to trigger `release.yml`. Merge and tag only after explicit user confirmation.
+
+Out of scope (noted in evaluation, not security fixes): JPEG metadata stripping; a broken `<img>` aborting the whole conversion.
+
+## Tasks
+
+| ID | Specs | Route | Status | Commit |
+|----|-------|-------|--------|--------|
+| T1 | S1 | inline | done | 9442799 |
+| T2 | S2 | inline | done | 594bcbd |
+| T3 | S3 | inline | done | ced79e9 |
+| T4 | S4 | inline | done | 0e374bf |
+| T5 | S5 | inline | done | 55e9708 |
+| T6 | S6 | inline | done | fe5ddc5 |
+| T7 | S7 | inline | done | bdace4f (amended) |
+| T8 | S8 | inline | pending | |
+
+Route evidence: units are small (< 100 lines each) and T3/T4 share `ConversionOptions.cs`, so no Writer trigger applies; all inline.
+
+## Log
+
+- L1 (2026-11-01, user): "Create a plan for fix each issue. Later each issue fixed is a commit. Later create PR to Master and launch new publish in nuget"
+- L2 (2026-11-01, user decision on S3): "Opt-in, v1.1.0"
+- L3: Verified before planning: href copied unchanged (`BlockLayoutEngine.cs:511-537`) and written as `/URI` (`PdfDocumentWriter.cs:133`); `ImageLoader.cs:203` falls back to the current directory; `ImageLoader.cs:43` puts the resolved path in the message; `PngDecoder.cs:32-58` trusts header dimensions and decompresses without bound. Deep-nesting stack overflow not yet measured (T4).
+- L4: Engram mirror pending: the Engram MCP tools are not available in this session.
+- L5 (T4): Measured stack overflow: 8 MB stack crashes between 5,000 and 10,000 nested divs; 1 MB stack (Windows default) at 1,000-1,500 divs or 750 nested tables; IIS threads use 256 KB. Default `MaxNestingDepth` set to 256, which rejects documents deeper than 256 that convert today on large stacks (accepted trade-off; `null` disables).
+- L6 (T4, new finding, not fixed): nested flex containers cost grows exponentially (20 levels 55 ms, 40 levels 1.5 s, 80 levels > 60 s) because `FlexLayoutEngine` lays out each item up to three times (lines 254, 309, 485). The depth limit does not cover it. Needs a decision: fix (memoize measurement) or defer.
+- L7 (T4, new finding, upstream): HtmlAgilityPack parse time is quadratic in nesting depth (5,000 levels 0.1 s, 20,000 levels 3 s). Mitigation documented: set `MaxHtmlLength` for untrusted input.
+- L8 (T3, new finding, not fixed): header/footer templates are laid out without `BasePath`, so their local images resolve against the current directory even when `BasePath` is set. With `RequireBasePathForLocalFiles` and no `BasePath` they are rejected (tested).
+- L9 (T3): test fixture `SecurityTests.CreateMinimalPng()` writes an undecodable PNG; the new test uses the valid `_png64` image instead.
+- L10 (T6): verified by running the Example app: 10 x 200 then 429 on `/report/pdf`; `/report` unaffected. T1-T5 each observed RED before GREEN; full suite 601 passed.
