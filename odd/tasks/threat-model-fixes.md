@@ -16,6 +16,7 @@ Branch: `develop` (joins open PR #13 to `Master`). Delivery: `single-pr`, non-br
 - **S10 Filesystem-aware containment** (user-reported finding "Case-insensitive lexical containment allows image path traversal on case-sensitive filesystems"). Image reads and `WritePdfFile` writes share one containment check that resolves symbolic links and compares with host case rules; `../Assets/x.png` from base `assets` and links pointing outside the base are rejected.
 - **S11 Pinned release actions** (user-reported finding "Mutable GitHub Actions can taint the package published by the release workflow"). Every action in all workflows is pinned to a full commit SHA with a version comment.
 - **S12 Pinned MCP package** (user-reported finding: project MCP config launches `npx -y @aikidosec/mcp@latest`). Both `.mcp.json` and `opencode.jsonc` launch an exact, reviewed version.
+- **S13 Scoped OIDC token** (user-reported finding "Job-wide OIDC permission exposes the NuGet publishing identity to pre-login build code"). Restore, build, test and pack run in a job without `id-token`; only a separate publish job that runs no repository code gets `id-token: write`, and it verifies the transferred packages before login.
 - **S8 Delivery.** "create PR to Master and launch new publish in nuget": PR to `Master`, then tag `v1.1.0` to trigger `release.yml`. Merge and tag only after explicit user confirmation.
 
 Out of scope (noted in evaluation, not security fixes): JPEG metadata stripping; a broken `<img>` aborting the whole conversion.
@@ -31,10 +32,11 @@ Out of scope (noted in evaluation, not security fixes): JPEG metadata stripping;
 | T5 | S5 | inline | done | 55e9708 |
 | T6 | S6 | inline | done | fe5ddc5 |
 | T7 | S7 | inline | done | bdace4f (amended) |
-| T9 | S9 | inline | in progress | |
+| T9 | S9 | inline | done | eeb339b |
 | T10 | S10 | inline | done | (this commit) |
 | T11 | S11 | inline | done | (this commit) |
 | T12 | S12 | inline | done | (this commit) |
+| T13 | S13 | inline | done | (this commit) |
 | T8 | S8 | inline | pending | |
 
 Route evidence: units are small (< 100 lines each) and T3/T4 share `ConversionOptions.cs`, so no Writer trigger applies; all inline.
@@ -55,3 +57,5 @@ Route evidence: units are small (< 100 lines each) and T3/T4 share `ConversionOp
 - L12 (2026-11-01, user): "wait, I have other issues" followed by the case-insensitive containment finding. Confirmed on Linux with RED tests: case-variant sibling read and write, and directory/file symlinks escaping BasePath (5 failing). Fixed with `PathContainment`; 611 tests pass.
 - L13 (2026-11-01, user): mutable-actions finding. Confirmed: checkout@v4 and setup-dotnet@v4 ran in the publish job. Pinned checkout v4.4.0 (11d5960), setup-dotnet v4.3.1 (67a3573), codeql-action v4.39.1 (9b32540); each equals the current v4 tag, so CI behavior is unchanged. YAML validated; workflows run first in CI on push. Job split (build vs publish) not done: optional hardening.
 - L14 (2026-11-01, user): MCP `@latest` finding. Pinned `@aikidosec/mcp@1.0.33` in both configs; that version ships `npm-shrinkwrap.json`, so its dependencies install with locked integrity, and npm versions are immutable. Upgrades now require an explicit edit.
+- L15 (2026-11-01): verifiers. S9 PASS (eeb339b): 0 mismatches in 400 parallel conversions, output equal to baseline after normalising dates and image names, 20 levels 55 ms vs 3,191 ms baseline. S10 B1 recheck PASS (70b2b96): all five link-then-`..` escapes rejected; 614 tests pass. Baseline advisories, not fixed: a flex container as the first child of `<body>` renders nothing; links inside flex items are dropped.
+- L16 (2026-11-01, user): job-wide OIDC finding. Confirmed: `id-token: write` covered restore/build/test/pack. Split `release.yml` into `build` (contents: read) and `publish` (id-token: write only, no checkout, SHA-256 of the packages checked against the build job output). Workflow filename unchanged so the Trusted Publishing policy still matches. No `environment:` added, because a nuget.org policy without one may stop matching; recommended to the user as a follow-up. YAML validated and checksum/version shell steps dry-run locally; first real run is the v1.1.0 tag.
