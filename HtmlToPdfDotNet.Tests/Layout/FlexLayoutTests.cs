@@ -1103,14 +1103,14 @@ public class FlexLayoutTests
     [Theory]
     [InlineData("<div style=\"display:flex\">", "</div>")]
     [InlineData("<div style=\"display:flex\"><div style=\"flex:1\">a</div><div>", "</div></div>")]
-    public void DeeplyNestedFlexContainers_LayOutQuickly(string open, string close)
+    public async Task DeeplyNestedFlexContainers_LayOutQuickly(string open, string close)
     {
         string html = string.Concat(Enumerable.Repeat(open, 80)) + "x" + string.Concat(Enumerable.Repeat(close, 80));
 
-        Task<LayoutResult> layout = Task.Run(() => RunLayout(html));
+        // WaitAsync throws TimeoutException (failing the test) if layout takes longer than 5 s.
+        LayoutResult layout = await Task.Run(() => RunLayout(html)).WaitAsync(TimeSpan.FromSeconds(5));
 
-        Assert.True(layout.Wait(TimeSpan.FromSeconds(5)), "Nested flex layout did not finish within 5 s.");
-        Assert.Contains(layout.Result.Primitives.OfType<TextPrimitive>(), t => t.Text == "x");
+        Assert.Contains(layout.Primitives.OfType<TextPrimitive>(), t => t.Text == "x");
     }
 
     #endregion
