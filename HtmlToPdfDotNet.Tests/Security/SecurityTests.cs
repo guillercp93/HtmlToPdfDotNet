@@ -690,6 +690,57 @@ public class SecurityTests : IDisposable
         Assert.Equal(ImageFormat.Png, ImageLoader.Load("a.png", linkedBase).Format);
     }
 
+    /// <summary>
+    /// A link whose relative target passes through another link and then "..": the kernel
+    /// resolves "deeplink" first, so "deeplink/.." is the outside directory, not the base.
+    /// </summary>
+    [Fact]
+    public void ImageLoader_LinkTargetThroughAnotherLinkThenDotDot_Throws()
+    {
+        string baseDir = Path.Combine(_sandbox, "root");
+        string deep = Path.Combine(_sandbox, "outside", "deep");
+        Directory.CreateDirectory(baseDir);
+        Directory.CreateDirectory(deep);
+        File.WriteAllBytes(Path.Combine(_sandbox, "outside", "secret.png"), ValidPng());
+        if (!TryCreateSymlink(Path.Combine(baseDir, "deeplink"), deep, directory: true)) return;
+        if (!TryCreateSymlink(Path.Combine(baseDir, "trick.png"), "deeplink/../secret.png", directory: false)) return;
+        if (!TryCreateSymlink(Path.Combine(baseDir, "trickdir"), "deeplink/..", directory: true)) return;
+
+        Assert.Throws<UnauthorizedAccessException>(() => ImageLoader.Load("trick.png", baseDir));
+        Assert.Throws<UnauthorizedAccessException>(() => ImageLoader.Load("trickdir/secret.png", baseDir));
+    }
+
+    [Fact]
+    public void WritePdfFile_LinkTargetThroughAnotherLinkThenDotDot_Throws()
+    {
+        string baseDir = Path.Combine(_sandbox, "root");
+        string outside = Path.Combine(_sandbox, "outside");
+        Directory.CreateDirectory(baseDir);
+        Directory.CreateDirectory(Path.Combine(outside, "deep"));
+        if (!TryCreateSymlink(Path.Combine(baseDir, "deeplink"), Path.Combine(outside, "deep"), directory: true)) return;
+        if (!TryCreateSymlink(Path.Combine(baseDir, "trickdir"), "deeplink/..", directory: true)) return;
+        if (!TryCreateSymlink(Path.Combine(baseDir, "dangle.pdf"), "deeplink/../created.pdf", directory: false)) return;
+        PdfGenerator generator = new(new ConversionOptions { BasePath = baseDir });
+
+        Assert.Throws<UnauthorizedAccessException>(
+            () => generator.WritePdfFile("<p>x</p>", Path.Combine(baseDir, "trickdir", "out.pdf")));
+        Assert.Throws<UnauthorizedAccessException>(
+            () => generator.WritePdfFile("<p>x</p>", Path.Combine(baseDir, "dangle.pdf")));
+        Assert.False(File.Exists(Path.Combine(outside, "out.pdf")));
+        Assert.False(File.Exists(Path.Combine(outside, "created.pdf")));
+    }
+
+    [Fact]
+    public void ImageLoader_SymlinkLoop_FailsWithoutHanging()
+    {
+        string baseDir = Path.Combine(_sandbox, "root");
+        Directory.CreateDirectory(baseDir);
+        if (!TryCreateSymlink(Path.Combine(baseDir, "loop1"), "loop2", directory: true)) return;
+        if (!TryCreateSymlink(Path.Combine(baseDir, "loop2"), "loop1", directory: true)) return;
+
+        Assert.ThrowsAny<IOException>(() => ImageLoader.Load("loop1/x.png", baseDir));
+    }
+
     [Fact]
     public void WritePdfFile_SymlinkInsideBasePathPointingOutside_Throws()
     {

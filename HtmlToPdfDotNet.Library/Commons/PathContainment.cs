@@ -49,38 +49,60 @@ internal static class PathContainment
     }
 
     /// <summary>
-    /// Replaces every symbolic link along <paramref name="fullPath"/> with its final target.
-    /// Components that do not exist yet (for example a file about to be written) are kept as-is.
+    /// Resolves <paramref name="fullPath"/> the way the operating system does: one component at a
+    /// time, replacing each symbolic link with its raw target and applying <c>..</c> to the
+    /// already-resolved directory. A link target is never normalized as text, because in
+    /// <c>link/..</c> the kernel follows <c>link</c> before going up. Components that do not exist
+    /// yet (for example a file about to be written) are kept as-is.
     /// </summary>
     private static string ResolvePhysicalPath(string fullPath, ref int hops)
     {
-        string root = Path.GetPathRoot(fullPath) ?? string.Empty;
-        string[] parts = fullPath[root.Length..].Split(
-            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries);
+        string current = Path.GetPathRoot(fullPath) ?? string.Empty;
+        LinkedList<string> pending = new(SplitComponents(fullPath[current.Length..]));
 
-        string current = root;
-        foreach (string part in parts)
+        while (pending.First is { } node)
         {
-            string next = Path.Combine(current, part);
-            FileInfo entry = new(next);
-            if (entry.LinkTarget is not null)
-            {
-                if (++hops > MaxLinkHops)
-                {
-                    throw new IOException($"Too many levels of symbolic links in '{fullPath}'.");
-                }
+            string part = node.Value;
+            pending.RemoveFirst();
 
-                FileSystemInfo? target = entry.ResolveLinkTarget(returnFinalTarget: true);
-                if (target is not null)
-                {
-                    // The target's own parent directories may also be links.
-                    next = ResolvePhysicalPath(Path.GetFullPath(target.FullName), ref hops);
-                }
+            if (part == ".") continue;
+            if (part == "..")
+            {
+                current = Path.GetDirectoryName(current) ?? current; // ".." at the root stays at the root
+                continue;
             }
 
-            current = next;
+            string next = Path.Combine(current, part);
+            string? linkTarget = new FileInfo(next).LinkTarget;
+            if (linkTarget is null)
+            {
+                current = next;
+                continue;
+            }
+
+            if (++hops > MaxLinkHops)
+            {
+                throw new IOException($"Too many levels of symbolic links in '{fullPath}'.");
+            }
+
+            // Continue with the link's target followed by the components still pending.
+            // A relative target is resolved from the directory that contains the link (current).
+            string targetRoot = Path.GetPathRoot(linkTarget) ?? string.Empty;
+            if (Path.IsPathRooted(linkTarget))
+            {
+                current = targetRoot;
+            }
+
+            string[] targetParts = SplitComponents(linkTarget[targetRoot.Length..]);
+            for (int i = targetParts.Length - 1; i >= 0; i--)
+            {
+                pending.AddFirst(targetParts[i]);
+            }
         }
 
         return current;
     }
+
+    private static string[] SplitComponents(string path)
+        => path.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries);
 }
