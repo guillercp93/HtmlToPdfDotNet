@@ -1,3 +1,5 @@
+using System.Threading.RateLimiting;
+using HtmlToPdfDotNet.Example.Controllers;
 using HtmlToPdfDotNet.Example.Services;
 using HtmlToPdfDotNet.Library;
 using HtmlToPdfDotNet.Library.Commons;
@@ -31,10 +33,28 @@ builder.Services.AddSingleton<IPdfGenerator>(_ =>
     return new PdfGenerator(opts);
 });
 
+// ── Rate limiting ─────────────────────────────────────────────────────────
+// PDF generation is CPU-heavy and the endpoint is anonymous: cap requests per client IP
+// so a single caller cannot exhaust the server. Rejected requests get HTTP 429.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(ReportController.PdfRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+});
+
 // ── Build & configure pipeline ────────────────────────────────────────────
 WebApplication app = builder.Build();
 
 app.UseStaticFiles();
+app.UseRateLimiter();
 app.MapControllers();
 
 // Landing page — quick help for the developer
