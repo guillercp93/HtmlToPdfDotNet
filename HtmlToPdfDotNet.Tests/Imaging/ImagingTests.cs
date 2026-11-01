@@ -281,6 +281,28 @@ public class PngDecoderHardeningTests
         Assert.Throws<InvalidDataException>(() => PngDecoder.Decode(png));
     }
 
+    [Theory]
+    [InlineData(8193, 1)]
+    [InlineData(1, 8193)]
+    public void DimensionAboveMaxDimension_IsRejectedEvenWithinPixelBudget(int width, int height)
+    {
+        // Complete, valid RGB image data: only the dimension limit can reject it.
+        byte[] raw = new byte[height * (width * 3 + 1)];
+        byte[] png = Png(Ihdr(width, height), Chunk("IDAT", Zlib(raw)));
+
+        InvalidDataException ex = Assert.Throws<InvalidDataException>(() => PngDecoder.Decode(png));
+        Assert.Contains("8192", ex.Message);
+    }
+
+    [Fact]
+    public void ImageAtMaxDimension_Decodes()
+    {
+        byte[] raw = new byte[1 * (PngDecoder.MaxDimension * 3 + 1)];
+        ImageData image = PngDecoder.Decode(Png(Ihdr(PngDecoder.MaxDimension, 1), Chunk("IDAT", Zlib(raw))));
+
+        Assert.Equal(PngDecoder.MaxDimension, image.PixelWidth);
+    }
+
     [Fact]
     public void DecompressionBomb_DoesNotInflateBeyondDeclaredImageSize()
     {

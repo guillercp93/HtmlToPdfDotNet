@@ -18,10 +18,16 @@ namespace HtmlToPdfDotNet.Library.Models.Imaging;
 public static class PngDecoder
 {
     /// <summary>
+    /// Largest width or height accepted, in pixels. Checked per dimension so an extreme aspect
+    /// ratio (for example 67,108,864 x 1) cannot pass the <see cref="MaxPixels"/> budget.
+    /// </summary>
+    public const int MaxDimension = 8192;
+
+    /// <summary>
     /// Largest image accepted, in pixels (8192 x 8192). Header dimensions come from the file,
     /// so they are bounded before any buffer is sized from them.
     /// </summary>
-    public const long MaxPixels = 8192L * 8192L;
+    public const long MaxPixels = (long)MaxDimension * MaxDimension;
 
     public static ImageData Decode(byte[] pngBytes)
     {
@@ -55,6 +61,12 @@ public static class PngDecoder
         if (width <= 0 || height <= 0)
         {
             throw new InvalidDataException($"PNG: invalid dimensions {width}x{height}.");
+        }
+
+        if (width > MaxDimension || height > MaxDimension)
+        {
+            throw new InvalidDataException(
+                $"PNG: {width}x{height} exceeds the maximum supported dimension of {MaxDimension} pixels.");
         }
 
         if ((long)width * height > MaxPixels)

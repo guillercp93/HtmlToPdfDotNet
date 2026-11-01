@@ -222,7 +222,7 @@ catch (Exception ex) // Handles parsing, resource-loading, or rendering errors
 - No remote resources: images and stylesheets are never fetched over HTTP(S).
 - PNG alpha channel is currently not preserved.
 - Interlaced (Adam7) PNG images are not supported and cause the conversion to fail.
-- PNG images larger than 8192 x 8192 pixels (`PngDecoder.MaxPixels`), or whose header dimensions are invalid, are rejected with `InvalidDataException`; compressed image data is never inflated beyond the size its header declares.
+- PNG images wider or taller than 8192 pixels (`PngDecoder.MaxDimension`), or whose header dimensions are invalid, are rejected with `InvalidDataException`; compressed image data is never inflated beyond the size its header declares.
 - CMYK JPEG images are tagged as RGB, so their colors render incorrectly.
 - Font families that are not registered fall back to the standard PDF fonts.
 - `HeaderFooterConfig.HeaderHeight` and `FooterHeight` are not yet applied by the layout engine, so body content is not automatically kept clear of the footer.
