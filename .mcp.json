@@ -7,6 +7,14 @@
         "serve",
         "--mcp"
       ]
+    },
+    "aikido": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@aikidosec/mcp@latest"
+      ]
     }
   }
 }
