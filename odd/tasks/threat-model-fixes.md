@@ -37,7 +37,7 @@ Out of scope (noted in evaluation, not security fixes): JPEG metadata stripping;
 | T11 | S11 | inline | done | (this commit) |
 | T12 | S12 | inline | done | (this commit) |
 | T13 | S13 | inline | done | (this commit) |
-| T8 | S8 | inline | pending | |
+| T8 | S8 | inline | done | 6e52b56 (#14), tag v1.1.0 |
 
 Route evidence: units are small (< 100 lines each) and T3/T4 share `ConversionOptions.cs`, so no Writer trigger applies; all inline.
 
@@ -60,3 +60,4 @@ Route evidence: units are small (< 100 lines each) and T3/T4 share `ConversionOp
 - L15 (2026-11-01): verifiers. S9 PASS (eeb339b): 0 mismatches in 400 parallel conversions, output equal to baseline after normalising dates and image names, 20 levels 55 ms vs 3,191 ms baseline. S10 B1 recheck PASS (70b2b96): all five link-then-`..` escapes rejected; 614 tests pass. Baseline advisories, not fixed: a flex container as the first child of `<body>` renders nothing; links inside flex items are dropped.
 - L16 (2026-11-01, user): job-wide OIDC finding. Confirmed: `id-token: write` covered restore/build/test/pack. Split `release.yml` into `build` (contents: read) and `publish` (id-token: write only, no checkout, SHA-256 of the packages checked against the build job output). Workflow filename unchanged so the Trusted Publishing policy still matches. No `environment:` added, because a nuget.org policy without one may stop matching; recommended to the user as a follow-up. YAML validated and checksum/version shell steps dry-run locally; first real run is the v1.1.0 tag.
 - L17 (2026-11-01, user): "There are comments in the PR" (Aikido review on #14; #13 had been squash-merged before the threat-model commits, so they moved to #14). Both confirmed and fixed: (1) PNG limit checked only the pixel product, so 67,108,864x1 passed although the README promised 8192 x 8192; added `PngDecoder.MaxDimension` per-dimension check, RED observed with valid image data (8193x1, 1x8193). (2) Example rate limiter partitioned on the proxy address behind a reverse proxy; added `UseForwardedHeaders` (X-Forwarded-For trusted from loopback only) before `UseRateLimiter`. Verified in the running app: client A 10 x 200 then 429, client B still 200. Suite 617 passed.
+- L18 (2026-11-01, user): "I merged it" (#14, 6e52b56), then "yes" to the tag. `v1.1.0` pushed; release run 41329780578: build success, publish success, log shows `HtmlToPdfDotNet.1.1.0.nupkg` and `.snupkg` "Your package was pushed." Tag creation bypassed a repository ruleset restricting tag creation.
