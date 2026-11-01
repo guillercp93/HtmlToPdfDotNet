@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using HtmlAgilityPack;
 using HtmlToPdfDotNet.Library.Commons;
 using HtmlToPdfDotNet.Library.Models.Fonts;
@@ -184,6 +185,53 @@ public static class FlexLayoutEngine
 
     #region Measurement
 
+    /// <summary>
+    /// Per-conversion cache of flex item layouts, keyed by the style map of the conversion
+    /// (one map per document) so entries are released with it.
+    /// </summary>
+    /// <remarks>
+    /// A flex container lays out each item up to three times (measure, layout at basis,
+    /// re-layout after grow/shrink), and each of those re-runs every nested flex container.
+    /// Without reuse the cost grows exponentially with flex nesting depth. An item layout
+    /// depends only on the node, the page width and the page content height (styles, fonts
+    /// and base path are fixed per conversion), and callers only read the result
+    /// (<see cref="CopyPrimitives"/> creates new primitives), so results are safely shared.
+    /// </remarks>
+    private static readonly ConditionalWeakTable<Dictionary<HtmlNode, ComputedStyle>, Dictionary<(HtmlNode Node, float Width, float PageContentH), LayoutResult>>
+        _ItemLayoutCache = new();
+
+    /// <summary>
+    /// Lays out <paramref name="node"/>'s content on a margin-less page of the given size,
+    /// reusing an earlier identical layout from the same conversion when available.
+    /// </summary>
+    private static LayoutResult LayoutItem(
+        HtmlNode node,
+        float pageWidth,
+        float pageContentH,
+        Dictionary<HtmlNode, ComputedStyle> styles,
+        FontRegistry? registry,
+        string? basePath)
+    {
+        Dictionary<(HtmlNode, float, float), LayoutResult> cache = _ItemLayoutCache.GetValue(styles, _ => new());
+        (HtmlNode, float, float) key = (node, pageWidth, pageContentH);
+
+        lock (cache)
+        {
+            if (cache.TryGetValue(key, out LayoutResult? cached)) return cached;
+        }
+
+        // Laid out outside the lock: nested flex containers re-enter this method.
+        PageLayout page = new(pageWidth, pageContentH, new PageMargins(0f));
+        LayoutResult result = new BlockLayoutEngine(page, styles, registry, basePath).Layout(node);
+
+        lock (cache)
+        {
+            cache.TryAdd(key, result);
+        }
+
+        return result;
+    }
+
     /// <summary>Width of the virtual page used to measure the natural width of auto-basis items.</summary>
     private const float MeasureWidth = 10000f;
 
@@ -249,9 +297,7 @@ public static class FlexLayoutEngine
                     // Flex-basis: auto, no explicit width → measure natural content width
                     // by doing a test layout at a very large width, then reading the
                     // rightmost extent of text, images, and sized boxes.
-                    PageLayout measurePage = new(MeasureWidth, pageContentH, new PageMargins(0f));
-                    BlockLayoutEngine measureEngine = new(measurePage, styles, registry, basePath);
-                    LayoutResult measureResult = measureEngine.Layout(item.Node);
+                    LayoutResult measureResult = LayoutItem(item.Node, MeasureWidth, pageContentH, styles, registry, basePath);
 
                     // Find rightmost content extent from text and image primitives
                     // measured from the test layout's origin. Inline text primitives
@@ -304,9 +350,7 @@ public static class FlexLayoutEngine
             // Layout the child at the TOTAL width (content + padding + border + margin)
             // so that BlockLayoutEngine's ResolveWidth yields the correct content-box size.
             float totalItemWidth = basisContentWidth + itemBoxH;
-            PageLayout childPage = new(totalItemWidth, pageContentH, new PageMargins(0f));
-            BlockLayoutEngine childEngine = new(childPage, styles, registry, basePath);
-            LayoutResult innerResult = childEngine.Layout(item.Node);
+            LayoutResult innerResult = LayoutItem(item.Node, totalItemWidth, pageContentH, styles, registry, basePath);
 
             // Total height this item occupies in the flow.
             // innerResult.TotalHeight covers only the laid-out children
@@ -480,9 +524,8 @@ public static class FlexLayoutEngine
 
                 // Total width for the re-layout page (content + padding + border + margin)
                 float totalItemWidth = allocated + itemBoxH;
-                PageLayout relayoutPage = new(Math.Max(1f, totalItemWidth), pageContentH, new PageMargins(0f));
-                BlockLayoutEngine relayoutEngine = new(relayoutPage, styles, registry, basePath);
-                LayoutResult relayoutResult = relayoutEngine.Layout(items[i].Node);
+                LayoutResult relayoutResult = LayoutItem(items[i].Node, Math.Max(1f, totalItemWidth), pageContentH,
+                                                         styles, registry, basePath);
 
                 float relayoutContentH = relayoutResult.TotalHeight;
                 if (!items[i].Style.Height.IsAuto && items[i].Style.Height.Points > relayoutContentH)
