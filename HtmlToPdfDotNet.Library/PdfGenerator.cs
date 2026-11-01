@@ -147,10 +147,17 @@ public class PdfGenerator : IPdfGenerator
     public LayoutResult RunLayout(string html)
     {
         ArgumentNullException.ThrowIfNullOrEmpty(html);
+        if (html.Length > _options.MaxHtmlLength)
+        {
+            throw new ArgumentException(
+                $"The HTML is {html.Length} characters long, which exceeds ConversionOptions.MaxHtmlLength ({_options.MaxHtmlLength}).",
+                nameof(html));
+        }
 
         HtmlDocument doc = new();
 
         doc.LoadHtml(Helpers.CleanHtml(html));
+        EnsureWithinNestingDepth(doc);
         EnsureLocalImagesAllowed(doc);
 
         List<CssRule> cssRules = ResolveStyleSheets(_options.StyleSheets)
@@ -259,6 +266,7 @@ public class PdfGenerator : IPdfGenerator
 
         HtmlDocument doc = new();
         doc.LoadHtml(html);
+        EnsureWithinNestingDepth(doc);
         EnsureLocalImagesAllowed(doc);
         StyleResolver resolver = new();
         Dictionary<HtmlNode, ComputedStyle> styles = resolver.Resolve(doc.DocumentNode);
@@ -396,6 +404,36 @@ public class PdfGenerator : IPdfGenerator
             }
 
             yield return styleSheet;
+        }
+    }
+
+    /// <summary>
+    /// Enforces <see cref="ConversionOptions.MaxNestingDepth"/>. The walk is iterative so the check
+    /// itself cannot overflow the stack on the documents it exists to reject.
+    /// </summary>
+    /// <param name="doc">The parsed HTML document or fragment.</param>
+    private void EnsureWithinNestingDepth(HtmlDocument doc)
+    {
+        if (_options.MaxNestingDepth is not int maxDepth) return;
+
+        Stack<(HtmlNode Node, int Depth)> pending = new();
+        pending.Push((doc.DocumentNode, 0));
+        while (pending.Count > 0)
+        {
+            (HtmlNode node, int depth) = pending.Pop();
+            foreach (HtmlNode child in node.ChildNodes)
+            {
+                if (child.NodeType != HtmlNodeType.Element) continue;
+
+                int childDepth = depth + 1;
+                if (childDepth > maxDepth)
+                {
+                    throw new ArgumentException(
+                        $"The HTML nests elements deeper than ConversionOptions.MaxNestingDepth ({maxDepth}).");
+                }
+
+                pending.Push((child, childDepth));
+            }
         }
     }
 
