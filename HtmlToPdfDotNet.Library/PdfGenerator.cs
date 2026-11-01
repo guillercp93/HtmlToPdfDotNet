@@ -151,6 +151,7 @@ public class PdfGenerator : IPdfGenerator
         HtmlDocument doc = new();
 
         doc.LoadHtml(Helpers.CleanHtml(html));
+        EnsureLocalImagesAllowed(doc);
 
         List<CssRule> cssRules = ResolveStyleSheets(_options.StyleSheets)
                                          .SelectMany(CssStyleSheetParser.Parse)
@@ -252,12 +253,13 @@ public class PdfGenerator : IPdfGenerator
     /// <param name="html">The HTML fragment to lay out.</param>
     /// <param name="contentWidth">The available width for the layout.</param>
     /// <returns>The list of render primitives for the HTML fragment.</returns>
-    private static List<RenderPrimitive> LayoutHtmlFragment(string html, float contentWidth)
+    private List<RenderPrimitive> LayoutHtmlFragment(string html, float contentWidth)
     {
         if (string.IsNullOrWhiteSpace(html)) return [];
 
         HtmlDocument doc = new();
         doc.LoadHtml(html);
+        EnsureLocalImagesAllowed(doc);
         StyleResolver resolver = new();
         Dictionary<HtmlNode, ComputedStyle> styles = resolver.Resolve(doc.DocumentNode);
 
@@ -394,6 +396,27 @@ public class PdfGenerator : IPdfGenerator
             }
 
             yield return styleSheet;
+        }
+    }
+
+    /// <summary>
+    /// Enforces <see cref="ConversionOptions.RequireBasePathForLocalFiles"/>: when it is set and no
+    /// <see cref="ConversionOptions.BasePath"/> is configured, any <c>&lt;img&gt;</c> whose src is not a
+    /// <c>data:</c> URI is rejected before layout, instead of resolving against the current directory.
+    /// </summary>
+    /// <param name="doc">The parsed HTML document or fragment.</param>
+    private void EnsureLocalImagesAllowed(HtmlDocument doc)
+    {
+        if (!_options.RequireBasePathForLocalFiles || !string.IsNullOrWhiteSpace(_options.BasePath)) return;
+
+        foreach (HtmlNode img in doc.DocumentNode.Descendants("img"))
+        {
+            string src = img.GetAttributeValue("src", string.Empty).Trim();
+            if (src.Length > 0 && !src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException(
+                    $"Local image '{src}' cannot be loaded: ConversionOptions.BasePath is required when RequireBasePathForLocalFiles is enabled.");
+            }
         }
     }
 

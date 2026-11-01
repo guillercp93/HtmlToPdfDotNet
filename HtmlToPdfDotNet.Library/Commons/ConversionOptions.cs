@@ -25,6 +25,16 @@ public class ConversionOptions
     public string? BasePath { get; set; }
 
     /// <summary>
+    /// When true, local image files are only loaded if <see cref="BasePath"/> is set.
+    /// A document (or header/footer template) that references a local image <c>src</c>
+    /// without a <see cref="BasePath"/> is rejected with <see cref="UnauthorizedAccessException"/>
+    /// instead of being resolved against the current working directory. <c>data:</c> URIs are
+    /// always allowed. Defaults to false for backward compatibility; enable it when the HTML
+    /// may contain untrusted content.
+    /// </summary>
+    public bool RequireBasePathForLocalFiles { get; set; }
+
+    /// <summary>
     /// Optional list of CSS file paths to include in the PDF.
     /// </summary>
     public IEnumerable<string> StyleSheets { get; set; } = [];
@@ -83,6 +93,7 @@ public class ConversionOptions
         };
         CompressStreams = source.CompressStreams;
         BasePath = source.BasePath;
+        RequireBasePathForLocalFiles = source.RequireBasePathForLocalFiles;
         StyleSheets = source.StyleSheets.ToArray();
         Fonts = new FontRegistry(source.Fonts);
 

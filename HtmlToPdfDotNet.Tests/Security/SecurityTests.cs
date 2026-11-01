@@ -506,4 +506,70 @@ public class SecurityTests : IDisposable
     }
 
     #endregion
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  ConversionOptions.RequireBasePathForLocalFiles (opt-in fail-closed)
+    // ═══════════════════════════════════════════════════════════════════
+
+    #region RequireBasePathForLocalFiles
+
+    [Fact]
+    public void RequireBasePath_WithoutBasePath_LocalImage_Throws()
+    {
+        PdfGenerator generator = new(new ConversionOptions { RequireBasePathForLocalFiles = true });
+
+        Assert.Throws<UnauthorizedAccessException>(
+            () => generator.Convert("<p>Hi</p><img src=\"images/test.png\" />"));
+    }
+
+    [Fact]
+    public void RequireBasePath_WithoutBasePath_LocalImageInHeader_Throws()
+    {
+        PdfGenerator generator = new(new ConversionOptions
+        {
+            RequireBasePathForLocalFiles = true,
+            HeaderFooter = new HeaderFooterConfig { HeaderHtml = "<img src=\"logo.png\" />" },
+        });
+
+        Assert.Throws<UnauthorizedAccessException>(() => generator.Convert("<p>Hi</p>"));
+    }
+
+    [Fact]
+    public void RequireBasePath_WithoutBasePath_DataUriImage_Converts()
+    {
+        PdfGenerator generator = new(new ConversionOptions { RequireBasePathForLocalFiles = true });
+
+        byte[] pdf = generator.Convert($"<p>Hi</p><img src=\"{_png64}\" />");
+
+        Assert.Contains("/Subtype /Image", System.Text.Encoding.Latin1.GetString(pdf));
+    }
+
+    [Fact]
+    public void RequireBasePath_WithBasePath_LocalImage_Converts()
+    {
+        PdfGenerator generator = new(new ConversionOptions
+        {
+            RequireBasePathForLocalFiles = true,
+            BasePath = _sandbox,
+        });
+        // CreateMinimalPng() is not decodable; write the valid 1x1 PNG from _png64 instead.
+        File.WriteAllBytes(Path.Combine(_sandbox, "valid.png"), Convert.FromBase64String(_png64[(_png64.IndexOf(',') + 1)..]));
+
+        byte[] pdf = generator.Convert("<p>Hi</p><img src=\"valid.png\" />");
+
+        Assert.Contains("/Subtype /Image", System.Text.Encoding.Latin1.GetString(pdf));
+    }
+
+    [Fact]
+    public void RequireBasePath_DefaultIsFalse_KeepsCurrentDirectoryFallback()
+    {
+        Assert.False(new ConversionOptions().RequireBasePathForLocalFiles);
+
+        // Previous behavior: the src is resolved against the current directory and is simply missing.
+        PdfGenerator generator = new();
+        Assert.Throws<FileNotFoundException>(
+            () => generator.Convert($"<img src=\"missing_{Guid.NewGuid():N}.png\" />"));
+    }
+
+    #endregion
 }
