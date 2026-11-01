@@ -134,7 +134,8 @@ public class PdfGenerator : IPdfGenerator
         }
 
         byte[] rawPdf = Convert(html);
-        using FileStream fs = File.OpenWrite(resolvedPath);
+        // FileMode.Create truncates an existing file; File.OpenWrite would leave stale trailing bytes.
+        using FileStream fs = new(resolvedPath, FileMode.Create, FileAccess.Write);
         fs.Write(rawPdf);
     }
 

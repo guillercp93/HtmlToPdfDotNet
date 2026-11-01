@@ -58,6 +58,20 @@ public class PublicApiValidationTests : IDisposable
     }
 
     [Fact]
+    public void WritePdfFile_ExistingLargerFile_IsFullyReplaced()
+    {
+        PdfGenerator generator = new();
+        string pdfPath = Path.Combine(_sandbox, "existing.pdf");
+        File.WriteAllBytes(pdfPath, Enumerable.Repeat((byte)'X', 1024 * 1024).ToArray());
+
+        generator.WritePdfFile("<p>Hello</p>", pdfPath);
+
+        byte[] written = File.ReadAllBytes(pdfPath);
+        Assert.Equal(generator.Convert("<p>Hello</p>").Length, written.Length);
+        Assert.EndsWith("%%EOF", System.Text.Encoding.ASCII.GetString(written).TrimEnd());
+    }
+
+    [Fact]
     public void RunLayout_NullHtml_ThrowsArgumentNullException()
     {
         PdfGenerator generator = new();
