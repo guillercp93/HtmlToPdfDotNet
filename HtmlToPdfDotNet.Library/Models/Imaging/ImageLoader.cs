@@ -40,7 +40,8 @@ public static class ImageLoader
 
         if (!File.Exists(path))
         {
-            throw new FileNotFoundException($"Image file not found: {path}", path);
+            // Report the caller's src, not the resolved path, so server directories are not disclosed.
+            throw new FileNotFoundException($"Image file not found: {src}", src);
         }
 
         byte[] bytes = File.ReadAllBytes(path);

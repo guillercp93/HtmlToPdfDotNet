@@ -305,6 +305,18 @@ public class SecurityTests : IDisposable
     }
 
     [Fact]
+    public void ImageLoader_Load_MissingFile_DoesNotRevealResolvedServerPath()
+    {
+        FileNotFoundException ex = Assert.Throws<FileNotFoundException>(
+            () => ImageLoader.Load("images/missing.png", _sandbox));
+
+        Assert.Contains("images/missing.png", ex.Message);
+        Assert.Equal("images/missing.png", ex.FileName);
+        Assert.DoesNotContain(Path.GetFullPath(_sandbox), ex.Message);
+        Assert.DoesNotContain(Path.GetFullPath(_sandbox), ex.FileName);
+    }
+
+    [Fact]
     public void ImageLoader_Load_DataUri_BypassesFileResolution()
     {
         ImageData imageData = ImageLoader.Load(_png64);
