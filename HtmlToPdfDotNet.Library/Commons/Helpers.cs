@@ -356,6 +356,33 @@ public static class Helpers
     }
 
     /// <summary>
+    /// Decompresses zlib/Deflate data, stopping after <paramref name="maxLength"/> bytes.
+    /// Memory grows with the data actually inflated, so a small compressed payload cannot
+    /// expand without bound (decompression bomb).
+    /// </summary>
+    /// <param name="data">The compressed data.</param>
+    /// <param name="maxLength">The maximum number of decompressed bytes to return.</param>
+    /// <returns>At most <paramref name="maxLength"/> decompressed bytes.</returns>
+    public static byte[] ZlibDecompress(byte[] data, int maxLength)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(maxLength);
+
+        using MemoryStream input = new(data);
+        using MemoryStream output = new();
+        using ZLibStream zlib = new(input, CompressionMode.Decompress);
+
+        byte[] buffer = new byte[Math.Min(maxLength, 81920)];
+        while (output.Length < maxLength)
+        {
+            int read = zlib.Read(buffer, 0, (int)Math.Min(buffer.Length, maxLength - output.Length));
+            if (read == 0) break;
+            output.Write(buffer, 0, read);
+        }
+
+        return output.ToArray();
+    }
+
+    /// <summary>
     /// Builds padded glyf data and returns the offsets.
     /// </summary>
     /// <param name="parts">The parts of the glyf data.</param>

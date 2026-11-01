@@ -17,6 +17,12 @@ namespace HtmlToPdfDotNet.Library.Models.Imaging;
 /// </summary>
 public static class PngDecoder
 {
+    /// <summary>
+    /// Largest image accepted, in pixels (8192 x 8192). Header dimensions come from the file,
+    /// so they are bounded before any buffer is sized from them.
+    /// </summary>
+    public const long MaxPixels = 8192L * 8192L;
+
     public static ImageData Decode(byte[] pngBytes)
     {
         ValidateSignature(pngBytes);
@@ -27,6 +33,11 @@ public static class PngDecoder
         if (ihdr.Type != "IHDR")
         {
             throw new InvalidDataException("PNG: First chunk isn't IHDR.");
+        }
+
+        if (ihdr.Data.Length < 13)
+        {
+            throw new InvalidDataException("PNG: IHDR chunk is too short.");
         }
 
         int width = BinaryPrimitives.ReadInt32BigEndian(ihdr.Data.AsSpan(0, 4));
@@ -40,6 +51,25 @@ public static class PngDecoder
         {
             throw new InvalidDataException("PNG: Interlacing (Adam7) is not supported.");
         }
+
+        if (width <= 0 || height <= 0)
+        {
+            throw new InvalidDataException($"PNG: invalid dimensions {width}x{height}.");
+        }
+
+        if ((long)width * height > MaxPixels)
+        {
+            throw new InvalidDataException(
+                $"PNG: {width}x{height} exceeds the maximum supported size of {MaxPixels:N0} pixels.");
+        }
+
+        // Parameters by colorType
+        GetColorTypeParams(colorType, out int samplesPerPixel, out string colorSpace, out bool hasAlpha);
+
+        int bytePerSamples = bitDepth == 16 ? 2 : 1;
+        int bpp = bytePerSamples * samplesPerPixel; // bytes per pixel
+        int stride = width * bpp + 1; // +1 for filter type byte
+        int expectedLength = height * stride; // bounded by MaxPixels, so it fits in int
 
         // Read chunks IDAT and PLTE
         List<byte[]> idatData = new();
@@ -55,19 +85,13 @@ public static class PngDecoder
 
         // Descompress IDAT (zlib/FlateDecode)
         byte[] compressed = Helpers.ConcatArrays(idatData);
-        byte[] rawScanlines = Helpers.ZlibDecompress(compressed);
+        // Inflate only as much as the header says the image needs.
+        byte[] rawScanlines = Helpers.ZlibDecompress(compressed, expectedLength);
 
-        // Parameters by colorType
-        GetColorTypeParams(colorType, out int samplesPerPixel, out string colorSpace, out bool hasAlpha);
-
-        int bytePerSamples = bitDepth == 16 ? 2 : 1;
-        int bpp = bytePerSamples * samplesPerPixel; // bytes per pixel
-        int stride = width * bpp + 1; // +1 for filter type byte
-
-        if (rawScanlines.Length < (height * stride))
+        if (rawScanlines.Length < expectedLength)
         {
             throw new InvalidDataException(
-                $"PNG: IDAT data isn't enough. Expected: {height * stride} bytes, got: {rawScanlines.Length} bytes."
+                $"PNG: IDAT data isn't enough. Expected: {expectedLength} bytes, got: {rawScanlines.Length} bytes."
             );
         }
 

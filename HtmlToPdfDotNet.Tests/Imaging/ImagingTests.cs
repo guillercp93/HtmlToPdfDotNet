@@ -232,3 +232,87 @@ public class ImagingTests
         Assert.Throws<ArgumentException>(() => builder.RegisterImage("imgBadAlpha", img));
     }
 }
+
+/// <summary>
+/// Malicious PNG input: header dimensions, chunk lengths and compressed data come from
+/// the image and must not drive unbounded allocation or int overflow.
+/// </summary>
+public class PngDecoderHardeningTests
+{
+    private static byte[] Chunk(string type, byte[] data, int? declaredLength = null)
+    {
+        byte[] chunk = new byte[12 + data.Length];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(chunk, declaredLength ?? data.Length);
+        Encoding.ASCII.GetBytes(type).CopyTo(chunk, 4);
+        data.CopyTo(chunk, 8);
+        return chunk; // CRC left as zero; the decoder does not verify it
+    }
+
+    private static byte[] Ihdr(int width, int height, byte colorType = 2)
+    {
+        byte[] d = new byte[13];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(d, width);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(d.AsSpan(4), height);
+        d[8] = 8;          // bit depth
+        d[9] = colorType;  // 2 = RGB
+        return Chunk("IHDR", d);
+    }
+
+    private static byte[] Zlib(byte[] raw)
+    {
+        using MemoryStream ms = new();
+        using (System.IO.Compression.ZLibStream z = new(ms, System.IO.Compression.CompressionLevel.SmallestSize))
+            z.Write(raw);
+        return ms.ToArray();
+    }
+
+    private static byte[] Png(params byte[][] chunks)
+        => [.. Constants.PngSignature, .. chunks.SelectMany(c => c), .. Chunk("IEND", [])];
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 0)]
+    [InlineData(-1, 1)]
+    [InlineData(100_000, 100_000)]  // 10 gigapixels: int overflow and multi-GB allocation
+    public void InvalidOrHugeDimensions_ThrowInvalidDataException(int width, int height)
+    {
+        byte[] png = Png(Ihdr(width, height), Chunk("IDAT", Zlib(new byte[4])));
+
+        Assert.Throws<InvalidDataException>(() => PngDecoder.Decode(png));
+    }
+
+    [Fact]
+    public void DecompressionBomb_DoesNotInflateBeyondDeclaredImageSize()
+    {
+        // 1x1 RGB needs 4 bytes (filter byte + 3 samples); the IDAT inflates to 64 MB of zeros.
+        byte[] png = Png(Ihdr(1, 1), Chunk("IDAT", Zlib(new byte[64 * 1024 * 1024])));
+
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        ImageData image = PngDecoder.Decode(png);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Equal(1, image.PixelWidth);
+        Assert.True(allocated < 8 * 1024 * 1024, $"Decoding allocated {allocated:N0} bytes.");
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(int.MaxValue)]
+    public void ChunkWithInvalidDeclaredLength_ThrowsInvalidDataException(int declaredLength)
+    {
+        byte[] png = Png(Ihdr(1, 1), Chunk("IDAT", new byte[8], declaredLength));
+
+        Assert.Throws<InvalidDataException>(() => PngDecoder.Decode(png));
+    }
+
+    [Fact]
+    public void ValidSmallPng_StillDecodes()
+    {
+        byte[] png = Png(Ihdr(2, 1), Chunk("IDAT", Zlib([0, 255, 0, 0, 0, 0, 255])));
+
+        ImageData image = PngDecoder.Decode(png);
+
+        Assert.Equal(2, image.PixelWidth);
+        Assert.Equal(new byte[] { 255, 0, 0, 0, 0, 255 }, image.RawBytes);
+    }
+}
