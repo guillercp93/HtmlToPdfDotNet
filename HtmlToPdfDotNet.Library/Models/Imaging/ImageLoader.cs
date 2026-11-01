@@ -238,11 +238,8 @@ public static class ImageLoader
         // Combine and canonicalize the final destination path
         string resolvedPath = Path.GetFullPath(Path.Combine(canonicalBasePath, sanitizedSrc));
 
-        // Enforce the directory boundary limit
-        if (!resolvedPath.StartsWith(canonicalBasePath, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new UnauthorizedAccessException($"Access to the path '{src}' is denied. It lies outside the allowed base directory.");
-        }
+        // Enforce the directory boundary with filesystem semantics (case rules, symbolic links)
+        PathContainment.EnsureInside(canonicalBasePath, resolvedPath, src);
 
         return resolvedPath;
     }

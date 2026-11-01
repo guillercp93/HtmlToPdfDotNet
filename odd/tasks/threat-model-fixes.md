@@ -12,6 +12,8 @@ Branch: `develop` (joins open PR #13 to `Master`). Delivery: `single-pr`, non-br
 - **S5 Image bombs.** PNG width/height must be positive and bounded, and zlib decompression must stop at the size the header implies, so a small malicious PNG cannot exhaust memory or overflow `int` arithmetic.
 - **S6 Example rate limiting.** The Example app limits `/report/pdf` per client and answers HTTP 429 above the limit.
 - **S7 Docs and version.** README documents the new options and security behavior; library version 1.1.0.
+- **S9 Flex nesting cost.** Nested flex containers must lay out in time roughly linear in nesting depth (no exponential blow-up), with identical output for existing flex documents.
+- **S10 Filesystem-aware containment** (user-reported finding "Case-insensitive lexical containment allows image path traversal on case-sensitive filesystems"). Image reads and `WritePdfFile` writes share one containment check that resolves symbolic links and compares with host case rules; `../Assets/x.png` from base `assets` and links pointing outside the base are rejected.
 - **S8 Delivery.** "create PR to Master and launch new publish in nuget": PR to `Master`, then tag `v1.1.0` to trigger `release.yml`. Merge and tag only after explicit user confirmation.
 
 Out of scope (noted in evaluation, not security fixes): JPEG metadata stripping; a broken `<img>` aborting the whole conversion.
@@ -27,6 +29,8 @@ Out of scope (noted in evaluation, not security fixes): JPEG metadata stripping;
 | T5 | S5 | inline | done | 55e9708 |
 | T6 | S6 | inline | done | fe5ddc5 |
 | T7 | S7 | inline | done | bdace4f (amended) |
+| T9 | S9 | inline | in progress | |
+| T10 | S10 | inline | done | (this commit) |
 | T8 | S8 | inline | pending | |
 
 Route evidence: units are small (< 100 lines each) and T3/T4 share `ConversionOptions.cs`, so no Writer trigger applies; all inline.
@@ -43,3 +47,5 @@ Route evidence: units are small (< 100 lines each) and T3/T4 share `ConversionOp
 - L8 (T3, new finding, not fixed): header/footer templates are laid out without `BasePath`, so their local images resolve against the current directory even when `BasePath` is set. With `RequireBasePathForLocalFiles` and no `BasePath` they are rejected (tested).
 - L9 (T3): test fixture `SecurityTests.CreateMinimalPng()` writes an undecodable PNG; the new test uses the valid `_png64` image instead.
 - L10 (T6): verified by running the Example app: 10 x 200 then 429 on `/report/pdf`; `/report` unaffected. T1-T5 each observed RED before GREEN; full suite 601 passed.
+- L11 (2026-11-01, user decision on L6): "Fix flex first" (fix nested flex cost before merging PR #13 and publishing v1.1.0).
+- L12 (2026-11-01, user): "wait, I have other issues" followed by the case-insensitive containment finding. Confirmed on Linux with RED tests: case-variant sibling read and write, and directory/file symlinks escaping BasePath (5 failing). Fixed with `PathContainment`; 611 tests pass.

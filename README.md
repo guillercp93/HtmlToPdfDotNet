@@ -298,6 +298,7 @@ The `HtmlToPdfDotNet.Example` project is an ASP.NET Core sample that renders a R
 - Documents nesting elements deeper than `ConversionOptions.MaxNestingDepth` (default 256) are rejected with `ArgumentException` before layout, because extreme nesting would overflow the thread's stack and terminate the process. Set it to `null` to disable the check.
 - `ConversionOptions.MaxHtmlLength` (unlimited by default) rejects longer input before parsing. Set it when converting untrusted HTML: the HtmlAgilityPack parser's time grows quadratically with nesting depth, so a deeply nested document of about 1 MB can take minutes to parse.
 - When `BasePath` is set, `WritePdfFile` only writes inside `BasePath`; any other output path throws `UnauthorizedAccessException`.
+- Containment follows the host filesystem: symbolic links are resolved to their real location before the check, and paths are compared with the platform's case rules (case-sensitive on Linux), so a case-variant sibling directory or a link pointing outside `BasePath` is rejected. A link replaced between the check and the file access is not covered.
 
 ---
 

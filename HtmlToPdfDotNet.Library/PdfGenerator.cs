@@ -119,17 +119,8 @@ public class PdfGenerator : IPdfGenerator
         string resolvedPath = pdfPath;
         if (!string.IsNullOrEmpty(_options.BasePath))
         {
-            string canonicalBasePath = Path.GetFullPath(_options.BasePath);
-            if (!canonicalBasePath.EndsWith(Path.DirectorySeparatorChar.ToString()))
-            {
-                canonicalBasePath += Path.DirectorySeparatorChar;
-            }
-
             string fullPdfPath = Path.GetFullPath(pdfPath);
-            if (!fullPdfPath.StartsWith(canonicalBasePath, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new UnauthorizedAccessException($"Access to the path '{pdfPath}' is denied. It lies outside the allowed base directory.");
-            }
+            PathContainment.EnsureInside(_options.BasePath, fullPdfPath, pdfPath);
             resolvedPath = fullPdfPath;
         }
 
