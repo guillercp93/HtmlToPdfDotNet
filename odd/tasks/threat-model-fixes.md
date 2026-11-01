@@ -15,6 +15,7 @@ Branch: `develop` (joins open PR #13 to `Master`). Delivery: `single-pr`, non-br
 - **S9 Flex nesting cost.** Nested flex containers must lay out in time roughly linear in nesting depth (no exponential blow-up), with identical output for existing flex documents.
 - **S10 Filesystem-aware containment** (user-reported finding "Case-insensitive lexical containment allows image path traversal on case-sensitive filesystems"). Image reads and `WritePdfFile` writes share one containment check that resolves symbolic links and compares with host case rules; `../Assets/x.png` from base `assets` and links pointing outside the base are rejected.
 - **S11 Pinned release actions** (user-reported finding "Mutable GitHub Actions can taint the package published by the release workflow"). Every action in all workflows is pinned to a full commit SHA with a version comment.
+- **S12 Pinned MCP package** (user-reported finding: project MCP config launches `npx -y @aikidosec/mcp@latest`). Both `.mcp.json` and `opencode.jsonc` launch an exact, reviewed version.
 - **S8 Delivery.** "create PR to Master and launch new publish in nuget": PR to `Master`, then tag `v1.1.0` to trigger `release.yml`. Merge and tag only after explicit user confirmation.
 
 Out of scope (noted in evaluation, not security fixes): JPEG metadata stripping; a broken `<img>` aborting the whole conversion.
@@ -33,6 +34,7 @@ Out of scope (noted in evaluation, not security fixes): JPEG metadata stripping;
 | T9 | S9 | inline | in progress | |
 | T10 | S10 | inline | done | (this commit) |
 | T11 | S11 | inline | done | (this commit) |
+| T12 | S12 | inline | done | (this commit) |
 | T8 | S8 | inline | pending | |
 
 Route evidence: units are small (< 100 lines each) and T3/T4 share `ConversionOptions.cs`, so no Writer trigger applies; all inline.
@@ -52,3 +54,4 @@ Route evidence: units are small (< 100 lines each) and T3/T4 share `ConversionOp
 - L11 (2026-11-01, user decision on L6): "Fix flex first" (fix nested flex cost before merging PR #13 and publishing v1.1.0).
 - L12 (2026-11-01, user): "wait, I have other issues" followed by the case-insensitive containment finding. Confirmed on Linux with RED tests: case-variant sibling read and write, and directory/file symlinks escaping BasePath (5 failing). Fixed with `PathContainment`; 611 tests pass.
 - L13 (2026-11-01, user): mutable-actions finding. Confirmed: checkout@v4 and setup-dotnet@v4 ran in the publish job. Pinned checkout v4.4.0 (11d5960), setup-dotnet v4.3.1 (67a3573), codeql-action v4.39.1 (9b32540); each equals the current v4 tag, so CI behavior is unchanged. YAML validated; workflows run first in CI on push. Job split (build vs publish) not done: optional hardening.
+- L14 (2026-11-01, user): MCP `@latest` finding. Pinned `@aikidosec/mcp@1.0.33` in both configs; that version ships `npm-shrinkwrap.json`, so its dependencies install with locked integrity, and npm versions are immutable. Upgrades now require an explicit edit.
