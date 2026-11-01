@@ -246,4 +246,49 @@ public class LinkAnnotationIntegrationTests
         Assert.Equal(Enumerable.Range(0, layout.PageCount), layout.Annotations.Select(a => a.PageIndex).Order());
         Assert.All(layout.Annotations, a => Assert.Equal("https://example.com/h", a.Uri));
     }
+
+    // ── Link scheme allowlist ────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("JavaScript:alert(1)")]
+    [InlineData("  javascript:alert(1)")]
+    [InlineData("file:///etc/passwd")]
+    [InlineData("smb://attacker.example/share")]
+    [InlineData("data:text/html,hi")]
+    [InlineData("relative/page.html")]
+    [InlineData("#section")]
+    public void UnsafeOrSchemelessHref_ProducesNoAnnotation_ButKeepsText(string href)
+    {
+        string html = $"<a href=\"{href}\">Click here</a>";
+
+        LayoutResult layout = RunLayout(html);
+
+        Assert.Empty(layout.Annotations);
+        Assert.Contains(layout.Primitives.OfType<TextPrimitive>(), t => t.Text.Contains("Click"));
+
+        byte[] pdf = new PdfGenerator(new ConversionOptions { CompressStreams = false }).Convert(html);
+        Assert.DoesNotContain("/URI", Encoding.Latin1.GetString(pdf));
+    }
+
+    [Theory]
+    [InlineData("http://example.com")]
+    [InlineData("HTTPS://example.com/path?q=1")]
+    [InlineData("mailto:someone@example.com")]
+    public void SafeSchemeHref_ProducesAnnotation(string href)
+    {
+        LayoutResult layout = RunLayout($"<a href=\"{href}\">Click here</a>");
+
+        Assert.NotEmpty(layout.Annotations);
+        Assert.All(layout.Annotations, a => Assert.Equal(href, a.Uri));
+    }
+
+    [Fact]
+    public void UnsafeHrefInsideSafeLink_DoesNotInheritOrOverrideOuterLink()
+    {
+        LayoutResult layout = RunLayout(
+            "<p><a href=\"https://example.com\">outer <a href=\"javascript:x\">inner</a></a></p>");
+
+        Assert.All(layout.Annotations, a => Assert.Equal("https://example.com", a.Uri));
+    }
 }

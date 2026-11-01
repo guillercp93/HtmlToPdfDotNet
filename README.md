@@ -17,7 +17,7 @@ The primary goal of HtmlToPdfDotNet is to provide a fully managed solution for g
 - **Images:** Embeds JPEG and PNG images from local files or `data:` URIs.
 - **Tables:** `<table>` layouts with `<thead>`, `<tbody>`, `<tfoot>`, and borders.
 - **Lists:** `<ul>` and `<ol>` with `list-style-type` (`disc`, `circle`, `square`, `decimal`, `lower-alpha`, `upper-alpha`, `lower-roman`, `upper-roman`, `none`).
-- **Links:** `<a href>` elements become clickable PDF link annotations.
+- **Links:** `<a href>` elements with an `http`, `https`, or `mailto` target become clickable PDF link annotations. Other targets (`javascript:`, `file://`, `smb://`, relative paths, `#fragment`) render as plain text without a link.
 - **Headers and Footers:** Running header and footer HTML templates with `{page}` and `{total}` placeholders.
 - **Page Breaks:** `page-break-before`, `page-break-after`, and `page-break-inside`.
 - **Dependency Injection:** Registration extension for `Microsoft.Extensions.DependencyInjection`.

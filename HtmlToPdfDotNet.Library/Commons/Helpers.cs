@@ -160,6 +160,26 @@ public static class Helpers
         return new string(chars);
     }
 
+    private static readonly HashSet<string> _SafeLinkSchemes =
+        new(StringComparer.OrdinalIgnoreCase) { "http", "https", "mailto" };
+
+    /// <summary>
+    /// Returns the trimmed <paramref name="href"/> when it is an absolute URI with an
+    /// allowed scheme (http, https, mailto); otherwise null. PDF viewers can act on other
+    /// schemes (file://, smb://, javascript:), so those never become link annotations.
+    /// </summary>
+    /// <param name="href">The raw href attribute value.</param>
+    /// <returns>The link target to annotate, or null when the link must not be clickable.</returns>
+    internal static string? GetSafeLinkUri(string? href)
+    {
+        if (string.IsNullOrWhiteSpace(href)) return null;
+
+        string trimmed = href.Trim();
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) && _SafeLinkSchemes.Contains(uri.Scheme)
+            ? trimmed
+            : null;
+    }
+
     /// <summary>
     /// Normalizes the text by replacing line breaks and tabs with spaces.
     /// </summary>
